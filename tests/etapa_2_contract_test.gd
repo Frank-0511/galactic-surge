@@ -12,6 +12,8 @@ func _init() -> void:
 	passed = _assert_collision_contract(
 		"res://scenes/entities/enemy/enemy_bullet.tscn", 8, 1, "player_hit"
 	) and passed
+	passed = _assert_enemy_contract() and passed
+	passed = _assert_enemy_spawner_contract() and passed
 	passed = _assert_scene("res://scenes/systems/enemy_spawner.tscn") and passed
 	passed = _assert_scene("res://scenes/ui/game_over.tscn") and passed
 	quit(0 if passed else 1)
@@ -76,3 +78,81 @@ func _assert_collision_contract(
 		passed = false
 	projectile.free()
 	return passed
+
+
+func _assert_enemy_contract() -> bool:
+	var packed_scene: PackedScene = load("res://scenes/entities/enemy/enemy.tscn") as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: res://scenes/entities/enemy/enemy.tscn")
+		return false
+	var enemy: Area2D = packed_scene.instantiate() as Area2D
+	if enemy == null:
+		push_error("Enemy scene root must be Area2D")
+		return false
+	var passed: bool = true
+	if enemy.collision_layer != 4 or enemy.collision_mask != 3:
+		push_error("Enemy collision layer/mask must be 4/3")
+		passed = false
+	if not enemy.is_in_group("enemies"):
+		push_error("Enemy must belong to the enemies group")
+		passed = false
+	if not enemy.has_method("destroy"):
+		push_error("Enemy missing public method: destroy")
+		passed = false
+	if not enemy.has_signal("destroyed"):
+		push_error("Enemy missing signal: destroyed")
+		passed = false
+	if enemy.get_node_or_null("ShootCooldown") == null:
+		push_error("Enemy missing ShootCooldown")
+		passed = false
+	enemy.free()
+	return passed
+
+
+func _assert_enemy_spawner_contract() -> bool:
+	var packed_scene: PackedScene = load("res://scenes/systems/enemy_spawner.tscn") as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: res://scenes/systems/enemy_spawner.tscn")
+		return false
+	var spawner: Node2D = packed_scene.instantiate() as Node2D
+	if spawner == null:
+		push_error("EnemySpawner scene root must be Node2D")
+		return false
+	var passed: bool = true
+	var expected_exports: Dictionary = {
+		"rows": 3,
+		"columns": 6,
+		"horizontal_spacing": 72.0,
+		"vertical_spacing": 64.0,
+		"formation_speed": 80.0,
+		"descent_distance": 32.0,
+	}
+	for property_name: String in expected_exports:
+		if spawner.get(property_name) != expected_exports[property_name]:
+			push_error("EnemySpawner %s has an unexpected default" % property_name)
+			passed = false
+	for method_name: String in ["spawn_formation", "stop"]:
+		if not spawner.has_method(method_name):
+			push_error("EnemySpawner missing public method: %s" % method_name)
+			passed = false
+	if not spawner.has_signal("enemy_contacted_player"):
+		push_error("EnemySpawner missing signal: enemy_contacted_player")
+		passed = false
+	spawner.spawn_formation()
+	if _count_formation_enemies(spawner) != 18:
+		push_error("EnemySpawner must create exactly 18 enemies")
+		passed = false
+	spawner.spawn_formation()
+	if _count_formation_enemies(spawner) != 18:
+		push_error("EnemySpawner must replace its formation with exactly 18 enemies")
+		passed = false
+	spawner.free()
+	return passed
+
+
+func _count_formation_enemies(spawner: Node2D) -> int:
+	var enemy_count: int = 0
+	for child: Node in spawner.get_children():
+		if child is Area2D and child.is_in_group("enemies"):
+			enemy_count += 1
+	return enemy_count
