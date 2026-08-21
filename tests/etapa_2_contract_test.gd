@@ -151,6 +151,7 @@ func _assert_enemy_spawner_contract() -> bool:
 	if not spawner.has_signal("enemy_contacted_player"):
 		push_error("EnemySpawner missing signal: enemy_contacted_player")
 		passed = false
+	passed = _assert_formation_edge_contract() and passed
 	spawner.spawn_formation()
 	if _count_formation_enemies(spawner) != 18:
 		push_error("EnemySpawner must create exactly 18 enemies")
@@ -160,6 +161,21 @@ func _assert_enemy_spawner_contract() -> bool:
 		push_error("EnemySpawner must replace its formation with exactly 18 enemies")
 		passed = false
 	spawner.free()
+	return passed
+
+
+func _assert_formation_edge_contract() -> bool:
+	var spawner_source: String = FileAccess.get_file_as_string("res://scenes/systems/enemy_spawner.gd")
+	var passed: bool = true
+	if not spawner_source.contains("const ENEMY_HALF_WIDTH: float = 18.0"):
+		push_error("EnemySpawner must define the Enemy half-width as 18 px")
+		passed = false
+	if not spawner_source.contains("enemy.global_position.x - ENEMY_HALF_WIDTH"):
+		push_error("EnemySpawner left viewport edge must include the Enemy half-width")
+		passed = false
+	if not spawner_source.contains("enemy.global_position.x + ENEMY_HALF_WIDTH"):
+		push_error("EnemySpawner right viewport edge must include the Enemy half-width")
+		passed = false
 	return passed
 
 

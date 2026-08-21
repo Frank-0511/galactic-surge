@@ -27,6 +27,9 @@ signal enemy_contacted_player(player: Node2D)
 ## Vertical step applied after reaching a viewport edge.
 @export var descent_distance: float = 32.0
 
+## Half of the 36 px Enemy collision shape width.
+const ENEMY_HALF_WIDTH: float = 18.0
+
 var _direction: float = 1.0
 var _is_running: bool = true
 
@@ -43,11 +46,11 @@ func _process(delta: float) -> void:
 		return
 	var viewport_rect: Rect2 = get_viewport_rect()
 	var horizontal_delta: float = _direction * formation_speed * delta
-	var left_edge: float = enemies[0].global_position.x
-	var right_edge: float = left_edge
+	var left_edge: float = enemies[0].global_position.x - ENEMY_HALF_WIDTH
+	var right_edge: float = enemies[0].global_position.x + ENEMY_HALF_WIDTH
 	for enemy: Area2D in enemies:
-		left_edge = minf(left_edge, enemy.global_position.x)
-		right_edge = maxf(right_edge, enemy.global_position.x)
+		left_edge = minf(left_edge, enemy.global_position.x - ENEMY_HALF_WIDTH)
+		right_edge = maxf(right_edge, enemy.global_position.x + ENEMY_HALF_WIDTH)
 	if left_edge + horizontal_delta < viewport_rect.position.x or right_edge + horizontal_delta > viewport_rect.end.x:
 		_direction *= -1.0
 		for enemy: Area2D in enemies:
