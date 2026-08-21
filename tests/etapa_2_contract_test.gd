@@ -2,6 +2,10 @@
 extends SceneTree
 
 func _init() -> void:
+	call_deferred("_run_contracts")
+
+
+func _run_contracts() -> void:
 	var passed: bool = true
 	passed = _assert_player_contract() and passed
 	passed = _assert_scene("res://scenes/entities/enemy/enemy.tscn") and passed
@@ -96,6 +100,7 @@ func _assert_main_session_contract() -> bool:
 	if main == null:
 		push_error("Main scene root must be Node2D")
 		return false
+	root.add_child(main)
 	var passed: bool = true
 	if main.get_node_or_null("EnemySpawner") == null:
 		push_error("Main missing EnemySpawner child")
@@ -107,6 +112,7 @@ func _assert_main_session_contract() -> bool:
 	if not main_source.contains("const STARTING_LIVES: int = 3"):
 		push_error("Main must declare STARTING_LIVES as 3")
 		passed = false
+	root.remove_child(main)
 	main.free()
 	return passed
 
@@ -134,6 +140,32 @@ func _assert_initial_formation_viewport(main: Node2D) -> bool:
 		passed = false
 	if absf((left_edge + right_edge) / 2.0 - 300.0) > 0.01:
 		push_error("Initial formation center must be near x=300")
+		passed = false
+	if absf(enemies[0].global_position.x - 120.0) > 0.01:
+		push_error("Initial formation leftmost center must be x=120")
+		passed = false
+	if absf(enemies[5].global_position.x - 480.0) > 0.01:
+		push_error("Initial formation rightmost center must be x=480")
+		passed = false
+	if absf(left_edge - 102.0) > 0.01 or absf(right_edge - 498.0) > 0.01:
+		push_error("Initial formation edges must be x=102 and x=498")
+		passed = false
+	for row: int in 3:
+		for column: int in range(1, 6):
+			var enemy_index: int = row * 6 + column
+			var previous_enemy: Area2D = enemies[enemy_index - 1]
+			var current_enemy: Area2D = enemies[enemy_index]
+			if absf(current_enemy.global_position.x - previous_enemy.global_position.x - 72.0) > 0.01:
+				push_error("Formation enemies must keep 72 px horizontal spacing per row")
+				passed = false
+	var tracked_enemy: Area2D = enemies[0]
+	var initial_position: Vector2 = tracked_enemy.global_position
+	spawner._process(0.016)
+	if absf(tracked_enemy.global_position.y - initial_position.y) > 0.01:
+		push_error("Initial formation frame must not descend")
+		passed = false
+	if absf(tracked_enemy.global_position.x - initial_position.x - 1.28) > 0.01:
+		push_error("Initial formation frame must advance 1.28 px horizontally")
 		passed = false
 	return passed
 
