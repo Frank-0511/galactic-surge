@@ -3,4 +3,5 @@
 [ext_resource type="Script" path="res://scenes/systems/enemy_spawner.gd" id="1_spawner"]
 
 [node name="EnemySpawner" type="Node2D"]
+process_mode = 1
 script = ExtResource("1_spawner")

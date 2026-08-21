@@ -52,14 +52,10 @@ const _WAVE_CONFIGS: Array = [
 ]
 
 var _direction: float = 1.0
-var _is_running: bool = true
+var _is_running: bool = false
 var _current_wave: int = 0
 var _alive_count: int = 0
 var _wave_cleared_emitted: bool = false
-
-
-func _ready() -> void:
-	start_wave(0)
 
 
 func _process(delta: float) -> void:
@@ -85,11 +81,7 @@ func _process(delta: float) -> void:
 
 
 func spawn_formation() -> void:
-	for enemy: Area2D in _get_valid_enemies():
-		remove_child(enemy)
-		enemy.queue_free()
-	_alive_count = 0
-	_wave_cleared_emitted = false
+	clear_formation()
 	if enemy_scene == null:
 		return
 	for row: int in rows:
@@ -108,6 +100,14 @@ func spawn_formation() -> void:
 	_direction = 1.0
 	_is_running = true
 	set_process(true)
+
+
+func clear_formation() -> void:
+	for enemy: Area2D in _get_valid_enemies():
+		remove_child(enemy)
+		enemy.queue_free()
+	_alive_count = 0
+	_wave_cleared_emitted = false
 
 
 func stop() -> void:
