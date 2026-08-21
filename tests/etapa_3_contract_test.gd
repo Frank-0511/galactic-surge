@@ -1,0 +1,355 @@
+# Contract harness for the Etapa 3 waves, scoring, and HUD systems.
+extends SceneTree
+
+const HUD_SCENE_PATH := "res://scenes/ui/hud.tscn"
+const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const SPAWNER_SCENE_PATH := "res://scenes/systems/enemy_spawner.tscn"
+const GAME_OVER_SCENE_PATH := "res://scenes/ui/game_over.tscn"
+
+const POINTS_PER_ENEMY: int = 100
+const CLEAN_WAVE_BONUS: int = 500
+const STARTING_LIVES: int = 3
+const TOTAL_WAVES: int = 5
+
+
+func _init() -> void:
+	call_deferred("_run_contracts")
+
+
+func _run_contracts() -> void:
+	var passed: bool = true
+	passed = _assert_hud_contract() and passed
+	passed = _assert_spawner_wave_contract() and passed
+	passed = _assert_main_owns_state_contract() and passed
+	passed = _assert_score_contract() and passed
+	passed = _assert_clean_wave_bonus_contract() and passed
+	passed = _assert_wave_progression_contract() and passed
+	passed = _assert_game_over_score_contract() and passed
+	passed = _assert_mission_complete_contract() and passed
+	passed = _assert_retry_reset_contract() and passed
+	quit(0 if passed else 1)
+
+
+func _assert_hud_contract() -> bool:
+	var packed_scene: PackedScene = load(HUD_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: %s" % HUD_SCENE_PATH)
+		return false
+	var hud: CanvasLayer = packed_scene.instantiate() as CanvasLayer
+	if hud == null:
+		push_error("HUD scene root must be CanvasLayer")
+		return false
+	root.add_child(hud)
+	var passed: bool = true
+	if not hud.has_signal("lives_changed"):
+		push_error("HUD missing signal: lives_changed")
+		passed = false
+	if not hud.has_signal("score_changed"):
+		push_error("HUD missing signal: score_changed")
+		passed = false
+	if not hud.has_signal("wave_changed"):
+		push_error("HUD missing signal: wave_changed")
+		passed = false
+	for method_name: String in ["set_lives", "set_score", "set_wave", "show_mission_complete"]:
+		if not hud.has_method(method_name):
+			push_error("HUD missing public method: %s" % method_name)
+			passed = false
+	if hud.get_node_or_null("Margin/LivesLabel") == null:
+		push_error("HUD missing Margin/LivesLabel")
+		passed = false
+	if hud.get_node_or_null("Margin/ScoreLabel") == null:
+		push_error("HUD missing Margin/ScoreLabel")
+		passed = false
+	if hud.get_node_or_null("Margin/WaveLabel") == null:
+		push_error("HUD missing Margin/WaveLabel")
+		passed = false
+	if hud.get_node_or_null("MissionCompleteLabel") == null:
+		push_error("HUD missing MissionCompleteLabel")
+		passed = false
+	# Mission complete label must start hidden.
+	var mission_label: Node = hud.get_node("MissionCompleteLabel")
+	if mission_label is CanvasItem and mission_label.visible:
+		push_error("HUD MissionCompleteLabel must start hidden")
+		passed = false
+	hud.free()
+	return passed
+
+
+func _assert_spawner_wave_contract() -> bool:
+	var packed_scene: PackedScene = load(SPAWNER_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: %s" % SPAWNER_SCENE_PATH)
+		return false
+	var spawner: Node2D = packed_scene.instantiate() as Node2D
+	if spawner == null:
+		push_error("EnemySpawner scene root must be Node2D")
+		return false
+	var passed: bool = true
+	# Wave configuration export.
+	if not spawner.has_method("get_total_waves") or spawner.get_total_waves() != TOTAL_WAVES:
+		push_error("EnemySpawner must report %d total waves" % TOTAL_WAVES)
+		passed = false
+	if not spawner.has_method("get_current_wave"):
+		push_error("EnemySpawner missing method: get_current_wave")
+		passed = false
+	if not spawner.has_signal("wave_cleared"):
+		push_error("EnemySpawner missing signal: wave_cleared")
+		passed = false
+	if not spawner.has_signal("all_waves_cleared"):
+		push_error("EnemySpawner missing signal: all_waves_cleared")
+		passed = false
+	# Wave 1 must remain 3x6 at 80 px/s.
+	if spawner.rows != 3 or spawner.columns != 6:
+		push_error("Wave 1 formation must be 3x6")
+		passed = false
+	if spawner.formation_speed != 80.0:
+		push_error("Wave 1 formation_speed must be 80.0")
+		passed = false
+	spawner.free()
+	return passed
+
+
+func _assert_main_owns_state_contract() -> bool:
+	var packed_scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: %s" % MAIN_SCENE_PATH)
+		return false
+	var main: Node2D = packed_scene.instantiate() as Node2D
+	if main == null:
+		push_error("Main scene root must be Node2D")
+		return false
+	root.add_child(main)
+	var passed: bool = true
+	# Main must own lives, score, and wave as single source of truth.
+	for property_name: String in ["lives", "score", "wave"]:
+		if not property_name in main:
+			push_error("Main must own state property: %s" % property_name)
+			passed = false
+	if main.get("lives") != STARTING_LIVES:
+		push_error("Main lives must start at %d" % STARTING_LIVES)
+		passed = false
+	if main.get("score") != 0:
+		push_error("Main score must start at 0")
+		passed = false
+	if main.get("wave") != 1:
+		push_error("Main wave must start at 1")
+		passed = false
+	# HUD must be a separate CanvasLayer child.
+	if main.get_node_or_null("HUD") == null:
+		push_error("Main missing HUD child")
+		passed = false
+	var hud: Node = main.get_node_or_null("HUD")
+	if hud != null and not (hud is CanvasLayer):
+		push_error("HUD must be a CanvasLayer")
+		passed = false
+	root.remove_child(main)
+	main.free()
+	return passed
+
+
+func _assert_score_contract() -> bool:
+	var packed_scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		return false
+	var main: Node2D = packed_scene.instantiate() as Node2D
+	root.add_child(main)
+	var passed: bool = true
+	# Destroying one enemy must add 100 points.
+	var initial_score: int = main.score
+	_destroy_one_enemy(main)
+	if main.score - initial_score != POINTS_PER_ENEMY:
+		push_error("Destroying one enemy must add %d points, got %d" % [POINTS_PER_ENEMY, main.score - initial_score])
+		passed = false
+	root.remove_child(main)
+	main.free()
+	return passed
+
+
+func _assert_clean_wave_bonus_contract() -> bool:
+	var packed_scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		return false
+	var main: Node2D = packed_scene.instantiate() as Node2D
+	root.add_child(main)
+	var passed: bool = true
+	# Clear wave 1 without taking damage: 18 enemies * 100 + 500 bonus.
+	var initial_score: int = main.score
+	_clear_current_wave(main)
+	var expected: int = POINTS_PER_ENEMY * 18 + CLEAN_WAVE_BONUS
+	if main.score - initial_score != expected:
+		push_error("Clean wave 1 must add %d points, got %d" % [expected, main.score - initial_score])
+		passed = false
+	# Wave must advance after clearing.
+	if main.wave != 2:
+		push_error("Wave must advance to 2 after clearing wave 1, got %d" % main.wave)
+		passed = false
+	root.remove_child(main)
+	main.free()
+	return passed
+
+
+func _assert_wave_progression_contract() -> bool:
+	var packed_scene: PackedScene = load(SPAWNER_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		return false
+	var spawner: Node2D = packed_scene.instantiate() as Node2D
+	root.add_child(spawner)
+	var passed: bool = true
+	# Waves 2-5 must have increasing difficulty (speed or count).
+	var wave_configs: Array = []
+	for wave_index: int in TOTAL_WAVES:
+		var config: Dictionary = spawner.get_wave_config(wave_index)
+		wave_configs.append(config)
+	# Wave 1 baseline.
+	var wave1_speed: float = float(wave_configs[0].get("formation_speed", 80.0))
+	if absf(wave1_speed - 80.0) > 0.01:
+		push_error("Wave 1 speed must be 80.0, got %f" % wave1_speed)
+		passed = false
+	# At least one later wave must be faster than wave 1.
+	var has_increase: bool = false
+	for wave_index: int in range(1, TOTAL_WAVES):
+		var wave_speed: float = float(wave_configs[wave_index].get("formation_speed", 80.0))
+		if wave_speed > wave1_speed:
+			has_increase = true
+	if not has_increase:
+		push_error("At least one wave after wave 1 must have higher speed")
+		passed = false
+	spawner.free()
+	return passed
+
+
+func _assert_game_over_score_contract() -> bool:
+	var packed_scene: PackedScene = load(GAME_OVER_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		return false
+	var game_over: CanvasLayer = packed_scene.instantiate() as CanvasLayer
+	if game_over == null:
+		return false
+	root.add_child(game_over)
+	var passed: bool = true
+	# Game Over must accept and show the final score.
+	if not game_over.has_method("show_game_over"):
+		push_error("GameOver missing method: show_game_over")
+		passed = false
+	# show_game_over must accept a final_score argument without error.
+	if game_over.has_method("show_game_over"):
+		game_over.show_game_over(12345)
+		if not game_over.visible:
+			push_error("GameOver must become visible after show_game_over")
+			passed = false
+		var score_label: Node = game_over.get_node_or_null("Control/FinalScoreLabel")
+		if score_label == null:
+			push_error("GameOver missing Control/FinalScoreLabel")
+			passed = false
+		elif score_label is Label and not score_label.text.contains("12345"):
+			push_error("GameOver FinalScoreLabel must contain the final score")
+			passed = false
+	game_over.free()
+	return passed
+
+
+func _assert_mission_complete_contract() -> bool:
+	var packed_scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		return false
+	var main: Node2D = packed_scene.instantiate() as Node2D
+	root.add_child(main)
+	var passed: bool = true
+	# Completing all 5 waves must trigger mission complete on the HUD, not a separate victory screen.
+	var hud: CanvasLayer = main.get_node_or_null("HUD") as CanvasLayer
+	if hud == null:
+		push_error("Main missing HUD for mission complete")
+		passed = false
+	else:
+		var mission_label: Node = hud.get_node_or_null("MissionCompleteLabel")
+		if mission_label == null:
+			push_error("HUD missing MissionCompleteLabel")
+			passed = false
+		else:
+			# Fast-forward: clear all 5 waves without damage.
+			for wave_index: int in TOTAL_WAVES:
+				_clear_current_wave(main)
+			# After 5 waves, mission must be complete.
+			if not main.has_method("is_mission_complete") or not main.is_mission_complete():
+				push_error("Main must report mission complete after clearing all waves")
+				passed = false
+			# Mission complete label must be visible.
+			if mission_label is CanvasItem and not mission_label.visible:
+				push_error("HUD MissionCompleteLabel must be visible after mission complete")
+				passed = false
+			# Session must be stopped.
+			if main.has_method("is_session_active") and main.is_session_active():
+				push_error("Main session must be stopped after mission complete")
+				passed = false
+			# No separate victory screen node should exist.
+			if main.get_node_or_null("VictoryScreen") != null:
+				push_error("Main must not have a separate VictoryScreen node")
+				passed = false
+	root.remove_child(main)
+	main.free()
+	return passed
+
+
+func _assert_retry_reset_contract() -> bool:
+	var packed_scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		return false
+	var main: Node2D = packed_scene.instantiate() as Node2D
+	root.add_child(main)
+	var passed: bool = true
+	# Modify state.
+	main.set("score", 9999)
+	main.set("wave", 4)
+	main.set("lives", 1)
+	# Retry must reset everything (simulated by checking reset method exists and resets in-place).
+	if not main.has_method("reset_session"):
+		push_error("Main missing method: reset_session")
+		passed = false
+	else:
+		main.reset_session()
+		if main.score != 0:
+			push_error("Retry must reset score to 0")
+			passed = false
+		if main.wave != 1:
+			push_error("Retry must reset wave to 1")
+			passed = false
+		if main.lives != STARTING_LIVES:
+			push_error("Retry must reset lives to %d" % STARTING_LIVES)
+			passed = false
+	root.remove_child(main)
+	main.free()
+	return passed
+
+
+# --- Helpers ---
+
+func _destroy_one_enemy(main: Node2D) -> void:
+	var spawner: Node2D = main.get_node_or_null("EnemySpawner")
+	if spawner == null:
+		return
+	var enemies: Array[Area2D] = _get_formation_enemies(spawner)
+	if enemies.is_empty():
+		return
+	var first_enemy: Area2D = enemies[0]
+	if is_instance_valid(first_enemy) and first_enemy.has_method("destroy"):
+		first_enemy.destroy()
+
+
+func _clear_current_wave(main: Node2D) -> void:
+	var spawner: Node2D = main.get_node_or_null("EnemySpawner")
+	if spawner == null:
+		return
+	var enemies: Array[Area2D] = _get_formation_enemies(spawner)
+	for enemy: Area2D in enemies:
+		if is_instance_valid(enemy) and enemy.has_method("destroy"):
+			enemy.destroy()
+	# Allow deferred signals to flush.
+	await create_timer(0.0).timeout
+
+
+func _get_formation_enemies(spawner: Node2D) -> Array[Area2D]:
+	var enemies: Array[Area2D] = []
+	for child: Node in spawner.get_children():
+		if is_instance_valid(child) and child is Area2D and child.is_in_group("enemies"):
+			enemies.append(child as Area2D)
+	return enemies
