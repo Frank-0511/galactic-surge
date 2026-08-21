@@ -1,0 +1,57 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/main_menu.gd" id="1_main_menu"]
+
+[node name="MainMenu" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_main_menu")
+
+[node name="Control" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="ColorRect" parent="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.1, 0.82)
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="Control"]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 240.0
+offset_right = 500.0
+offset_bottom = 300.0
+theme_override_font_sizes/font_size = 36
+text = "DEFENSA ESPACIAL"
+horizontal_alignment = 1
+
+[node name="PlayButton" type="Button" parent="Control"]
+layout_mode = 0
+offset_left = 200.0
+offset_top = 365.0
+offset_right = 400.0
+offset_bottom = 420.0
+theme_override_font_sizes/font_size = 24
+text = "Jugar"
+
+[node name="QuitButton" type="Button" parent="Control"]
+layout_mode = 0
+offset_left = 200.0
+offset_top = 440.0
+offset_right = 400.0
+offset_bottom = 495.0
+theme_override_font_sizes/font_size = 24
+text = "Salir"
+
+[connection signal="pressed" from="Control/PlayButton" to="." method="_on_play_button_pressed"]
+[connection signal="pressed" from="Control/QuitButton" to="." method="_on_quit_button_pressed"]
