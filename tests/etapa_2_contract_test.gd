@@ -1,3 +1,4 @@
+# Contract harness for the Etapa 2 combat scenes.
 extends SceneTree
 
 func _init() -> void:
