@@ -103,10 +103,38 @@ func _assert_main_session_contract() -> bool:
 	if main.get_node_or_null("GameOver") == null:
 		push_error("Main missing GameOver child")
 		passed = false
+	passed = _assert_initial_formation_viewport(main) and passed
 	if not main_source.contains("const STARTING_LIVES: int = 3"):
 		push_error("Main must declare STARTING_LIVES as 3")
 		passed = false
 	main.free()
+	return passed
+
+
+func _assert_initial_formation_viewport(main: Node2D) -> bool:
+	var spawner: Node2D = main.get_node_or_null("EnemySpawner") as Node2D
+	if spawner == null:
+		return false
+	spawner.spawn_formation()
+	var enemies: Array[Area2D] = _get_formation_enemies(spawner)
+	if enemies.size() != 18:
+		push_error("Main must start with exactly 18 formation enemies")
+		return false
+	var left_edge: float = enemies[0].global_position.x - 18.0
+	var right_edge: float = enemies[0].global_position.x + 18.0
+	for enemy: Area2D in enemies:
+		left_edge = minf(left_edge, enemy.global_position.x - 18.0)
+		right_edge = maxf(right_edge, enemy.global_position.x + 18.0)
+	var passed: bool = true
+	if left_edge < 0.0:
+		push_error("Initial formation left edge must be inside the viewport")
+		passed = false
+	if right_edge > 600.0:
+		push_error("Initial formation right edge must be inside the viewport")
+		passed = false
+	if absf((left_edge + right_edge) / 2.0 - 300.0) > 0.01:
+		push_error("Initial formation center must be near x=300")
+		passed = false
 	return passed
 
 
@@ -234,8 +262,12 @@ func _assert_formation_edge_contract() -> bool:
 
 
 func _count_formation_enemies(spawner: Node2D) -> int:
-	var enemy_count: int = 0
+	return _get_formation_enemies(spawner).size()
+
+
+func _get_formation_enemies(spawner: Node2D) -> Array[Area2D]:
+	var enemies: Array[Area2D] = []
 	for child: Node in spawner.get_children():
 		if child is Area2D and child.is_in_group("enemies"):
-			enemy_count += 1
-	return enemy_count
+			enemies.append(child as Area2D)
+	return enemies
