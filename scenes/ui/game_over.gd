@@ -6,7 +6,8 @@ extends CanvasLayer
 signal retry_requested
 
 
-func show_game_over() -> void:
+func show_game_over(final_score: int = 0) -> void:
+	$Control/FinalScoreLabel.text = "Score final: %d" % final_score
 	visible = true
 	$Control/RetryButton.grab_focus()
 
