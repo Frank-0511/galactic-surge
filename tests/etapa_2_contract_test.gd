@@ -126,9 +126,13 @@ func _assert_initial_formation_viewport(main: Node2D) -> bool:
 	if enemies.size() != 18:
 		push_error("Main must start with exactly 18 formation enemies")
 		return false
+	var min_center_x: float = enemies[0].global_position.x
+	var max_center_x: float = min_center_x
 	var left_edge: float = enemies[0].global_position.x - 18.0
 	var right_edge: float = enemies[0].global_position.x + 18.0
 	for enemy: Area2D in enemies:
+		min_center_x = minf(min_center_x, enemy.global_position.x)
+		max_center_x = maxf(max_center_x, enemy.global_position.x)
 		left_edge = minf(left_edge, enemy.global_position.x - 18.0)
 		right_edge = maxf(right_edge, enemy.global_position.x + 18.0)
 	var passed: bool = true
@@ -141,10 +145,10 @@ func _assert_initial_formation_viewport(main: Node2D) -> bool:
 	if absf((left_edge + right_edge) / 2.0 - 300.0) > 0.01:
 		push_error("Initial formation center must be near x=300")
 		passed = false
-	if absf(enemies[0].global_position.x - 120.0) > 0.01:
+	if absf(min_center_x - 120.0) > 0.01:
 		push_error("Initial formation leftmost center must be x=120")
 		passed = false
-	if absf(enemies[5].global_position.x - 480.0) > 0.01:
+	if absf(max_center_x - 480.0) > 0.01:
 		push_error("Initial formation rightmost center must be x=480")
 		passed = false
 	if absf(left_edge - 102.0) > 0.01 or absf(right_edge - 498.0) > 0.01:
@@ -158,15 +162,19 @@ func _assert_initial_formation_viewport(main: Node2D) -> bool:
 			if absf(current_enemy.global_position.x - previous_enemy.global_position.x - 72.0) > 0.01:
 				push_error("Formation enemies must keep 72 px horizontal spacing per row")
 				passed = false
-	var tracked_enemy: Area2D = enemies[0]
-	var initial_position: Vector2 = tracked_enemy.global_position
+	var initial_positions: Array[Vector2] = []
+	for enemy: Area2D in enemies:
+		initial_positions.append(enemy.global_position)
 	spawner._process(0.016)
-	if absf(tracked_enemy.global_position.y - initial_position.y) > 0.01:
-		push_error("Initial formation frame must not descend")
-		passed = false
-	if absf(tracked_enemy.global_position.x - initial_position.x - 1.28) > 0.01:
-		push_error("Initial formation frame must advance 1.28 px horizontally")
-		passed = false
+	for enemy_index: int in enemies.size():
+		var enemy: Area2D = enemies[enemy_index]
+		var initial_position: Vector2 = initial_positions[enemy_index]
+		if absf(enemy.global_position.y - initial_position.y) > 0.01:
+			push_error("Initial formation frame must not descend")
+			passed = false
+		if absf(enemy.global_position.x - initial_position.x - 1.28) > 0.01:
+			push_error("Initial formation frame must advance every enemy 1.28 px horizontally")
+			passed = false
 	return passed
 
 
