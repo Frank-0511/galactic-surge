@@ -1,0 +1,41 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/game_over.gd" id="1_game_over"]
+
+[node name="GameOver" type="CanvasLayer"]
+visible = false
+script = ExtResource("1_game_over")
+
+[node name="Control" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="ColorRect" parent="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.65)
+
+[node name="GameOverLabel" type="Label" parent="Control"]
+offset_left = 185.0
+offset_top = 310.0
+offset_right = 415.0
+offset_bottom = 370.0
+theme_override_font_sizes/font_size = 36
+text = "GAME OVER"
+horizontal_alignment = 1
+
+[node name="RetryButton" type="Button" parent="Control"]
+offset_left = 225.0
+offset_top = 395.0
+offset_right = 375.0
+offset_bottom = 445.0
+theme_override_font_sizes/font_size = 22
+text = "Reintentar"
+
+[connection signal="pressed" from="Control/RetryButton" to="." method="_on_retry_button_pressed"]

@@ -16,7 +16,8 @@ func _init() -> void:
 	passed = _assert_enemy_projectile_contract() and passed
 	passed = _assert_enemy_spawner_contract() and passed
 	passed = _assert_scene("res://scenes/systems/enemy_spawner.tscn") and passed
-	passed = _assert_scene("res://scenes/ui/game_over.tscn") and passed
+	passed = _assert_game_over_contract() and passed
+	passed = _assert_main_session_contract() and passed
 	quit(0 if passed else 1)
 
 
@@ -54,6 +55,59 @@ func _assert_scene(path: String) -> bool:
 		push_error("Missing scene: %s" % path)
 		return false
 	return true
+
+
+func _assert_game_over_contract() -> bool:
+	var packed_scene: PackedScene = load("res://scenes/ui/game_over.tscn") as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: res://scenes/ui/game_over.tscn")
+		return false
+	var game_over: CanvasLayer = packed_scene.instantiate() as CanvasLayer
+	if game_over == null:
+		push_error("GameOver scene root must be CanvasLayer")
+		return false
+	var passed: bool = true
+	if game_over.visible:
+		push_error("GameOver must start hidden")
+		passed = false
+	if game_over.get_node_or_null("Control/RetryButton") == null:
+		push_error("GameOver missing Control/RetryButton")
+		passed = false
+	if not game_over.has_signal("retry_requested"):
+		push_error("GameOver missing signal: retry_requested")
+		passed = false
+	var retry_state: Dictionary = {"emitted": false}
+	game_over.retry_requested.connect(func() -> void: retry_state["emitted"] = true)
+	game_over.call("_on_retry_button_pressed")
+	if not retry_state["emitted"]:
+		push_error("GameOver must emit retry_requested when RetryButton is pressed")
+		passed = false
+	game_over.free()
+	return passed
+
+
+func _assert_main_session_contract() -> bool:
+	var main_source: String = FileAccess.get_file_as_string("res://scenes/main/main.gd")
+	var packed_scene: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: res://scenes/main/main.tscn")
+		return false
+	var main: Node2D = packed_scene.instantiate() as Node2D
+	if main == null:
+		push_error("Main scene root must be Node2D")
+		return false
+	var passed: bool = true
+	if main.get_node_or_null("EnemySpawner") == null:
+		push_error("Main missing EnemySpawner child")
+		passed = false
+	if main.get_node_or_null("GameOver") == null:
+		push_error("Main missing GameOver child")
+		passed = false
+	if not main_source.contains("const STARTING_LIVES: int = 3"):
+		push_error("Main must declare STARTING_LIVES as 3")
+		passed = false
+	main.free()
+	return passed
 
 
 func _assert_collision_contract(
