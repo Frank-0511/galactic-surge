@@ -153,6 +153,7 @@ func _assert_score_contract() -> bool:
 		return false
 	var main: Node2D = packed_scene.instantiate() as Node2D
 	root.add_child(main)
+	main.start_session()
 	var passed: bool = true
 	# Destroying one enemy must add 100 points.
 	var initial_score: int = main.score
@@ -171,6 +172,7 @@ func _assert_clean_wave_bonus_contract() -> bool:
 		return false
 	var main: Node2D = packed_scene.instantiate() as Node2D
 	root.add_child(main)
+	main.start_session()
 	var passed: bool = true
 	# Clear wave 1 without taking damage: 18 enemies * 100 + 500 bonus.
 	var initial_score: int = main.score
@@ -254,6 +256,7 @@ func _assert_mission_complete_contract() -> bool:
 		return false
 	var main: Node2D = packed_scene.instantiate() as Node2D
 	root.add_child(main)
+	main.start_session()
 	var passed: bool = true
 	# Completing all 5 waves must trigger mission complete on the HUD, not a separate victory screen.
 	var hud: CanvasLayer = main.get_node_or_null("HUD") as CanvasLayer
@@ -296,6 +299,7 @@ func _assert_retry_reset_contract() -> bool:
 		return false
 	var main: Node2D = packed_scene.instantiate() as Node2D
 	root.add_child(main)
+	main.start_session()
 	var passed: bool = true
 	# Modify state.
 	main.set("score", 9999)
