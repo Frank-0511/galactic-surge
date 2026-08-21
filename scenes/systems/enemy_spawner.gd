@@ -1,10 +1,21 @@
 # enemy_spawner.gd
 # Creates and moves the enemy formation as one synchronized group.
+# Owns the progressive wave system: five waves with increasing speed and density.
 
 extends Node2D
 
 ## Emitted when an enemy directly collides with the player.
 signal enemy_contacted_player(player: Node2D)
+
+## Emitted once for every enemy destruction signal received.
+signal enemy_destroyed(enemy: Area2D)
+
+## Emitted exactly once when the last enemy of a wave is destroyed.
+## wave_index is 0-based.
+signal wave_cleared(wave_index: int)
+
+## Emitted after the final wave (index 4) is cleared.
+signal all_waves_cleared
 
 ## Scene used for every member of the formation.
 @export var enemy_scene: PackedScene = preload("res://scenes/entities/enemy/enemy.tscn")
@@ -30,12 +41,25 @@ signal enemy_contacted_player(player: Node2D)
 ## Half of the 36 px Enemy collision shape width.
 const ENEMY_HALF_WIDTH: float = 18.0
 
+## Progressive wave configurations (rows, columns, formation_speed).
+## Indices are 0-based: wave 0 is the first wave, wave 4 is the last.
+const _WAVE_CONFIGS: Array = [
+	{"rows": 3, "columns": 6, "formation_speed": 80.0},
+	{"rows": 3, "columns": 6, "formation_speed": 95.0},
+	{"rows": 3, "columns": 7, "formation_speed": 110.0},
+	{"rows": 4, "columns": 7, "formation_speed": 125.0},
+	{"rows": 4, "columns": 8, "formation_speed": 140.0},
+]
+
 var _direction: float = 1.0
 var _is_running: bool = true
+var _current_wave: int = 0
+var _alive_count: int = 0
+var _wave_cleared_emitted: bool = false
 
 
 func _ready() -> void:
-	spawn_formation()
+	start_wave(0)
 
 
 func _process(delta: float) -> void:
@@ -64,6 +88,8 @@ func spawn_formation() -> void:
 	for enemy: Area2D in _get_valid_enemies():
 		remove_child(enemy)
 		enemy.queue_free()
+	_alive_count = 0
+	_wave_cleared_emitted = false
 	if enemy_scene == null:
 		return
 	for row: int in rows:
@@ -76,7 +102,9 @@ func spawn_formation() -> void:
 				row * vertical_spacing + 120.0,
 			)
 			enemy.player_contacted.connect(_on_enemy_player_contacted)
+			enemy.destroyed.connect(_on_enemy_destroyed)
 			add_child(enemy)
+			_alive_count += 1
 	_direction = 1.0
 	_is_running = true
 	set_process(true)
@@ -91,6 +119,32 @@ func stop() -> void:
 			shoot_cooldown.stop()
 
 
+func get_total_waves() -> int:
+	return _WAVE_CONFIGS.size()
+
+
+func get_current_wave() -> int:
+	return _current_wave
+
+
+func get_wave_config(wave_index: int) -> Dictionary:
+	if wave_index < 0 or wave_index >= _WAVE_CONFIGS.size():
+		return {}
+	var config: Dictionary = _WAVE_CONFIGS[wave_index]
+	return config.duplicate()
+
+
+func start_wave(wave_index: int) -> void:
+	var config: Dictionary = get_wave_config(wave_index)
+	if config.is_empty():
+		return
+	_current_wave = wave_index
+	rows = int(config["rows"])
+	columns = int(config["columns"])
+	formation_speed = float(config["formation_speed"])
+	spawn_formation()
+
+
 func _get_valid_enemies() -> Array[Area2D]:
 	var enemies: Array[Area2D] = []
 	for child: Node in get_children():
@@ -101,3 +155,13 @@ func _get_valid_enemies() -> Array[Area2D]:
 
 func _on_enemy_player_contacted(player: Node2D) -> void:
 	enemy_contacted_player.emit(player)
+
+
+func _on_enemy_destroyed(enemy: Area2D) -> void:
+	enemy_destroyed.emit(enemy)
+	_alive_count -= 1
+	if _alive_count <= 0 and not _wave_cleared_emitted:
+		_wave_cleared_emitted = true
+		wave_cleared.emit(_current_wave)
+		if _current_wave == _WAVE_CONFIGS.size() - 1:
+			all_waves_cleared.emit()
