@@ -13,6 +13,7 @@ func _init() -> void:
 		"res://scenes/entities/enemy/enemy_bullet.tscn", 8, 1, "player_hit"
 	) and passed
 	passed = _assert_enemy_contract() and passed
+	passed = _assert_enemy_projectile_contract() and passed
 	passed = _assert_enemy_spawner_contract() and passed
 	passed = _assert_scene("res://scenes/systems/enemy_spawner.tscn") and passed
 	passed = _assert_scene("res://scenes/ui/game_over.tscn") and passed
@@ -106,6 +107,18 @@ func _assert_enemy_contract() -> bool:
 		push_error("Enemy missing ShootCooldown")
 		passed = false
 	enemy.free()
+	return passed
+
+
+func _assert_enemy_projectile_contract() -> bool:
+	var enemy_source: String = FileAccess.get_file_as_string("res://scenes/entities/enemy/enemy.gd")
+	var passed: bool = true
+	if not enemy_source.contains("get_tree().current_scene.add_child(enemy_bullet)"):
+		push_error("EnemyBullet must be added to the current scene")
+		passed = false
+	if not enemy_source.contains("enemy_bullet.global_position = global_position + Vector2(0, 20)"):
+		push_error("EnemyBullet must use Enemy global position plus its spawn offset")
+		passed = false
 	return passed
 
 

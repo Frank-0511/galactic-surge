@@ -55,8 +55,8 @@ func _on_shoot_cooldown_timeout() -> void:
 	if enemy_bullet_scene != null:
 		var enemy_bullet: Node2D = enemy_bullet_scene.instantiate() as Node2D
 		if enemy_bullet != null:
-			enemy_bullet.position = Vector2(0, 20)
-			add_child(enemy_bullet)
+			get_tree().current_scene.add_child(enemy_bullet)
+			enemy_bullet.global_position = global_position + Vector2(0, 20)
 	_schedule_next_shot()
 
 
