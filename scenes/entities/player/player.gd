@@ -1,10 +1,12 @@
 # player.gd
-# Player ship controller. Handles horizontal movement and shooting.
+# Player ship controller. Handles horizontal movement, shooting, and 4B
+# power-up modifiers: persistent double shot and a renewable 10s shield.
 
 extends CharacterBody2D
 
 signal damage_requested
 signal invulnerability_ended
+signal shot_fired(is_double_shot: bool)
 
 ## Movement speed in pixels per second.
 @export var speed: float = 400.0
@@ -21,17 +23,25 @@ signal invulnerability_ended
 ## Margin from the ship center to the screen edge.
 const MARGIN: float = 16.0
 
+## Horizontal offset (px) between the two bullets fired in double-shot mode.
+const DOUBLE_SHOT_SPREAD: float = 12.0
+
 @onready var _shoot_cooldown: Timer = $ShootCooldown
 @onready var _invulnerability_timer: Timer = $InvulnerabilityTimer
 @onready var _blink_timer: Timer = $BlinkTimer
+@onready var _shield_timer: Timer = $ShieldTimer
+@onready var _shield_ring: Node2D = $ShieldRing
 
 var _is_invulnerable: bool = false
 var _gameplay_enabled: bool = true
+var _double_shot_enabled: bool = false
+var _shield_active: bool = false
 
 
 func _ready() -> void:
 	_invulnerability_timer.timeout.connect(_on_invulnerability_timer_timeout)
 	_blink_timer.timeout.connect(_on_blink_timer_timeout)
+	_shield_timer.timeout.connect(_on_shield_timer_timeout)
 
 
 func _process(_delta: float) -> void:
@@ -57,6 +67,8 @@ func _process(_delta: float) -> void:
 func take_damage() -> bool:
 	if _is_invulnerable or not _gameplay_enabled:
 		return false
+	if _shield_active:
+		return false
 	damage_requested.emit()
 	return true
 
@@ -75,6 +87,73 @@ func set_gameplay_enabled(enabled: bool) -> void:
 		velocity = Vector2.ZERO
 
 
+# ---------------------------------------------------------------------------
+# 4B power-up APIs
+# ---------------------------------------------------------------------------
+
+func enable_double_shot() -> void:
+	_double_shot_enabled = true
+
+
+func disable_double_shot() -> void:
+	_double_shot_enabled = false
+
+
+func has_double_shot() -> bool:
+	return _double_shot_enabled
+
+
+func activate_shield(duration: float) -> void:
+	_shield_active = true
+	_shield_ring.visible = true
+	_shield_timer.wait_time = duration
+	_shield_timer.start()
+
+
+func has_shield() -> bool:
+	return _shield_active
+
+
+func clear_power_ups() -> void:
+	_double_shot_enabled = false
+	_shield_active = false
+	_shield_timer.stop()
+	_shield_ring.visible = false
+
+
+# ---------------------------------------------------------------------------
+# Shooting helper
+# ---------------------------------------------------------------------------
+
+func _shoot() -> void:
+	if bullet_scene == null:
+		return
+	if _double_shot_enabled:
+		_spawn_bullet(-DOUBLE_SHOT_SPREAD)
+		_spawn_bullet(DOUBLE_SHOT_SPREAD)
+	else:
+		_spawn_bullet(0.0)
+	shot_fired.emit(_double_shot_enabled)
+
+
+func _spawn_bullet(offset_x: float) -> void:
+	var bullet: Node2D = bullet_scene.instantiate() as Node2D
+	bullet.global_position = global_position + Vector2(offset_x, -20.0)
+	var container: Node = get_tree().current_scene
+	if container == null:
+		container = get_parent()
+	container.add_child(bullet)
+
+
+# ---------------------------------------------------------------------------
+# Test-only helpers
+# ---------------------------------------------------------------------------
+
+## Simulates a single shot bypassing input and cooldown. Used by contract tests.
+func simulate_shot() -> void:
+	_shoot()
+
+
 func _on_invulnerability_timer_timeout() -> void:
 	_is_invulnerable = false
 	_blink_timer.stop()
@@ -87,12 +166,9 @@ func _on_blink_timer_timeout() -> void:
 		visible = not visible
 
 
-func _shoot() -> void:
-	if bullet_scene == null:
-		return
-	var bullet: Node = bullet_scene.instantiate()
-	bullet.position = global_position + Vector2(0, -20)
-	get_tree().current_scene.add_child(bullet)
+func _on_shield_timer_timeout() -> void:
+	_shield_active = false
+	_shield_ring.visible = false
 
 
 func _draw() -> void:

@@ -21,11 +21,11 @@ func _run_contracts() -> void:
 	passed = _assert_hud_contract() and passed
 	passed = _assert_spawner_wave_contract() and passed
 	passed = _assert_main_owns_state_contract() and passed
-	passed = _assert_score_contract() and passed
-	passed = _assert_clean_wave_bonus_contract() and passed
+	passed = await _assert_score_contract() and passed
+	passed = await _assert_clean_wave_bonus_contract() and passed
 	passed = _assert_wave_progression_contract() and passed
 	passed = _assert_game_over_score_contract() and passed
-	passed = _assert_mission_complete_contract() and passed
+	passed = await _assert_mission_complete_contract() and passed
 	passed = _assert_retry_reset_contract() and passed
 	quit(0 if passed else 1)
 
@@ -175,8 +175,10 @@ func _assert_clean_wave_bonus_contract() -> bool:
 	main.start_session()
 	var passed: bool = true
 	# Clear wave 1 without taking damage: 18 enemies * 100 + 500 bonus.
+	_set_zero_display_duration(main)
 	var initial_score: int = main.score
 	_clear_current_wave(main)
+	await _finish_wave_transition(main)
 	var expected: int = POINTS_PER_ENEMY * 18 + CLEAN_WAVE_BONUS
 	if main.score - initial_score != expected:
 		push_error("Clean wave 1 must add %d points, got %d" % [expected, main.score - initial_score])
@@ -270,8 +272,11 @@ func _assert_mission_complete_contract() -> bool:
 			passed = false
 		else:
 			# Fast-forward: clear all 5 waves without damage.
+			_set_zero_display_duration(main)
 			for wave_index: int in TOTAL_WAVES:
 				_clear_current_wave(main)
+				if wave_index < TOTAL_WAVES - 1:
+					await _finish_wave_transition(main)
 			# After 5 waves, mission must be complete.
 			if not main.has_method("is_mission_complete") or not main.is_mission_complete():
 				push_error("Main must report mission complete after clearing all waves")
@@ -357,3 +362,21 @@ func _get_formation_enemies(spawner: Node2D) -> Array[Area2D]:
 		if is_instance_valid(child) and child is Area2D and child.is_in_group("enemies"):
 			enemies.append(child as Area2D)
 	return enemies
+
+
+func _set_zero_display_duration(main: Node2D) -> void:
+	var announcement: CanvasLayer = main.get_node_or_null("WaveAnnouncement") as CanvasLayer
+	if announcement != null and "display_duration" in announcement:
+		announcement.set("display_duration", 0.0)
+	# Disable drops so power-ups don't interfere with score assertions.
+	if "enemy_drop_chance" in main:
+		main.set("enemy_drop_chance", 0.0)
+	if "clear_wave_drop_chance" in main:
+		main.set("clear_wave_drop_chance", 0.0)
+
+
+func _finish_wave_transition(main: Node2D) -> void:
+	# Wait for the announcement timer to fire and Main to start the next wave.
+	await process_frame
+	await process_frame
+	await process_frame

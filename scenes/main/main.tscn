@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/entities/player/player.tscn" id="2"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/effects/visual_feedback.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://scenes/ui/main_menu.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://scenes/audio/audio_feedback.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/ui/wave_announcement.tscn" id="11"]
 
 [node name="Main" type="Node2D"]
 process_mode = 3
@@ -32,9 +34,13 @@ position = Vector2(300, 0)
 
 [node name="VisualFeedback" parent="." instance=ExtResource("7")]
 
+[node name="AudioFeedback" parent="." instance=ExtResource("10")]
+
 [node name="GameOver" parent="." instance=ExtResource("4")]
 
 [node name="HUD" parent="." instance=ExtResource("5")]
+
+[node name="WaveAnnouncement" parent="." instance=ExtResource("11")]
 
 [node name="MainMenu" parent="." instance=ExtResource("8")]
 
