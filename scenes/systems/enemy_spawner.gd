@@ -56,6 +56,14 @@ var _is_running: bool = false
 var _current_wave: int = 0
 var _alive_count: int = 0
 var _wave_cleared_emitted: bool = false
+var _formation_origin: Vector2 = Vector2.ZERO
+var _first_row_y: float = 120.0
+
+
+## Sets the formation origin (center_x, first_row_y) from GameLayout.
+func set_formation_layout(origin: Vector2, first_row_y: float) -> void:
+	_formation_origin = origin
+	_first_row_y = first_row_y
 
 
 func _process(delta: float) -> void:
@@ -89,13 +97,13 @@ func spawn_formation() -> void:
 			var enemy: Area2D = enemy_scene.instantiate() as Area2D
 			if enemy == null:
 				continue
-			enemy.position = Vector2(
-				(column - (columns - 1) / 2.0) * horizontal_spacing,
-				row * vertical_spacing + 120.0,
+			add_child(enemy)
+			enemy.global_position = Vector2(
+				_formation_origin.x + (column - (columns - 1) / 2.0) * horizontal_spacing,
+				_first_row_y + row * vertical_spacing,
 			)
 			enemy.player_contacted.connect(_on_enemy_player_contacted)
 			enemy.destroyed.connect(_on_enemy_destroyed)
-			add_child(enemy)
 			_alive_count += 1
 	_direction = 1.0
 	_is_running = true

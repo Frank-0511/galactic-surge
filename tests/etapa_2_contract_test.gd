@@ -112,6 +112,19 @@ func _assert_main_session_contract() -> bool:
 	if not main_source.contains("const STARTING_LIVES: int = 3"):
 		push_error("Main must declare STARTING_LIVES as 3")
 		passed = false
+	# Player must spawn at the GameLayout position, not at the historical 600x800 origin.
+	main.call("start_session")
+	var layout: GameLayout = GameLayout.new()
+	layout.configure(main.get_viewport().get_visible_rect().size)
+	var expected_spawn: Vector2 = layout.get_player_spawn_position()
+	var player: Node2D = main.get_node_or_null("Player") as Node2D
+	if player != null and player.global_position != expected_spawn:
+		push_error("Player must spawn at the GameLayout position %s, got %s" % [expected_spawn, player.global_position])
+		passed = false
+	# Player horizontal center must match the viewport center, not the historical 300.
+	if player != null and not is_equal_approx(player.global_position.x, main.get_viewport().get_visible_rect().get_center().x):
+		push_error("Main must apply GameLayout before starting the session, player x=%f" % player.global_position.x)
+		passed = false
 	root.remove_child(main)
 	main.free()
 	return passed
@@ -121,6 +134,12 @@ func _assert_initial_formation_viewport(main: Node2D) -> bool:
 	var spawner: Node2D = main.get_node_or_null("EnemySpawner") as Node2D
 	if spawner == null:
 		return false
+	# Derive formation geometry from the viewport via GameLayout.
+	var layout: GameLayout = GameLayout.new()
+	layout.configure(main.get_viewport().get_visible_rect().size)
+	var formation_origin: Vector2 = layout.get_enemy_formation_origin()
+	if spawner.has_method("set_formation_layout"):
+		spawner.call("set_formation_layout", formation_origin, formation_origin.y)
 	spawner.spawn_formation()
 	var enemies: Array[Area2D] = _get_formation_enemies(spawner)
 	if enemies.size() != 18:
@@ -136,23 +155,29 @@ func _assert_initial_formation_viewport(main: Node2D) -> bool:
 		left_edge = minf(left_edge, enemy.global_position.x - 18.0)
 		right_edge = maxf(right_edge, enemy.global_position.x + 18.0)
 	var passed: bool = true
+	var viewport_width: float = main.get_viewport().get_visible_rect().size.x
 	if left_edge < 0.0:
 		push_error("Initial formation left edge must be inside the viewport")
 		passed = false
-	if right_edge > 600.0:
+	if right_edge > viewport_width:
 		push_error("Initial formation right edge must be inside the viewport")
 		passed = false
-	if absf((left_edge + right_edge) / 2.0 - 300.0) > 0.01:
-		push_error("Initial formation center must be near x=300")
+	var expected_center: float = formation_origin.x
+	if absf((left_edge + right_edge) / 2.0 - expected_center) > 0.01:
+		push_error("Initial formation center must be near x=%f" % expected_center)
 		passed = false
-	if absf(min_center_x - 120.0) > 0.01:
-		push_error("Initial formation leftmost center must be x=120")
+	var expected_leftmost: float = expected_center - (6 - 1) / 2.0 * 72.0
+	var expected_rightmost: float = expected_center + (6 - 1) / 2.0 * 72.0
+	if absf(min_center_x - expected_leftmost) > 0.01:
+		push_error("Initial formation leftmost center must be x=%f" % expected_leftmost)
 		passed = false
-	if absf(max_center_x - 480.0) > 0.01:
-		push_error("Initial formation rightmost center must be x=480")
+	if absf(max_center_x - expected_rightmost) > 0.01:
+		push_error("Initial formation rightmost center must be x=%f" % expected_rightmost)
 		passed = false
-	if absf(left_edge - 102.0) > 0.01 or absf(right_edge - 498.0) > 0.01:
-		push_error("Initial formation edges must be x=102 and x=498")
+	var expected_left_edge: float = expected_leftmost - 18.0
+	var expected_right_edge: float = expected_rightmost + 18.0
+	if absf(left_edge - expected_left_edge) > 0.01 or absf(right_edge - expected_right_edge) > 0.01:
+		push_error("Initial formation edges must be x=%f and x=%f" % [expected_left_edge, expected_right_edge])
 		passed = false
 	for row: int in 3:
 		for column: int in range(1, 6):

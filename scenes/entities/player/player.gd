@@ -36,6 +36,7 @@ var _is_invulnerable: bool = false
 var _gameplay_enabled: bool = true
 var _double_shot_enabled: bool = false
 var _shield_active: bool = false
+var _horizontal_limits: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -54,9 +55,12 @@ func _process(_delta: float) -> void:
 	velocity = Vector2(direction * speed, 0.0)
 	move_and_slide()
 
-	# Clamp to viewport bounds.
-	var viewport_rect: Rect2 = get_viewport_rect()
-	position.x = clampf(position.x, viewport_rect.position.x + MARGIN, viewport_rect.end.x - MARGIN)
+	# Clamp to horizontal limits from GameLayout when provided, else viewport bounds.
+	if _horizontal_limits != Vector2.ZERO:
+		position.x = clampf(position.x, _horizontal_limits.x + MARGIN, _horizontal_limits.y - MARGIN)
+	else:
+		var viewport_rect: Rect2 = get_viewport_rect()
+		position.x = clampf(position.x, viewport_rect.position.x + MARGIN, viewport_rect.end.x - MARGIN)
 
 	# --- Shooting ---
 	if Input.is_action_pressed("shoot") and _shoot_cooldown.is_stopped():
@@ -85,6 +89,11 @@ func set_gameplay_enabled(enabled: bool) -> void:
 	_gameplay_enabled = enabled
 	if not _gameplay_enabled:
 		velocity = Vector2.ZERO
+
+
+## Sets the horizontal movement limits (min_x, max_x) from GameLayout.
+func set_horizontal_limits(limits: Vector2) -> void:
+	_horizontal_limits = limits
 
 
 # ---------------------------------------------------------------------------

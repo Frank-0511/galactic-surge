@@ -55,7 +55,7 @@ func _generate_stars(random: RandomNumberGenerator, count: int, viewport_rect: R
 	var stars: Array[Vector2] = []
 	for index: int in count:
 		var x: float = random.randf_range(viewport_rect.position.x, viewport_rect.end.x)
-		var y: float = random.randf_range(viewport_rect.position.y, viewport_rect.end.y - NEAR_SPEED)
+		var y: float = random.randf_range(viewport_rect.position.y, viewport_rect.end.y)
 		stars.append(Vector2(x, y))
 	return stars
 

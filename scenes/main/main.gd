@@ -8,7 +8,6 @@ const STARTING_LIVES: int = 3
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 5
-const PLAYER_RESPAWN_POSITION := Vector2(300, 700)
 const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
 const SHIELD_DURATION: float = 10.0
 
@@ -53,6 +52,8 @@ var _wave_is_clean: bool = true
 var _power_up_dropped_this_wave: bool = false
 var _pending_wave_index: int = 0
 var _last_phrase_index: int = -1
+
+var _game_layout: GameLayout = GameLayout.new()
 
 
 func _ready() -> void:
@@ -171,7 +172,7 @@ func _on_player_damage_requested() -> void:
 	lives -= 1
 	_hud.set_lives(lives)
 	if lives > 0:
-		_player.respawn(PLAYER_RESPAWN_POSITION)
+		_player.respawn(_game_layout.get_player_spawn_position())
 		return
 	_end_session()
 
@@ -234,7 +235,7 @@ func _on_wave_cleared(_wave_index: int) -> void:
 		return
 	# Clear-wave fallback drop: if no power-up dropped this wave, try once more.
 	if not _power_up_dropped_this_wave and randf() < clear_wave_drop_chance:
-		_spawn_power_up(Vector2(300, 160))
+		_spawn_power_up(_game_layout.get_power_up_fallback_position())
 	# Enter wave transition instead of starting the next wave immediately.
 	_session_state = SessionState.WAVE_TRANSITION
 	_enemy_spawner.stop()
@@ -316,13 +317,21 @@ func reset_session() -> void:
 	_game_over.visible = false
 	_pause_menu.visible = false
 	_hud.visible = true
+	_configure_game_layout()
 	_player.set_gameplay_enabled(true)
-	_player.respawn(PLAYER_RESPAWN_POSITION)
+	_player.respawn(_game_layout.get_player_spawn_position())
 	_hide_mission_complete_message()
 	_starfield.reset_scroll()
 	_update_hud()
 	_audio_feedback.start_combat_music()
 	_enemy_spawner.start_wave(0)
+
+
+func _configure_game_layout() -> void:
+	_game_layout.configure(get_viewport().get_visible_rect().size)
+	_player.set_horizontal_limits(_game_layout.get_player_horizontal_limits())
+	var formation_origin: Vector2 = _game_layout.get_enemy_formation_origin()
+	_enemy_spawner.set_formation_layout(formation_origin, formation_origin.y)
 
 
 func _clear_combat_transients() -> void:

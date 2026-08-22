@@ -42,6 +42,7 @@ func _run_contracts() -> void:
 	passed = _assert_audio_assets_contract() and passed
 	passed = _assert_audio_feedback_interface_contract() and passed
 	passed = await _assert_power_up_interface_contract() and passed
+	passed = _assert_wave_announcement_full_rect_contract() and passed
 	passed = await _assert_wave_announcement_interface_contract() and passed
 	passed = await _assert_player_power_up_api_contract() and passed
 	passed = await _assert_main_integration_contract() and passed
@@ -138,8 +139,8 @@ func _assert_audio_feedback_interface_contract() -> bool:
 	# Combat music must loop for the whole session.
 	var combat_music: AudioStreamPlayer = audio_feedback.get_node_or_null("CombatMusic") as AudioStreamPlayer
 	if combat_music != null and combat_music.stream != null:
-		if absf(combat_music.volume_db - (-1.94)) > 0.01:
-			push_error("CombatMusic.volume_db must be -1.94 dB (got %.2f)" % combat_music.volume_db)
+		if absf(combat_music.volume_db - (-3.88)) > 0.01:
+			push_error("CombatMusic.volume_db must be -3.88 dB (got %.2f)" % combat_music.volume_db)
 			passed = false
 		var loop_value: Variant = combat_music.stream.get(&"loop")
 		if loop_value != null and not bool(loop_value):
@@ -290,6 +291,37 @@ func _assert_power_up_interface_contract() -> bool:
 	if is_instance_valid(power_up):
 		root.remove_child(power_up)
 		power_up.free()
+	return passed
+
+
+func _assert_wave_announcement_full_rect_contract() -> bool:
+	# Task 3 red contract: the WaveAnnouncement Control layer must cover the
+	# whole viewport with full anchors and zero offsets, so the announcement
+	# no longer depends on the historical 600x800 rect.
+	var packed_scene: PackedScene = load(WAVE_ANNOUNCEMENT_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: %s" % WAVE_ANNOUNCEMENT_SCENE_PATH)
+		return false
+	var announcement: CanvasLayer = packed_scene.instantiate() as CanvasLayer
+	if announcement == null:
+		push_error("WaveAnnouncement scene root must be CanvasLayer")
+		return false
+	root.add_child(announcement)
+	var passed: bool = true
+	var control: Control = announcement.get_node_or_null("Control") as Control
+	if control == null:
+		push_error("WaveAnnouncement missing Control layer")
+		passed = false
+	else:
+		if control.anchor_right != 1.0 or control.anchor_bottom != 1.0:
+			push_error("WaveAnnouncement Control must fill the viewport with full anchors")
+			passed = false
+		if control.offset_left != 0.0 or control.offset_top != 0.0 \
+				or control.offset_right != 0.0 or control.offset_bottom != 0.0:
+			push_error("WaveAnnouncement Control must not retain 600x800 offsets")
+			passed = false
+	root.remove_child(announcement)
+	announcement.free()
 	return passed
 
 
@@ -558,6 +590,15 @@ func _assert_main_integration_contract() -> bool:
 			var pickups_after_clear: int = _count_power_ups(main)
 			if pickups_after_clear - pickups_before_clear != 1:
 				push_error("clear_wave_drop_chance = 1.0 must create exactly one pickup, got %d" % (pickups_after_clear - pickups_before_clear))
+				passed = false
+
+			# The clear-wave fallback must use GameLayout, not the historical Vector2(300, 160).
+			var main_source: String = FileAccess.get_file_as_string("res://scenes/main/main.gd")
+			if main_source.contains("Vector2(300, 160)"):
+				push_error("Main must not use the historical Vector2(300, 160) for the fallback drop")
+				passed = false
+			if not main_source.contains("get_power_up_fallback_position()"):
+				push_error("Main must use GameLayout.get_power_up_fallback_position() for the fallback drop")
 				passed = false
 
 		# return_to_main_menu must clean up everything.

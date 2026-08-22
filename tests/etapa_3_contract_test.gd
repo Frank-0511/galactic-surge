@@ -142,6 +142,15 @@ func _assert_main_owns_state_contract() -> bool:
 	if hud != null and not (hud is CanvasLayer):
 		push_error("HUD must be a CanvasLayer")
 		passed = false
+	# Player must spawn at the GameLayout position after start_session.
+	main.call("start_session")
+	var layout: GameLayout = GameLayout.new()
+	layout.configure(main.get_viewport().get_visible_rect().size)
+	var expected_spawn: Vector2 = layout.get_player_spawn_position()
+	var player: Node2D = main.get_node_or_null("Player") as Node2D
+	if player != null and player.global_position != expected_spawn:
+		push_error("Player must spawn at the GameLayout position %s, got %s" % [expected_spawn, player.global_position])
+		passed = false
 	root.remove_child(main)
 	main.free()
 	return passed

@@ -21,6 +21,7 @@ func _run_contracts() -> void:
 	passed = _assert_starfield_contract() and passed
 	var visual_feedback_passed: bool = await _assert_visual_feedback_contract()
 	passed = visual_feedback_passed and passed
+	passed = await _assert_background_full_rect_contract() and passed
 	passed = await _assert_main_navigation_contract() and passed
 	quit(0 if passed else 1)
 
@@ -299,6 +300,44 @@ func _assert_visual_feedback_contract() -> bool:
 		passed = false
 	root.remove_child(visual_feedback)
 	visual_feedback.free()
+	return passed
+
+
+func _assert_background_full_rect_contract() -> bool:
+	# Task 3 red contract: the Main background must fill the whole viewport
+	# using full anchors with all four offsets at zero, so it no longer
+	# depends on the historical 600x800 rect.
+	var packed_scene: PackedScene = load(MAIN_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_error("Missing scene: %s" % MAIN_SCENE_PATH)
+		return false
+	var main: Node2D = packed_scene.instantiate() as Node2D
+	if main == null:
+		push_error("Main scene root must be Node2D")
+		return false
+	root.add_child(main)
+	await process_frame
+	var passed: bool = true
+	var background: Control = main.get_node_or_null("Background") as Control
+	if background == null:
+		push_error("Main missing Background node")
+		passed = false
+	else:
+		passed = _assert_full_rect(background, "Main Background") and passed
+	root.remove_child(main)
+	main.free()
+	return passed
+
+
+func _assert_full_rect(control: Control, label: String) -> bool:
+	var passed: bool = true
+	if control.anchor_right != 1.0 or control.anchor_bottom != 1.0:
+		push_error("%s must fill the viewport with full anchors" % label)
+		passed = false
+	if control.offset_left != 0.0 or control.offset_top != 0.0 \
+			or control.offset_right != 0.0 or control.offset_bottom != 0.0:
+		push_error("%s must not retain 600x800 offsets" % label)
+		passed = false
 	return passed
 
 
