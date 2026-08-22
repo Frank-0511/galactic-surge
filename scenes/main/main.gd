@@ -66,6 +66,8 @@ func _ready() -> void:
 	_enemy_spawner.wave_cleared.connect(_on_wave_cleared)
 	_game_over.retry_requested.connect(_on_game_over_retry_requested)
 	_game_over.main_menu_requested.connect(return_to_main_menu)
+	_hud.retry_mission_requested.connect(_on_hud_retry_mission_requested)
+	_hud.main_menu_requested.connect(return_to_main_menu)
 	_main_menu.play_requested.connect(start_session)
 	_main_menu.quit_requested.connect(_on_main_menu_quit_requested)
 	_pause_menu.resume_requested.connect(resume_session)
@@ -340,9 +342,7 @@ func _clear_combat_transients() -> void:
 
 
 func _hide_mission_complete_message() -> void:
-	var mission_label: CanvasItem = _hud.get_node_or_null("MissionCompleteLabel") as CanvasItem
-	if mission_label != null:
-		mission_label.visible = false
+	_hud.hide_mission_complete()
 
 
 func _update_hud() -> void:
@@ -352,6 +352,10 @@ func _update_hud() -> void:
 
 
 func _on_game_over_retry_requested() -> void:
+	reset_session()
+
+
+func _on_hud_retry_mission_requested() -> void:
 	reset_session()
 
 

@@ -50,26 +50,60 @@ func _assert_hud_contract() -> bool:
 	if not hud.has_signal("wave_changed"):
 		push_error("HUD missing signal: wave_changed")
 		passed = false
-	for method_name: String in ["set_lives", "set_score", "set_wave", "show_mission_complete"]:
+	for method_name: String in ["set_lives", "set_score", "set_wave", "show_mission_complete", "hide_mission_complete"]:
 		if not hud.has_method(method_name):
 			push_error("HUD missing public method: %s" % method_name)
 			passed = false
-	if hud.get_node_or_null("Margin/LivesLabel") == null:
-		push_error("HUD missing Margin/LivesLabel")
-		passed = false
-	if hud.get_node_or_null("Margin/ScoreLabel") == null:
-		push_error("HUD missing Margin/ScoreLabel")
-		passed = false
-	if hud.get_node_or_null("Margin/WaveLabel") == null:
-		push_error("HUD missing Margin/WaveLabel")
-		passed = false
-	if hud.get_node_or_null("MissionCompleteLabel") == null:
-		push_error("HUD missing MissionCompleteLabel")
-		passed = false
+	for signal_name: String in ["lives_changed", "score_changed", "wave_changed", "retry_mission_requested", "main_menu_requested"]:
+		if not hud.has_signal(signal_name):
+			push_error("HUD missing signal: %s" % signal_name)
+			passed = false
+	for node_path: String in ["Margin/LivesLabel", "Margin/ScoreLabel", "Margin/WaveLabel", "MissionCompleteLabel", "RetryButton", "MainMenuButton"]:
+		if hud.get_node_or_null(node_path) == null:
+			push_error("HUD missing node: %s" % node_path)
+			passed = false
 	# Mission complete label must start hidden.
 	var mission_label: Node = hud.get_node("MissionCompleteLabel")
 	if mission_label is CanvasItem and mission_label.visible:
 		push_error("HUD MissionCompleteLabel must start hidden")
+		passed = false
+	# Final buttons must start hidden during normal play.
+	var retry_button: CanvasItem = hud.get_node_or_null("RetryButton") as CanvasItem
+	if retry_button != null and retry_button.visible:
+		push_error("HUD RetryButton must start hidden")
+		passed = false
+	var main_menu_button: CanvasItem = hud.get_node_or_null("MainMenuButton") as CanvasItem
+	if main_menu_button != null and main_menu_button.visible:
+		push_error("HUD MainMenuButton must start hidden")
+		passed = false
+	# show_mission_complete() must reveal label and buttons, and focus RetryButton.
+	hud.show_mission_complete()
+	if mission_label is CanvasItem and not mission_label.visible:
+		push_error("HUD MissionCompleteLabel must be visible after show_mission_complete()")
+		passed = false
+	if retry_button != null and not retry_button.visible:
+		push_error("HUD RetryButton must be visible after show_mission_complete()")
+		passed = false
+	if main_menu_button != null and not main_menu_button.visible:
+		push_error("HUD MainMenuButton must be visible after show_mission_complete()")
+		passed = false
+	if retry_button is Control and not retry_button.has_focus():
+		push_error("HUD RetryButton must grab focus after show_mission_complete()")
+		passed = false
+	# hide_mission_complete() must hide everything again.
+	hud.hide_mission_complete()
+	if mission_label is CanvasItem and mission_label.visible:
+		push_error("HUD MissionCompleteLabel must be hidden after hide_mission_complete()")
+		passed = false
+	if retry_button != null and retry_button.visible:
+		push_error("HUD RetryButton must be hidden after hide_mission_complete()")
+		passed = false
+	if main_menu_button != null and main_menu_button.visible:
+		push_error("HUD MainMenuButton must be hidden after hide_mission_complete()")
+		passed = false
+	# HUD must not have a VictoryScreen child.
+	if hud.get_node_or_null("VictoryScreen") != null:
+		push_error("HUD must not have a VictoryScreen node")
 		passed = false
 	hud.free()
 	return passed
@@ -279,7 +313,15 @@ func _assert_mission_complete_contract() -> bool:
 		if mission_label == null:
 			push_error("HUD missing MissionCompleteLabel")
 			passed = false
-		else:
+		var retry_button: CanvasItem = hud.get_node_or_null("RetryButton") as CanvasItem
+		var main_menu_button: CanvasItem = hud.get_node_or_null("MainMenuButton") as CanvasItem
+		if retry_button == null:
+			push_error("HUD missing RetryButton")
+			passed = false
+		if main_menu_button == null:
+			push_error("HUD missing MainMenuButton")
+			passed = false
+		if mission_label != null:
 			# Fast-forward: clear all 5 waves without damage.
 			_set_zero_display_duration(main)
 			for wave_index: int in TOTAL_WAVES:
@@ -290,17 +332,82 @@ func _assert_mission_complete_contract() -> bool:
 			if not main.has_method("is_mission_complete") or not main.is_mission_complete():
 				push_error("Main must report mission complete after clearing all waves")
 				passed = false
-			# Mission complete label must be visible.
+			# Mission complete label and both buttons must be visible.
 			if mission_label is CanvasItem and not mission_label.visible:
 				push_error("HUD MissionCompleteLabel must be visible after mission complete")
+				passed = false
+			if retry_button != null and not retry_button.visible:
+				push_error("HUD RetryButton must be visible after mission complete")
+				passed = false
+			if main_menu_button != null and not main_menu_button.visible:
+				push_error("HUD MainMenuButton must be visible after mission complete")
+				passed = false
+			# RetryButton must have keyboard focus for accessibility.
+			if retry_button is Control and not retry_button.has_focus():
+				push_error("HUD RetryButton must grab focus after mission complete")
 				passed = false
 			# Session must be stopped.
 			if main.has_method("is_session_active") and main.is_session_active():
 				push_error("Main session must be stopped after mission complete")
 				passed = false
-			# No separate victory screen node should exist.
+			# No separate victory screen node should exist on Main or HUD.
 			if main.get_node_or_null("VictoryScreen") != null:
 				push_error("Main must not have a separate VictoryScreen node")
+				passed = false
+			if hud.get_node_or_null("VictoryScreen") != null:
+				push_error("HUD must not have a separate VictoryScreen node")
+				passed = false
+			# "Jugar de nuevo" signal must trigger a clean reset.
+			hud.retry_mission_requested.emit()
+			await process_frame
+			if main.score != 0:
+				push_error("Retry mission must reset score to 0, got %d" % main.score)
+				passed = false
+			if main.wave != 1:
+				push_error("Retry mission must reset wave to 1, got %d" % main.wave)
+				passed = false
+			if main.lives != STARTING_LIVES:
+				push_error("Retry mission must reset lives to %d" % STARTING_LIVES)
+				passed = false
+			if main.has_method("is_mission_complete") and main.is_mission_complete():
+				push_error("Retry mission must clear mission complete state")
+				passed = false
+			if main.has_method("is_session_active") and not main.is_session_active():
+				push_error("Retry mission must restart the session")
+				passed = false
+			if mission_label is CanvasItem and mission_label.visible:
+				push_error("Retry mission must hide the mission complete label")
+				passed = false
+			if retry_button != null and retry_button.visible:
+				push_error("Retry mission must hide RetryButton")
+				passed = false
+			if main_menu_button != null and main_menu_button.visible:
+				push_error("Retry mission must hide MainMenuButton")
+				passed = false
+			# "Menú principal" signal must return to the menu state.
+			hud.main_menu_requested.emit()
+			await process_frame
+			if main.has_method("is_session_active") and main.is_session_active():
+				push_error("Main menu signal must stop the session")
+				passed = false
+			if main.has_method("is_mission_complete") and main.is_mission_complete():
+				push_error("Main menu signal must clear mission complete state")
+				passed = false
+			var main_menu: CanvasLayer = main.get_node_or_null("MainMenu") as CanvasLayer
+			if main_menu != null and not main_menu.visible:
+				push_error("Main menu signal must show the main menu")
+				passed = false
+			if hud.visible:
+				push_error("Main menu signal must hide the HUD")
+				passed = false
+			if mission_label is CanvasItem and mission_label.visible:
+				push_error("Main menu signal must hide the mission complete label")
+				passed = false
+			if retry_button != null and retry_button.visible:
+				push_error("Main menu signal must hide RetryButton")
+				passed = false
+			if main_menu_button != null and main_menu_button.visible:
+				push_error("Main menu signal must hide MainMenuButton")
 				passed = false
 	root.remove_child(main)
 	main.free()
