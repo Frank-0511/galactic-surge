@@ -29,7 +29,7 @@ func _ready() -> void:
 func show_announcement(next_wave: int, phrase: String) -> void:
 	_generation += 1
 	_active_generation = _generation
-	_wave_label.text = "OLEADA %d" % next_wave
+	_wave_label.text = "NIVEL %d · OLEADA %d" % [next_wave, next_wave]
 	_radar_label.text = phrase
 	_ready_label.text = "¡PREPÁRATE!"
 	visible = true

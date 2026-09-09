@@ -286,7 +286,7 @@ func _complete_mission() -> void:
 	_enemy_spawner.stop()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
-	_hud.show_mission_complete()
+	_hud.show_mission_complete(score)
 
 
 func is_mission_complete() -> bool:

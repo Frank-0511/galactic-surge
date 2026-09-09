@@ -58,14 +58,18 @@ func _assert_hud_contract() -> bool:
 		if not hud.has_signal(signal_name):
 			push_error("HUD missing signal: %s" % signal_name)
 			passed = false
-	for node_path: String in ["Margin/LivesLabel", "Margin/ScoreLabel", "Margin/WaveLabel", "MissionCompleteLabel", "RetryButton", "MainMenuButton"]:
+	for node_path: String in ["Margin/LivesLabel", "Margin/ScoreLabel", "Margin/WaveLabel", "VictoryLabel", "VictoryScoreLabel", "RetryButton", "MainMenuButton"]:
 		if hud.get_node_or_null(node_path) == null:
 			push_error("HUD missing node: %s" % node_path)
 			passed = false
-	# Mission complete label must start hidden.
-	var mission_label: Node = hud.get_node("MissionCompleteLabel")
-	if mission_label is CanvasItem and mission_label.visible:
-		push_error("HUD MissionCompleteLabel must start hidden")
+	# Victory labels must start hidden.
+	var victory_label: Label = hud.get_node("VictoryLabel") as Label
+	var victory_score_label: Label = hud.get_node("VictoryScoreLabel") as Label
+	if victory_label != null and victory_label.visible:
+		push_error("HUD VictoryLabel must start hidden")
+		passed = false
+	if victory_score_label != null and victory_score_label.visible:
+		push_error("HUD VictoryScoreLabel must start hidden")
 		passed = false
 	# Final buttons must start hidden during normal play.
 	var retry_button: CanvasItem = hud.get_node_or_null("RetryButton") as CanvasItem
@@ -76,10 +80,19 @@ func _assert_hud_contract() -> bool:
 	if main_menu_button != null and main_menu_button.visible:
 		push_error("HUD MainMenuButton must start hidden")
 		passed = false
-	# show_mission_complete() must reveal label and buttons, and focus RetryButton.
-	hud.show_mission_complete()
-	if mission_label is CanvasItem and not mission_label.visible:
-		push_error("HUD MissionCompleteLabel must be visible after show_mission_complete()")
+	# show_mission_complete() must reveal the victory copy and buttons, and focus RetryButton.
+	hud.show_mission_complete(12345)
+	if victory_label == null or victory_label.text != "¡Victoria!":
+		push_error("HUD VictoryLabel must show '¡Victoria!' after show_mission_complete()")
+		passed = false
+	if victory_score_label == null or not victory_score_label.text.contains("12345"):
+		push_error("HUD VictoryScoreLabel must contain the final score after show_mission_complete()")
+		passed = false
+	if victory_label != null and not victory_label.visible:
+		push_error("HUD VictoryLabel must be visible after show_mission_complete()")
+		passed = false
+	if victory_score_label != null and not victory_score_label.visible:
+		push_error("HUD VictoryScoreLabel must be visible after show_mission_complete()")
 		passed = false
 	if retry_button != null and not retry_button.visible:
 		push_error("HUD RetryButton must be visible after show_mission_complete()")
@@ -92,8 +105,11 @@ func _assert_hud_contract() -> bool:
 		passed = false
 	# hide_mission_complete() must hide everything again.
 	hud.hide_mission_complete()
-	if mission_label is CanvasItem and mission_label.visible:
-		push_error("HUD MissionCompleteLabel must be hidden after hide_mission_complete()")
+	if victory_label != null and victory_label.visible:
+		push_error("HUD VictoryLabel must be hidden after hide_mission_complete()")
+		passed = false
+	if victory_score_label != null and victory_score_label.visible:
+		push_error("HUD VictoryScoreLabel must be hidden after hide_mission_complete()")
 		passed = false
 	if retry_button != null and retry_button.visible:
 		push_error("HUD RetryButton must be hidden after hide_mission_complete()")
@@ -309,9 +325,13 @@ func _assert_mission_complete_contract() -> bool:
 		push_error("Main missing HUD for mission complete")
 		passed = false
 	else:
-		var mission_label: Node = hud.get_node_or_null("MissionCompleteLabel")
-		if mission_label == null:
-			push_error("HUD missing MissionCompleteLabel")
+		var victory_label: Label = hud.get_node_or_null("VictoryLabel") as Label
+		var victory_score_label: Label = hud.get_node_or_null("VictoryScoreLabel") as Label
+		if victory_label == null:
+			push_error("HUD missing VictoryLabel")
+			passed = false
+		if victory_score_label == null:
+			push_error("HUD missing VictoryScoreLabel")
 			passed = false
 		var retry_button: CanvasItem = hud.get_node_or_null("RetryButton") as CanvasItem
 		var main_menu_button: CanvasItem = hud.get_node_or_null("MainMenuButton") as CanvasItem
@@ -321,7 +341,7 @@ func _assert_mission_complete_contract() -> bool:
 		if main_menu_button == null:
 			push_error("HUD missing MainMenuButton")
 			passed = false
-		if mission_label != null:
+		if victory_label != null and victory_score_label != null:
 			# Fast-forward: clear all 5 waves without damage.
 			_set_zero_display_duration(main)
 			for wave_index: int in TOTAL_WAVES:
@@ -332,9 +352,12 @@ func _assert_mission_complete_contract() -> bool:
 			if not main.has_method("is_mission_complete") or not main.is_mission_complete():
 				push_error("Main must report mission complete after clearing all waves")
 				passed = false
-			# Mission complete label and both buttons must be visible.
-			if mission_label is CanvasItem and not mission_label.visible:
-				push_error("HUD MissionCompleteLabel must be visible after mission complete")
+			# Victory copy and both buttons must be visible.
+			if not victory_label.visible or victory_label.text != "¡Victoria!":
+				push_error("HUD VictoryLabel must be visible with victory copy after mission complete")
+				passed = false
+			if not victory_score_label.visible or not victory_score_label.text.contains(str(main.score)):
+				push_error("HUD VictoryScoreLabel must be visible with the final score after mission complete")
 				passed = false
 			if retry_button != null and not retry_button.visible:
 				push_error("HUD RetryButton must be visible after mission complete")
@@ -375,8 +398,8 @@ func _assert_mission_complete_contract() -> bool:
 			if main.has_method("is_session_active") and not main.is_session_active():
 				push_error("Retry mission must restart the session")
 				passed = false
-			if mission_label is CanvasItem and mission_label.visible:
-				push_error("Retry mission must hide the mission complete label")
+			if victory_label.visible or victory_score_label.visible:
+				push_error("Retry mission must hide the victory labels")
 				passed = false
 			if retry_button != null and retry_button.visible:
 				push_error("Retry mission must hide RetryButton")
@@ -400,8 +423,8 @@ func _assert_mission_complete_contract() -> bool:
 			if hud.visible:
 				push_error("Main menu signal must hide the HUD")
 				passed = false
-			if mission_label is CanvasItem and mission_label.visible:
-				push_error("Main menu signal must hide the mission complete label")
+			if victory_label.visible or victory_score_label.visible:
+				push_error("Main menu signal must hide the victory labels")
 				passed = false
 			if retry_button != null and retry_button.visible:
 				push_error("Main menu signal must hide RetryButton")

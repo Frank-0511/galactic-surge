@@ -370,8 +370,8 @@ func _assert_wave_announcement_interface_contract() -> bool:
 		var wave_label: Label = announcement.get_node_or_null("Control/WaveLabel") as Label
 		var radar_label: Label = announcement.get_node_or_null("Control/RadarLabel") as Label
 		var ready_label: Label = announcement.get_node_or_null("Control/ReadyLabel") as Label
-		if wave_label != null and wave_label.text != "OLEADA 2":
-			push_error("WaveLabel must show 'OLEADA 2', got '%s'" % wave_label.text)
+		if wave_label != null and wave_label.text != "NIVEL 2 · OLEADA 2":
+			push_error("WaveLabel must show 'NIVEL 2 · OLEADA 2', got '%s'" % wave_label.text)
 			passed = false
 		if radar_label != null and radar_label.text != "CONTACTO EN EL RADAR":
 			push_error("RadarLabel must show the phrase, got '%s'" % radar_label.text)
