@@ -15,6 +15,7 @@ signal main_menu_requested
 @onready var _wave_label: Label = $Margin/WaveLabel
 @onready var _victory_label: Label = $VictoryLabel
 @onready var _victory_score_label: Label = $VictoryScoreLabel
+@onready var _new_record_label: Label = $NewRecordLabel
 @onready var _retry_button: Button = $RetryButton
 @onready var _main_menu_button: Button = $MainMenuButton
 
@@ -34,11 +35,12 @@ func set_wave(wave: int) -> void:
 	wave_changed.emit(wave)
 
 
-func show_mission_complete(final_score: int) -> void:
+func show_mission_complete(final_score: int, is_new_record: bool = false) -> void:
 	_victory_label.text = "¡Victoria!"
 	_victory_score_label.text = "Score final: %d" % final_score
 	_victory_label.visible = true
 	_victory_score_label.visible = true
+	_new_record_label.visible = is_new_record
 	_retry_button.visible = true
 	_main_menu_button.visible = true
 	_retry_button.grab_focus()
@@ -47,6 +49,7 @@ func show_mission_complete(final_score: int) -> void:
 func hide_mission_complete() -> void:
 	_victory_label.visible = false
 	_victory_score_label.visible = false
+	_new_record_label.visible = false
 	_retry_button.visible = false
 	_main_menu_button.visible = false
 

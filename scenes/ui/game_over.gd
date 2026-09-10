@@ -6,9 +6,12 @@ extends CanvasLayer
 signal retry_requested
 signal main_menu_requested
 
+@onready var _new_record_label: Label = $Control/NewRecordLabel
 
-func show_game_over(final_score: int = 0) -> void:
+
+func show_game_over(final_score: int = 0, is_new_record: bool = false) -> void:
 	$Control/FinalScoreLabel.text = "Score final: %d" % final_score
+	_new_record_label.visible = is_new_record
 	visible = true
 	$Control/RetryButton.grab_focus()
 

@@ -288,8 +288,8 @@ func _end_session() -> void:
 	_enemy_spawner.stop()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
-	_update_high_score_if_needed()
-	_game_over.show_game_over(score)
+	var is_new_record: bool = _update_high_score_if_needed()
+	_game_over.show_game_over(score, is_new_record)
 
 
 func _complete_mission() -> void:
@@ -300,8 +300,8 @@ func _complete_mission() -> void:
 	_enemy_spawner.stop()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
-	_update_high_score_if_needed()
-	_hud.show_mission_complete(score)
+	var is_new_record: bool = _update_high_score_if_needed()
+	_hud.show_mission_complete(score, is_new_record)
 
 
 func is_mission_complete() -> bool:
@@ -366,10 +366,14 @@ func _update_hud() -> void:
 	_hud.set_wave(wave)
 
 
-func _update_high_score_if_needed() -> void:
-	if score > _high_score:
-		_high_score = score
-		HighScore.save_value(_high_score)
+## Returns true and persists the new best if this session's score beats
+## the previous record; returns false otherwise.
+func _update_high_score_if_needed() -> bool:
+	if score <= _high_score:
+		return false
+	_high_score = score
+	HighScore.save_value(_high_score)
+	return true
 
 
 func _on_game_over_retry_requested() -> void:

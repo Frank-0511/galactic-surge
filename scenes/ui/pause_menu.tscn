@@ -62,7 +62,7 @@ grow_vertical = 2
 theme_override_font_sizes/font_size = 24
 text = "Reanudar"
 
-[node name="MainMenuButton" type="Button" parent="Control"]
+[node name="MuteButton" type="CheckButton" parent="Control"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -72,11 +72,28 @@ anchor_bottom = 0.5
 offset_left = -100.0
 offset_top = 60.0
 offset_right = 100.0
-offset_bottom = 115.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
+text = "Silenciar audio"
+
+[node name="MainMenuButton" type="Button" parent="Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = 120.0
+offset_right = 100.0
+offset_bottom = 175.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 24
 text = "Menú principal"
 
 [connection signal="pressed" from="Control/ResumeButton" to="." method="_on_resume_button_pressed"]
+[connection signal="toggled" from="Control/MuteButton" to="." method="_on_mute_button_toggled"]
 [connection signal="pressed" from="Control/MainMenuButton" to="." method="_on_main_menu_button_pressed"]
