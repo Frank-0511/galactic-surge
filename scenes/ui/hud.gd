@@ -30,7 +30,7 @@ func set_score(score: int) -> void:
 
 
 func set_wave(wave: int) -> void:
-	_wave_label.text = "Nivel %d · Oleada %d" % [wave, wave]
+	_wave_label.text = "Oleada %d" % wave
 	wave_changed.emit(wave)
 
 

@@ -139,8 +139,8 @@ func _assert_audio_feedback_interface_contract() -> bool:
 	# Combat music must loop for the whole session.
 	var combat_music: AudioStreamPlayer = audio_feedback.get_node_or_null("CombatMusic") as AudioStreamPlayer
 	if combat_music != null and combat_music.stream != null:
-		if absf(combat_music.volume_db - (-3.88)) > 0.01:
-			push_error("CombatMusic.volume_db must be -3.88 dB (got %.2f)" % combat_music.volume_db)
+		if absf(combat_music.volume_db - (-6.38)) > 0.01:
+			push_error("CombatMusic.volume_db must be -6.38 dB (got %.2f)" % combat_music.volume_db)
 			passed = false
 		var loop_value: Variant = combat_music.stream.get(&"loop")
 		if loop_value != null and not bool(loop_value):
@@ -370,8 +370,8 @@ func _assert_wave_announcement_interface_contract() -> bool:
 		var wave_label: Label = announcement.get_node_or_null("Control/WaveLabel") as Label
 		var radar_label: Label = announcement.get_node_or_null("Control/RadarLabel") as Label
 		var ready_label: Label = announcement.get_node_or_null("Control/ReadyLabel") as Label
-		if wave_label != null and wave_label.text != "NIVEL 2 · OLEADA 2":
-			push_error("WaveLabel must show 'NIVEL 2 · OLEADA 2', got '%s'" % wave_label.text)
+		if wave_label != null and wave_label.text != "OLEADA 2":
+			push_error("WaveLabel must show 'OLEADA 2', got '%s'" % wave_label.text)
 			passed = false
 		if radar_label != null and radar_label.text != "CONTACTO EN EL RADAR":
 			push_error("RadarLabel must show the phrase, got '%s'" % radar_label.text)

@@ -38,6 +38,9 @@ var _double_shot_enabled: bool = false
 var _shield_active: bool = false
 var _horizontal_limits: Vector2 = Vector2.ZERO
 
+## Local clock used only to animate the engine flicker and nav lights.
+var _time: float = 0.0
+
 
 func _ready() -> void:
 	_invulnerability_timer.timeout.connect(_on_invulnerability_timer_timeout)
@@ -45,7 +48,12 @@ func _ready() -> void:
 	_shield_timer.timeout.connect(_on_shield_timer_timeout)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# Idle visuals (engine flicker, nav lights) keep animating even when
+	# gameplay input is disabled, e.g. during menus or wave transitions.
+	_time += delta
+	queue_redraw()
+
 	if not _gameplay_enabled:
 		velocity = Vector2.ZERO
 		return
@@ -198,6 +206,11 @@ func _draw() -> void:
 	hull_outline.append(hull[0])
 	draw_polyline(hull_outline, Color(0.35, 0.9, 1.0), 1.5)
 
+	# A thin highlight along the leading edge adds a touch of dimension.
+	draw_polyline(PackedVector2Array([
+		Vector2(-6, -5), Vector2(0, -16), Vector2(6, -5),
+	]), Color(0.7, 0.95, 1.0, 0.55), 1.0)
+
 	# Canopy and center seam add a small amount of depth.
 	var canopy: PackedVector2Array = PackedVector2Array([
 		Vector2(0, -11), Vector2(-4, -3), Vector2(0, 5), Vector2(4, -3),
@@ -210,3 +223,18 @@ func _draw() -> void:
 	draw_rect(Rect2(5, 10, 5, 6), Color(0.95, 0.35, 0.12))
 	draw_rect(Rect2(-9, 14, 3, 4), Color(1.0, 0.8, 0.25))
 	draw_rect(Rect2(6, 14, 3, 4), Color(1.0, 0.8, 0.25))
+
+	# Flickering exhaust glow gives the engines a small bit of life.
+	var flicker: float = 0.7 + 0.3 * absf(sin(_time * 14.0)) * absf(cos(_time * 5.0))
+	var flame_h: float = 5.0 * flicker
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-9, 18), Vector2(-7.5, 18 + flame_h), Vector2(-6, 18),
+	]), Color(1.0, 0.85, 0.3, 0.85 * flicker))
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(6, 18), Vector2(7.5, 18 + flame_h), Vector2(9, 18),
+	]), Color(1.0, 0.85, 0.3, 0.85 * flicker))
+
+	# Slow-blinking wingtip nav lights (red on the left, green on the right).
+	var blink: float = 1.0 if fmod(_time, 1.0) < 0.6 else 0.2
+	draw_circle(Vector2(-14, 15), 1.4, Color(1.0, 0.25, 0.25, blink))
+	draw_circle(Vector2(14, 15), 1.4, Color(0.3, 1.0, 0.4, blink))

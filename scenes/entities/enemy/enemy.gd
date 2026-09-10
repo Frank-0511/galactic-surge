@@ -22,9 +22,20 @@ signal player_contacted(player: Node2D)
 
 var _destroyed: bool = false
 
+## Local clock and per-instance offset used only to animate a subtle idle
+## breathing pulse, so a whole formation doesn't blink in perfect unison.
+var _time: float = 0.0
+var _pulse_offset: float = 0.0
+
 
 func _ready() -> void:
+	_pulse_offset = randf_range(0.0, TAU)
 	_schedule_next_shot()
+
+
+func _process(delta: float) -> void:
+	_time += delta
+	queue_redraw()
 
 
 func destroy() -> void:
@@ -65,8 +76,10 @@ func _schedule_next_shot() -> void:
 
 
 func _draw() -> void:
-	# Subtle glow separates the enemy from the starfield.
-	draw_circle(Vector2.ZERO, 16.0, Color(1.0, 0.2, 0.3, 0.12))
+	var pulse: float = 0.5 + 0.5 * sin(_time * 3.0 + _pulse_offset)
+
+	# Subtle glow separates the enemy from the starfield; it breathes gently.
+	draw_circle(Vector2.ZERO, 15.0 + 2.0 * pulse, Color(1.0, 0.2, 0.3, 0.08 + 0.06 * pulse))
 
 	# Compact hull and swept wings preserve the existing 36x28 silhouette.
 	var wings: PackedVector2Array = PackedVector2Array([
@@ -88,7 +101,13 @@ func _draw() -> void:
 	hull_outline.append(hull[0])
 	draw_polyline(hull_outline, Color(1.0, 0.55, 0.55), 1.5)
 
-	# A restrained bright core gives the enemy a readable focal point.
-	draw_circle(Vector2(0, -1), 4.0, Color(1.0, 0.3, 0.35, 0.35))
-	draw_circle(Vector2(0, -1), 2.0, Color(1.0, 0.85, 0.55))
+	# A pair of small antenna sensors give the silhouette more character.
+	draw_line(Vector2(-3, -10), Vector2(-5, -17), Color(1.0, 0.55, 0.55), 1.2)
+	draw_line(Vector2(3, -10), Vector2(5, -17), Color(1.0, 0.55, 0.55), 1.2)
+	draw_circle(Vector2(-5, -17), 1.2, Color(1.0, 0.4, 0.45, 0.9))
+	draw_circle(Vector2(5, -17), 1.2, Color(1.0, 0.4, 0.45, 0.9))
+
+	# A restrained bright core gives the enemy a readable, pulsing focal point.
+	draw_circle(Vector2(0, -1), 4.0, Color(1.0, 0.3, 0.35, 0.28 + 0.18 * pulse))
+	draw_circle(Vector2(0, -1), 2.0, Color(1.0, 0.85, 0.55, 0.75 + 0.25 * pulse))
 	draw_rect(Rect2(-9, 11, 18, 4), Color(0.35, 0.03, 0.1))

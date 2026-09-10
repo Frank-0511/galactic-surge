@@ -9,7 +9,9 @@ const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 5
 const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
+const HighScore: Script = preload("res://scripts/systems/high_score.gd")
 const SHIELD_DURATION: float = 10.0
+const NEARBY_SHAKE_RADIUS: float = 220.0
 
 const _RADAR_PHRASES: Array[String] = [
 	"SEÑAL HOSTIL DETECTADA",
@@ -33,11 +35,15 @@ var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tsc
 @onready var _visual_feedback: Node2D = $VisualFeedback
 @onready var _audio_feedback: Node = $AudioFeedback
 @onready var _wave_announcement: CanvasLayer = $WaveAnnouncement
+@onready var _camera: Camera2D = $Camera2D
 
 ## Current player lives, score, and 1-based wave number for this session.
 var lives: int = STARTING_LIVES
 var score: int = 0
 var wave: int = 1
+
+## Best score ever reached, loaded on startup and persisted to disk.
+var _high_score: int = 0
 
 ## Probability of a power-up dropping when an enemy is destroyed.
 @export_range(0.0, 1.0, 0.01) var enemy_drop_chance: float = 0.04
@@ -74,6 +80,7 @@ func _ready() -> void:
 	_pause_menu.main_menu_requested.connect(return_to_main_menu)
 	_wave_announcement.announcement_finished.connect(_on_wave_announcement_finished)
 	child_entered_tree.connect(_on_child_entered_tree)
+	_high_score = HighScore.load_value()
 	_update_hud()
 	_enter_main_menu()
 
@@ -143,6 +150,7 @@ func _enter_main_menu() -> void:
 	_player.visible = false
 	_hide_mission_complete_message()
 	_update_hud()
+	_main_menu.set_high_score(_high_score)
 	_main_menu.show_menu()
 
 
@@ -169,6 +177,7 @@ func _on_player_damage_requested() -> void:
 	if not _session_active:
 		return
 	_visual_feedback.play_damage_flash()
+	_camera.shake(6.0, 0.2)
 	_audio_feedback.play_player_damage()
 	_wave_is_clean = false
 	lives -= 1
@@ -189,7 +198,10 @@ func _on_enemy_destroyed(enemy: Area2D) -> void:
 		return
 	var explosion_position: Vector2 = enemy.global_position
 	_visual_feedback.play_enemy_explosion(explosion_position)
+	_visual_feedback.play_score_popup(explosion_position, POINTS_PER_ENEMY)
 	_audio_feedback.play_enemy_explosion()
+	if explosion_position.distance_to(_player.global_position) < NEARBY_SHAKE_RADIUS:
+		_camera.shake(3.0, 0.12)
 	score += POINTS_PER_ENEMY
 	_hud.set_score(score)
 	_try_spawn_enemy_power_up(explosion_position)
@@ -232,6 +244,7 @@ func _on_wave_cleared(_wave_index: int) -> void:
 	if _wave_is_clean:
 		score += CLEAN_WAVE_BONUS
 		_hud.set_score(score)
+		_visual_feedback.play_score_popup(_player.global_position + Vector2(0, -50), CLEAN_WAVE_BONUS, true)
 	if wave >= TOTAL_WAVES:
 		_complete_mission()
 		return
@@ -275,6 +288,7 @@ func _end_session() -> void:
 	_enemy_spawner.stop()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
+	_update_high_score_if_needed()
 	_game_over.show_game_over(score)
 
 
@@ -286,6 +300,7 @@ func _complete_mission() -> void:
 	_enemy_spawner.stop()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
+	_update_high_score_if_needed()
 	_hud.show_mission_complete(score)
 
 
@@ -349,6 +364,12 @@ func _update_hud() -> void:
 	_hud.set_lives(lives)
 	_hud.set_score(score)
 	_hud.set_wave(wave)
+
+
+func _update_high_score_if_needed() -> void:
+	if score > _high_score:
+		_high_score = score
+		HighScore.save_value(_high_score)
 
 
 func _on_game_over_retry_requested() -> void:
