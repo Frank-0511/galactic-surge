@@ -22,6 +22,7 @@ offset_top = 0.0
 offset_right = 0.0
 offset_bottom = 28.0
 theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1.0, 0.42, 0.42, 1.0)
 text = "Vidas: 3"
 
 [node name="ScoreLabel" type="Label" parent="Margin"]
@@ -33,6 +34,7 @@ offset_top = 32.0
 offset_right = 0.0
 offset_bottom = 60.0
 theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1.0, 0.82, 0.25, 1.0)
 text = "Score: 0"
 
 [node name="WaveLabel" type="Label" parent="Margin"]
@@ -44,6 +46,7 @@ offset_top = 64.0
 offset_right = 0.0
 offset_bottom = 92.0
 theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.35, 0.92, 1.0, 1.0)
 text = "Oleada: 1"
 
 [node name="VictoryLabel" type="Label" parent="."]
@@ -59,7 +62,10 @@ offset_right = 180.0
 offset_bottom = -15.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 32
+theme_override_colors/font_color = Color(0.42, 1.0, 0.62, 1.0)
+theme_override_constants/outline_size = 5
+theme_override_colors/font_outline_color = Color(0.02, 0.05, 0.09, 0.9)
 text = "¡Victoria!"
 horizontal_alignment = 1
 visible = false
@@ -78,6 +84,7 @@ offset_bottom = 20.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1.0, 0.82, 0.25, 1.0)
 text = "Score final: 0"
 horizontal_alignment = 1
 visible = false
