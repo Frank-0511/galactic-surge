@@ -78,36 +78,52 @@ func _schedule_next_shot() -> void:
 func _draw() -> void:
 	var pulse: float = 0.5 + 0.5 * sin(_time * 3.0 + _pulse_offset)
 
-	# Subtle glow separates the enemy from the starfield; it breathes gently.
-	draw_circle(Vector2.ZERO, 15.0 + 2.0 * pulse, Color(1.0, 0.2, 0.3, 0.08 + 0.06 * pulse))
+	# Toxic ambient glow separates the alien silhouette from the starfield.
+	draw_circle(Vector2.ZERO, 16.0 + 2.0 * pulse, Color(0.45, 1.0, 0.35, 0.07 + 0.05 * pulse))
 
-	# Compact hull and swept wings preserve the existing 36x28 silhouette.
-	var wings: PackedVector2Array = PackedVector2Array([
-		Vector2(-17, -7), Vector2(-8, -10), Vector2(-4, -4),
-		Vector2(4, -4), Vector2(8, -10), Vector2(17, -7),
-		Vector2(13, 8), Vector2(6, 5), Vector2(-6, 5), Vector2(-13, 8),
+	# Soft hover shadow beneath the carapace suggests it floats rather than flies.
+	draw_circle(Vector2(0, 13), 8.0, Color(0.35, 0.95, 0.3, 0.10 + 0.06 * pulse))
+
+	# Compact beetle-like carapace replaces the old swept-wing fighter silhouette.
+	var carapace: PackedVector2Array = PackedVector2Array([
+		Vector2(-8, -10), Vector2(0, -12), Vector2(8, -10),
+		Vector2(10, 1), Vector2(6, 9), Vector2(0, 11), Vector2(-6, 9), Vector2(-10, 1),
 	])
-	draw_colored_polygon(wings, Color(0.55, 0.08, 0.18))
-	var wing_outline: PackedVector2Array = wings.duplicate()
-	wing_outline.append(wings[0])
-	draw_polyline(wing_outline, Color(1.0, 0.35, 0.45), 1.25)
+	draw_colored_polygon(carapace, Color(0.22, 0.05, 0.32))
+	var carapace_outline: PackedVector2Array = carapace.duplicate()
+	carapace_outline.append(carapace[0])
+	draw_polyline(carapace_outline, Color(0.55, 1.0, 0.4), 1.5)
 
-	var hull: PackedVector2Array = PackedVector2Array([
-		Vector2(-9, -10), Vector2(9, -10), Vector2(12, 3),
-		Vector2(7, 12), Vector2(-7, 12), Vector2(-12, 3),
+	# Crab-like pincer claws give the alien a distinct, non-jet profile.
+	var claw_l: PackedVector2Array = PackedVector2Array([
+		Vector2(-9, -3), Vector2(-17, -6), Vector2(-21, -9),
+		Vector2(-16, -1), Vector2(-21, 4), Vector2(-16, 5), Vector2(-10, 2),
 	])
-	draw_colored_polygon(hull, Color(0.72, 0.1, 0.2))
-	var hull_outline: PackedVector2Array = hull.duplicate()
-	hull_outline.append(hull[0])
-	draw_polyline(hull_outline, Color(1.0, 0.55, 0.55), 1.5)
+	var claw_r: PackedVector2Array = PackedVector2Array([
+		Vector2(9, -3), Vector2(17, -6), Vector2(21, -9),
+		Vector2(16, -1), Vector2(21, 4), Vector2(16, 5), Vector2(10, 2),
+	])
+	draw_colored_polygon(claw_l, Color(0.28, 0.06, 0.4))
+	draw_colored_polygon(claw_r, Color(0.28, 0.06, 0.4))
+	var claw_l_outline: PackedVector2Array = claw_l.duplicate()
+	claw_l_outline.append(claw_l[0])
+	var claw_r_outline: PackedVector2Array = claw_r.duplicate()
+	claw_r_outline.append(claw_r[0])
+	draw_polyline(claw_l_outline, Color(0.6, 1.0, 0.45), 1.25)
+	draw_polyline(claw_r_outline, Color(0.6, 1.0, 0.45), 1.25)
 
-	# A pair of small antenna sensors give the silhouette more character.
-	draw_line(Vector2(-3, -10), Vector2(-5, -17), Color(1.0, 0.55, 0.55), 1.2)
-	draw_line(Vector2(3, -10), Vector2(5, -17), Color(1.0, 0.55, 0.55), 1.2)
-	draw_circle(Vector2(-5, -17), 1.2, Color(1.0, 0.4, 0.45, 0.9))
-	draw_circle(Vector2(5, -17), 1.2, Color(1.0, 0.4, 0.45, 0.9))
+	# Twin antennae keep a whisper of the old sensor pair, now bioluminescent.
+	draw_line(Vector2(-3, -11), Vector2(-4.5, -17), Color(0.65, 1.0, 0.5), 1.2)
+	draw_line(Vector2(3, -11), Vector2(4.5, -17), Color(0.65, 1.0, 0.5), 1.2)
+	draw_circle(Vector2(-4.5, -17), 1.2, Color(0.7, 1.0, 0.45, 0.9))
+	draw_circle(Vector2(4.5, -17), 1.2, Color(0.7, 1.0, 0.45, 0.9))
 
-	# A restrained bright core gives the enemy a readable, pulsing focal point.
-	draw_circle(Vector2(0, -1), 4.0, Color(1.0, 0.3, 0.35, 0.28 + 0.18 * pulse))
-	draw_circle(Vector2(0, -1), 2.0, Color(1.0, 0.85, 0.55, 0.75 + 0.25 * pulse))
-	draw_rect(Rect2(-9, 11, 18, 4), Color(0.35, 0.03, 0.1))
+	# Pulsing central eye reads as a clear, readable focal point at a glance.
+	draw_circle(Vector2(0, -1), 4.0, Color(0.55, 1.0, 0.35, 0.3 + 0.2 * pulse))
+	draw_circle(Vector2(0, -1), 2.0, Color(0.9, 1.0, 0.55, 0.8 + 0.2 * pulse))
+
+	# Three thin wriggling legs suggest a hovering, skittering gait.
+	for i in range(3):
+		var leg_x: float = (i - 1) * 4.0
+		var wag: float = sin(_time * 6.0 + _pulse_offset + i) * 1.5
+		draw_line(Vector2(leg_x, 9), Vector2(leg_x + wag, 15), Color(0.5, 0.95, 0.4, 0.8), 1.1)

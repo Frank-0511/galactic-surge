@@ -40,7 +40,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(1.0, 0.24, 0.72, 0.85)
-text = "SPACE INVADERS DDJI2"
+text = "DEFEND THE GALAXY"
 horizontal_alignment = 1
 
 [node name="TitleLabel" type="Label" parent="Control"]
@@ -60,7 +60,7 @@ theme_override_font_sizes/font_size = 40
 theme_override_colors/font_color = Color(0.35, 0.92, 1.0, 1.0)
 theme_override_constants/outline_size = 5
 theme_override_colors/font_outline_color = Color(0.02, 0.05, 0.09, 0.9)
-text = "DEFENSA ESPACIAL"
+text = "GALACTIC SURGE"
 horizontal_alignment = 1
 
 [node name="Divider" type="ColorRect" parent="Control"]

@@ -189,52 +189,82 @@ func _on_shield_timer_timeout() -> void:
 
 
 func _draw() -> void:
-	# Soft glow keeps the silhouette readable without changing its footprint.
+	# Wide ambient glow announces a bolder silhouette without padding the hitbox.
 	var glow: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -18), Vector2(-17, 16), Vector2(17, 16),
+		Vector2(0, -22), Vector2(-23, 12), Vector2(23, 12),
 	])
-	draw_colored_polygon(glow, Color(0.15, 0.75, 1.0, 0.16))
+	draw_colored_polygon(glow, Color(0.35, 0.55, 1.0, 0.14))
 
-	# Dark hull with a crisp retro-neon outline.
-	var hull: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -16), Vector2(-6, -5), Vector2(-14, 15),
-		Vector2(-5, 12), Vector2(0, 16), Vector2(5, 12),
-		Vector2(14, 15), Vector2(6, -5),
+	# Slender fuselage, narrower than the old hull so the new delta wings read clearly.
+	var fuselage: PackedVector2Array = PackedVector2Array([
+		Vector2(0, -20), Vector2(-4, -9), Vector2(-3, 3),
+		Vector2(-5, 13), Vector2(0, 16), Vector2(5, 13),
+		Vector2(3, 3), Vector2(4, -9),
 	])
-	draw_colored_polygon(hull, Color(0.08, 0.22, 0.42))
-	var hull_outline: PackedVector2Array = hull.duplicate()
-	hull_outline.append(hull[0])
-	draw_polyline(hull_outline, Color(0.35, 0.9, 1.0), 1.5)
+	draw_colored_polygon(fuselage, Color(0.08, 0.10, 0.19))
+	var fuselage_outline: PackedVector2Array = fuselage.duplicate()
+	fuselage_outline.append(fuselage[0])
+	draw_polyline(fuselage_outline, Color(0.45, 0.95, 1.0), 1.5)
 
-	# A thin highlight along the leading edge adds a touch of dimension.
-	draw_polyline(PackedVector2Array([
-		Vector2(-6, -5), Vector2(0, -16), Vector2(6, -5),
-	]), Color(0.7, 0.95, 1.0, 0.55), 1.0)
+	# Broad swept-back delta wings replace the old triangular hull for a bolder silhouette.
+	var wing_l: PackedVector2Array = PackedVector2Array([
+		Vector2(-3, -1), Vector2(-21, 9), Vector2(-15, 14), Vector2(-4, 9),
+	])
+	var wing_r: PackedVector2Array = PackedVector2Array([
+		Vector2(3, -1), Vector2(21, 9), Vector2(15, 14), Vector2(4, 9),
+	])
+	draw_colored_polygon(wing_l, Color(0.27, 0.08, 0.48))
+	draw_colored_polygon(wing_r, Color(0.27, 0.08, 0.48))
+	var wing_l_outline: PackedVector2Array = wing_l.duplicate()
+	wing_l_outline.append(wing_l[0])
+	var wing_r_outline: PackedVector2Array = wing_r.duplicate()
+	wing_r_outline.append(wing_r[0])
+	draw_polyline(wing_l_outline, Color(0.85, 0.45, 1.0), 1.25)
+	draw_polyline(wing_r_outline, Color(0.85, 0.45, 1.0), 1.25)
 
-	# Canopy and center seam add a small amount of depth.
+	# Wingtip fins add a sharper, more aggressive edge to the new profile.
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-21, 9), Vector2(-25, 15), Vector2(-17, 12),
+	]), Color(0.85, 0.45, 1.0, 0.8))
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(21, 9), Vector2(25, 15), Vector2(17, 12),
+	]), Color(0.85, 0.45, 1.0, 0.8))
+
+	# Elongated glowing canopy, larger and more forward than before.
 	var canopy: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -11), Vector2(-4, -3), Vector2(0, 5), Vector2(4, -3),
+		Vector2(0, -14), Vector2(-3.5, -4), Vector2(0, 2), Vector2(3.5, -4),
 	])
-	draw_colored_polygon(canopy, Color(0.22, 0.75, 0.95))
-	draw_polyline(PackedVector2Array([Vector2(0, -10), Vector2(0, 10)]), Color(0.55, 0.95, 1.0, 0.8), 1.0)
+	draw_colored_polygon(canopy, Color(0.28, 0.85, 1.0))
+	draw_polyline(PackedVector2Array([Vector2(0, -13), Vector2(0, 1)]), Color(0.65, 0.98, 1.0, 0.85), 1.0)
 
-	# Twin thrusters remain inside the original visual bounds.
-	draw_rect(Rect2(-10, 10, 5, 6), Color(0.95, 0.35, 0.12))
-	draw_rect(Rect2(5, 10, 5, 6), Color(0.95, 0.35, 0.12))
-	draw_rect(Rect2(-9, 14, 3, 4), Color(1.0, 0.8, 0.25))
-	draw_rect(Rect2(6, 14, 3, 4), Color(1.0, 0.8, 0.25))
+	# Wing-mounted cannons give the new silhouette a clear armament read.
+	draw_rect(Rect2(-22, 4, 6, 2.4), Color(0.55, 0.6, 0.68))
+	draw_rect(Rect2(16, 4, 6, 2.4), Color(0.55, 0.6, 0.68))
+	draw_circle(Vector2(-22, 5.2), 1.1, Color(0.85, 0.45, 1.0, 0.7))
+	draw_circle(Vector2(22, 5.2), 1.1, Color(0.85, 0.45, 1.0, 0.7))
 
-	# Flickering exhaust glow gives the engines a small bit of life.
+	# Twin wing-root engines plus a center thruster read as a proper tri-engine layout.
+	draw_rect(Rect2(-9, 9, 4, 6), Color(0.95, 0.35, 0.12))
+	draw_rect(Rect2(5, 9, 4, 6), Color(0.95, 0.35, 0.12))
+	draw_rect(Rect2(-2.5, 12, 5, 5), Color(0.95, 0.35, 0.12))
+	draw_rect(Rect2(-8, 13, 2.5, 3), Color(1.0, 0.8, 0.25))
+	draw_rect(Rect2(5.5, 13, 2.5, 3), Color(1.0, 0.8, 0.25))
+	draw_rect(Rect2(-1.7, 15, 3.4, 2.5), Color(1.0, 0.8, 0.25))
+
+	# Flickering exhaust glow across all three engines.
 	var flicker: float = 0.7 + 0.3 * absf(sin(_time * 14.0)) * absf(cos(_time * 5.0))
 	var flame_h: float = 5.0 * flicker
 	draw_colored_polygon(PackedVector2Array([
-		Vector2(-9, 18), Vector2(-7.5, 18 + flame_h), Vector2(-6, 18),
+		Vector2(-8, 17), Vector2(-6.5, 17 + flame_h), Vector2(-5, 17),
 	]), Color(1.0, 0.85, 0.3, 0.85 * flicker))
 	draw_colored_polygon(PackedVector2Array([
-		Vector2(6, 18), Vector2(7.5, 18 + flame_h), Vector2(9, 18),
+		Vector2(5, 17), Vector2(6.5, 17 + flame_h), Vector2(8, 17),
+	]), Color(1.0, 0.85, 0.3, 0.85 * flicker))
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-1, 18), Vector2(0, 18 + flame_h * 1.1), Vector2(1, 18),
 	]), Color(1.0, 0.85, 0.3, 0.85 * flicker))
 
 	# Slow-blinking wingtip nav lights (red on the left, green on the right).
 	var blink: float = 1.0 if fmod(_time, 1.0) < 0.6 else 0.2
-	draw_circle(Vector2(-14, 15), 1.4, Color(1.0, 0.25, 0.25, blink))
-	draw_circle(Vector2(14, 15), 1.4, Color(0.3, 1.0, 0.4, blink))
+	draw_circle(Vector2(-23, 12), 1.4, Color(1.0, 0.25, 0.25, blink))
+	draw_circle(Vector2(23, 12), 1.4, Color(0.3, 1.0, 0.4, blink))
