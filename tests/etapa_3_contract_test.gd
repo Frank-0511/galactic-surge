@@ -518,6 +518,8 @@ func _set_zero_display_duration(main: Node2D) -> void:
 		main.set("enemy_drop_chance", 0.0)
 	if "clear_wave_drop_chance" in main:
 		main.set("clear_wave_drop_chance", 0.0)
+	if "enemy_loot_drop_chance" in main:
+		main.set("enemy_loot_drop_chance", 0.0)
 
 
 func _finish_wave_transition(main: Node2D) -> void:

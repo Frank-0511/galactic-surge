@@ -1,6 +1,6 @@
 # main.gd
 # Coordinates the combat session, navigation states, visual and audio feedback,
-# power-up drops, and wave-transition announcements.
+# loot drops, and wave-transition announcements.
 
 extends Node2D
 
@@ -9,6 +9,8 @@ const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 5
 const BOSS_POINTS: int = 3000
+const LOOT_DROP_SCENE: PackedScene = preload("res://scenes/loot/loot_drop.tscn")
+const SCORE_LOOT_POINTS: int = 250
 const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
 const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss/boss.tscn")
 const HighScore: Script = preload("res://scripts/systems/high_score.gd")
@@ -47,18 +49,19 @@ var wave: int = 1
 ## Best score ever reached, loaded on startup and persisted to disk.
 var _high_score: int = 0
 
-## Probability of a power-up dropping when an enemy is destroyed.
-@export_range(0.0, 1.0, 0.01) var enemy_drop_chance: float = 0.04
-
-## Probability of a power-up dropping when a wave is cleared without any prior drop.
-@export_range(0.0, 1.0, 0.01) var clear_wave_drop_chance: float = 0.50
+## Loot drop probabilities and weights.
+@export_range(0.0, 1.0, 0.01) var enemy_loot_drop_chance: float = 0.18
+@export_range(0.0, 1.0, 0.01) var score_loot_weight: float = 0.45
+@export_range(0.0, 1.0, 0.01) var double_shot_loot_weight: float = 0.20
+@export_range(0.0, 1.0, 0.01) var shield_loot_weight: float = 0.15
+@export_range(0.0, 1.0, 0.01) var extra_life_loot_weight: float = 0.10
+@export_range(0.0, 1.0, 0.01) var bomb_loot_weight: float = 0.10
 
 var _session_state: SessionState = SessionState.MAIN_MENU
 var _state_before_pause: SessionState = SessionState.PLAYING
 var _session_active: bool = false
 var _mission_complete: bool = false
 var _wave_is_clean: bool = true
-var _power_up_dropped_this_wave: bool = false
 var _pending_wave_index: int = 0
 var _last_phrase_index: int = -1
 var _active_boss: Area2D = null
@@ -149,7 +152,6 @@ func _enter_main_menu() -> void:
 	_session_active = false
 	_mission_complete = false
 	_wave_is_clean = true
-	_power_up_dropped_this_wave = false
 	_session_state = SessionState.MAIN_MENU
 	_game_over.visible = false
 	_pause_menu.visible = false
@@ -212,38 +214,88 @@ func _on_enemy_destroyed(enemy: Area2D) -> void:
 		_camera.shake(3.0, 0.12)
 	score += POINTS_PER_ENEMY
 	_hud.set_score(score)
-	_try_spawn_enemy_power_up(explosion_position)
+	_try_spawn_enemy_loot(explosion_position)
 
 
-func _try_spawn_enemy_power_up(spawn_position: Vector2) -> void:
-	if _power_up_dropped_this_wave:
-		return
-	if randf() >= enemy_drop_chance:
-		return
-	_spawn_power_up(spawn_position)
+func _pick_loot_type() -> int:
+	var w_score: float = maxf(score_loot_weight, 0.0)
+	var w_double: float = maxf(double_shot_loot_weight, 0.0)
+	var w_shield: float = maxf(shield_loot_weight, 0.0)
+	var w_life: float = maxf(extra_life_loot_weight, 0.0)
+	var w_bomb: float = maxf(bomb_loot_weight, 0.0)
+	var total_weight: float = w_score + w_double + w_shield + w_life + w_bomb
+	if total_weight <= 0.0:
+		return LootDrop.Type.SCORE
+
+	var roll: float = randf() * total_weight
+	var cumulative: float = 0.0
+
+	cumulative += w_score
+	if roll < cumulative:
+		return LootDrop.Type.SCORE
+
+	cumulative += w_double
+	if roll < cumulative:
+		return LootDrop.Type.DOUBLE_SHOT
+
+	cumulative += w_shield
+	if roll < cumulative:
+		return LootDrop.Type.SHIELD
+
+	cumulative += w_life
+	if roll < cumulative:
+		return LootDrop.Type.EXTRA_LIFE
+
+	return LootDrop.Type.BOMB
 
 
-func _spawn_power_up(spawn_position: Vector2) -> void:
-	var power_up: Area2D = POWER_UP_SCENE.instantiate() as Area2D
-	if power_up == null:
-		return
-	var power_up_type: int = randi() % 2
-	power_up.configure(power_up_type, spawn_position)
-	if power_up.has_signal(&"collected"):
-		power_up.collected.connect(_on_power_up_collected)
-	add_child(power_up)
-	_power_up_dropped_this_wave = true
-
-
-func _on_power_up_collected(power_up_type: int) -> void:
+func _try_spawn_enemy_loot(spawn_position: Vector2) -> void:
 	if not _session_active:
 		return
-	match power_up_type:
-		0: # PowerUp.Type.DOUBLE_SHOT
+	if enemy_loot_drop_chance <= 0.0 or randf() >= enemy_loot_drop_chance:
+		return
+	var total_weight: float = (
+		maxf(score_loot_weight, 0.0)
+		+ maxf(double_shot_loot_weight, 0.0)
+		+ maxf(shield_loot_weight, 0.0)
+		+ maxf(extra_life_loot_weight, 0.0)
+		+ maxf(bomb_loot_weight, 0.0)
+	)
+	if total_weight <= 0.0:
+		return
+	_spawn_loot(_pick_loot_type(), spawn_position)
+
+
+func _spawn_loot(loot_type: int, spawn_position: Vector2) -> void:
+	var loot: Area2D = LOOT_DROP_SCENE.instantiate() as Area2D
+	if loot == null:
+		return
+	if loot.has_signal(&"collected"):
+		loot.collected.connect(_on_loot_collected)
+	if loot.has_method(&"configure"):
+		loot.configure(loot_type, spawn_position, _player)
+	add_child(loot)
+
+
+func _on_loot_collected(loot_type: int) -> void:
+	if not _session_active:
+		return
+	match loot_type:
+		LootDrop.Type.SCORE:
+			score += SCORE_LOOT_POINTS
+			_hud.set_score(score)
+			_visual_feedback.play_score_popup(_player.global_position, SCORE_LOOT_POINTS)
+		LootDrop.Type.DOUBLE_SHOT:
 			_player.enable_double_shot()
-		1: # PowerUp.Type.SHIELD
+			_audio_feedback.play_power_up_collected(0)
+		LootDrop.Type.SHIELD:
 			_player.activate_shield(SHIELD_DURATION)
-	_audio_feedback.play_power_up_collected(power_up_type)
+			_audio_feedback.play_power_up_collected(1)
+		LootDrop.Type.EXTRA_LIFE:
+			lives = mini(lives + 1, STARTING_LIVES)
+			_hud.set_lives(lives)
+		LootDrop.Type.BOMB:
+			_clear_enemy_bullets()
 
 
 func _on_wave_cleared(_wave_index: int) -> void:
@@ -261,9 +313,6 @@ func _on_wave_cleared(_wave_index: int) -> void:
 		_audio_feedback.stop_combat_music()
 		_wave_announcement.show_announcement(6, "¡AMENAZA COLOSAL DETECTADA!")
 		return
-	# Clear-wave fallback drop: if no power-up dropped this wave, try once more.
-	if not _power_up_dropped_this_wave and randf() < clear_wave_drop_chance:
-		_spawn_power_up(_game_layout.get_power_up_fallback_position())
 	# Enter wave transition instead of starting the next wave immediately.
 	_session_state = SessionState.WAVE_TRANSITION
 	_enemy_spawner.stop()
@@ -280,7 +329,6 @@ func _on_wave_announcement_finished() -> void:
 		return
 	wave = _pending_wave_index + 1
 	_wave_is_clean = true
-	_power_up_dropped_this_wave = false
 	_hud.set_wave(wave)
 	_update_hud()
 	_enemy_spawner.start_wave(_pending_wave_index)
@@ -407,7 +455,6 @@ func reset_session() -> void:
 	_session_active = true
 	_mission_complete = false
 	_wave_is_clean = true
-	_power_up_dropped_this_wave = false
 	_session_state = SessionState.PLAYING
 	_main_menu.visible = false
 	_game_over.visible = false
@@ -433,6 +480,12 @@ func _configure_game_layout() -> void:
 func _clear_combat_transients() -> void:
 	for transient: Node in get_tree().get_nodes_in_group(&"combat_transients"):
 		transient.queue_free()
+
+
+func _clear_enemy_bullets() -> void:
+	for bullet: Node in get_tree().get_nodes_in_group(&"enemy_bullets"):
+		if is_instance_valid(bullet):
+			bullet.queue_free()
 
 
 func _hide_mission_complete_message() -> void:

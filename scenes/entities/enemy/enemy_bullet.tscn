@@ -5,7 +5,7 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_enemy_bullet"]
 size = Vector2(4, 12)
 
-[node name="EnemyBullet" type="Area2D" groups=["combat_transients"]]
+[node name="EnemyBullet" type="Area2D" groups=["combat_transients", "enemy_bullets"]]
 process_mode = 1
 collision_layer = 8
 collision_mask = 1

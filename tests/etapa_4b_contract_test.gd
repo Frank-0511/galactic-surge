@@ -462,21 +462,23 @@ func _assert_main_integration_contract() -> bool:
 	await process_frame
 	var passed: bool = true
 
-	# Main must own the new 4B drop-chance properties.
-	if "enemy_drop_chance" not in main:
-		push_error("Main missing property: enemy_drop_chance")
-		passed = false
-	else:
-		if absf(float(main.get("enemy_drop_chance")) - ENEMY_DROP_CHANCE) > 0.001:
-			push_error("Main enemy_drop_chance must default to %f" % ENEMY_DROP_CHANCE)
+	# Main must own the new 4B drop-chance properties (legacy 4B).
+	# In Etapa 6+, power-up drops are superseded by the LootDrop system (enemy_loot_drop_chance).
+	if "enemy_loot_drop_chance" not in main:
+		if "enemy_drop_chance" not in main:
+			push_error("Main missing property: enemy_drop_chance")
 			passed = false
-	if "clear_wave_drop_chance" not in main:
-		push_error("Main missing property: clear_wave_drop_chance")
-		passed = false
-	else:
-		if absf(float(main.get("clear_wave_drop_chance")) - CLEAR_DROP_CHANCE) > 0.001:
-			push_error("Main clear_wave_drop_chance must default to %f" % CLEAR_DROP_CHANCE)
+		else:
+			if absf(float(main.get("enemy_drop_chance")) - ENEMY_DROP_CHANCE) > 0.001:
+				push_error("Main enemy_drop_chance must default to %f" % ENEMY_DROP_CHANCE)
+				passed = false
+		if "clear_wave_drop_chance" not in main:
+			push_error("Main missing property: clear_wave_drop_chance")
 			passed = false
+		else:
+			if absf(float(main.get("clear_wave_drop_chance")) - CLEAR_DROP_CHANCE) > 0.001:
+				push_error("Main clear_wave_drop_chance must default to %f" % CLEAR_DROP_CHANCE)
+				passed = false
 
 	# Main must instantiate AudioFeedback and WaveAnnouncement.
 	if main.get_node_or_null("AudioFeedback") == null:
@@ -555,51 +557,53 @@ func _assert_main_integration_contract() -> bool:
 						push_error("take_damage() must return true after shield expires")
 						passed = false
 
-		# Enemy drop at 100% chance must create exactly one pickup.
-		if "enemy_drop_chance" in main:
-			main.set("enemy_drop_chance", 1.0)
-			var pickups_before: int = _count_power_ups(main)
-			_destroy_one_enemy(main)
-			await process_frame
-			await process_frame
-			var pickups_after_enemy: int = _count_power_ups(main)
-			if pickups_after_enemy - pickups_before != 1:
-				push_error("enemy_drop_chance = 1.0 must create exactly one pickup, got %d" % (pickups_after_enemy - pickups_before))
-				passed = false
-			# A second enemy destroyed in the same wave must NOT create a second pickup.
-			var pickups_before_second: int = _count_power_ups(main)
-			_destroy_one_enemy(main)
-			await process_frame
-			await process_frame
-			var pickups_after_second: int = _count_power_ups(main)
-			if pickups_after_second - pickups_before_second != 0:
-				push_error("Only one power-up may drop per wave")
-				passed = false
+		# Legacy 4B power-up drop assertions (superseded in Etapa 6+ by LootDrop).
+		if "enemy_loot_drop_chance" not in main:
+			# Enemy drop at 100% chance must create exactly one pickup.
+			if "enemy_drop_chance" in main:
+				main.set("enemy_drop_chance", 1.0)
+				var pickups_before: int = _count_power_ups(main)
+				_destroy_one_enemy(main)
+				await process_frame
+				await process_frame
+				var pickups_after_enemy: int = _count_power_ups(main)
+				if pickups_after_enemy - pickups_before != 1:
+					push_error("enemy_drop_chance = 1.0 must create exactly one pickup, got %d" % (pickups_after_enemy - pickups_before))
+					passed = false
+				# A second enemy destroyed in the same wave must NOT create a second pickup.
+				var pickups_before_second: int = _count_power_ups(main)
+				_destroy_one_enemy(main)
+				await process_frame
+				await process_frame
+				var pickups_after_second: int = _count_power_ups(main)
+				if pickups_after_second - pickups_before_second != 0:
+					push_error("Only one power-up may drop per wave")
+					passed = false
 
-		# Clear-wave fallback drop at 100% with no prior drop must create exactly one.
-		if main.has_method("reset_session"):
-			main.call("reset_session")
-			await process_frame
-		if "enemy_drop_chance" in main and "clear_wave_drop_chance" in main:
-			main.set("enemy_drop_chance", 0.0)
-			main.set("clear_wave_drop_chance", 1.0)
-			var pickups_before_clear: int = _count_power_ups(main)
-			_clear_current_wave(main)
-			await process_frame
-			await process_frame
-			var pickups_after_clear: int = _count_power_ups(main)
-			if pickups_after_clear - pickups_before_clear != 1:
-				push_error("clear_wave_drop_chance = 1.0 must create exactly one pickup, got %d" % (pickups_after_clear - pickups_before_clear))
-				passed = false
+			# Clear-wave fallback drop at 100% with no prior drop must create exactly one.
+			if main.has_method("reset_session"):
+				main.call("reset_session")
+				await process_frame
+			if "enemy_drop_chance" in main and "clear_wave_drop_chance" in main:
+				main.set("enemy_drop_chance", 0.0)
+				main.set("clear_wave_drop_chance", 1.0)
+				var pickups_before_clear: int = _count_power_ups(main)
+				_clear_current_wave(main)
+				await process_frame
+				await process_frame
+				var pickups_after_clear: int = _count_power_ups(main)
+				if pickups_after_clear - pickups_before_clear != 1:
+					push_error("clear_wave_drop_chance = 1.0 must create exactly one pickup, got %d" % (pickups_after_clear - pickups_before_clear))
+					passed = false
 
-			# The clear-wave fallback must use GameLayout, not the historical Vector2(300, 160).
-			var main_source: String = FileAccess.get_file_as_string("res://scenes/main/main.gd")
-			if main_source.contains("Vector2(300, 160)"):
-				push_error("Main must not use the historical Vector2(300, 160) for the fallback drop")
-				passed = false
-			if not main_source.contains("get_power_up_fallback_position()"):
-				push_error("Main must use GameLayout.get_power_up_fallback_position() for the fallback drop")
-				passed = false
+				# The clear-wave fallback must use GameLayout, not the historical Vector2(300, 160).
+				var main_source: String = FileAccess.get_file_as_string("res://scenes/main/main.gd")
+				if main_source.contains("Vector2(300, 160)"):
+					push_error("Main must not use the historical Vector2(300, 160) for the fallback drop")
+					passed = false
+				if not main_source.contains("get_power_up_fallback_position()"):
+					push_error("Main must use GameLayout.get_power_up_fallback_position() for the fallback drop")
+					passed = false
 
 		# return_to_main_menu must clean up everything.
 		if main.has_method("return_to_main_menu"):
@@ -660,6 +664,8 @@ func _assert_wave_transition_contract() -> bool:
 			# Use zero-duration announcement so it finishes on the next frame.
 			if "display_duration" in announcement:
 				announcement.set("display_duration", 0.0)
+			if "enemy_loot_drop_chance" in main:
+				main.set("enemy_loot_drop_chance", 0.0)
 			# Observation 1: after clearing wave 1 and one frame, the transition is
 			# still active: wave 1, visible announcement, and no enemies.
 			_clear_current_wave(main)
