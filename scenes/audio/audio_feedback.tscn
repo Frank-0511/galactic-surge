@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scenes/audio/audio_feedback.gd" id="1"]
 [ext_resource type="AudioStream" path="res://assets/audio/music/combat_8bit_space_shooter.mp3" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/player_damage.wav" id="6"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/pickup_double_shot.wav" id="7"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/pickup_shield.wav" id="8"]
+[ext_resource type="AudioStream" path="res://assets/audio/music/boss_battle_8bit.mp3" id="9_boss_music"]
 
 [node name="AudioFeedback" type="Node"]
 process_mode = 3
@@ -15,6 +16,11 @@ script = ExtResource("1")
 
 [node name="CombatMusic" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("2")
+autoplay = false
+volume_db = -10.89
+
+[node name="BossMusic" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("9_boss_music")
 autoplay = false
 volume_db = -10.89
 

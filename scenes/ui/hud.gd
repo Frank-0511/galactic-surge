@@ -13,11 +13,30 @@ signal main_menu_requested
 @onready var _lives_label: Label = $Margin/LivesLabel
 @onready var _score_label: Label = $Margin/ScoreLabel
 @onready var _wave_label: Label = $Margin/WaveLabel
+@onready var _boss_container: Control = $BossContainer
+@onready var _boss_name_label: Label = $BossContainer/BossNameLabel
+@onready var _boss_progress_bar: ProgressBar = $BossContainer/BossProgressBar
 @onready var _victory_label: Label = $VictoryLabel
 @onready var _victory_score_label: Label = $VictoryScoreLabel
 @onready var _new_record_label: Label = $NewRecordLabel
 @onready var _retry_button: Button = $RetryButton
 @onready var _main_menu_button: Button = $MainMenuButton
+
+
+func show_boss_health_bar(boss_name: String, max_health: int) -> void:
+	_boss_name_label.text = "BOSS: %s" % boss_name
+	_boss_progress_bar.max_value = max_health
+	_boss_progress_bar.value = max_health
+	_boss_container.visible = true
+
+
+func update_boss_health(current: int, max_health: int) -> void:
+	_boss_progress_bar.max_value = max_health
+	_boss_progress_bar.value = current
+
+
+func hide_boss_health_bar() -> void:
+	_boss_container.visible = false
 
 
 func set_lives(lives: int) -> void:
@@ -52,6 +71,7 @@ func hide_mission_complete() -> void:
 	_new_record_label.visible = false
 	_retry_button.visible = false
 	_main_menu_button.visible = false
+	hide_boss_health_bar()
 
 
 func _on_retry_button_pressed() -> void:

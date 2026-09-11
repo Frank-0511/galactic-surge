@@ -346,9 +346,15 @@ func _assert_mission_complete_contract() -> bool:
 			_set_zero_display_duration(main)
 			for wave_index: int in TOTAL_WAVES:
 				_clear_current_wave(main)
-				if wave_index < TOTAL_WAVES - 1:
-					await _finish_wave_transition(main)
-			# After 5 waves, mission must be complete.
+				await _finish_wave_transition(main)
+			# In Etapa 5+, defeat the boss if present to reach mission complete.
+			for child: Node in main.get_children():
+				if child is Area2D and child.has_method("take_damage"):
+					child.call("take_damage", 30)
+					await process_frame
+					await process_frame
+					break
+			# After 5 waves and boss battle, mission must be complete.
 			if not main.has_method("is_mission_complete") or not main.is_mission_complete():
 				push_error("Main must report mission complete after clearing all waves")
 				passed = false

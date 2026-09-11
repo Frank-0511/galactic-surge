@@ -8,7 +8,9 @@ const STARTING_LIVES: int = 3
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 5
+const BOSS_POINTS: int = 3000
 const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
+const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss/boss.tscn")
 const HighScore: Script = preload("res://scripts/systems/high_score.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
@@ -20,7 +22,7 @@ const _RADAR_PHRASES: Array[String] = [
 	"ENEMIGOS APROXIMÁNDOSE",
 ]
 
-enum SessionState { MAIN_MENU, PLAYING, PAUSED, WAVE_TRANSITION, GAME_OVER, MISSION_COMPLETE }
+enum SessionState { MAIN_MENU, PLAYING, PAUSED, WAVE_TRANSITION, BOSS_BATTLE, GAME_OVER, MISSION_COMPLETE }
 
 ## Bullet scene to provide to the player.
 var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tscn")
@@ -52,12 +54,14 @@ var _high_score: int = 0
 @export_range(0.0, 1.0, 0.01) var clear_wave_drop_chance: float = 0.50
 
 var _session_state: SessionState = SessionState.MAIN_MENU
+var _state_before_pause: SessionState = SessionState.PLAYING
 var _session_active: bool = false
 var _mission_complete: bool = false
 var _wave_is_clean: bool = true
 var _power_up_dropped_this_wave: bool = false
 var _pending_wave_index: int = 0
 var _last_phrase_index: int = -1
+var _active_boss: Area2D = null
 
 var _game_layout: GameLayout = GameLayout.new()
 
@@ -88,7 +92,7 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_echo() or not event.is_action_pressed(&"pause"):
 		return
-	if _session_state == SessionState.PLAYING:
+	if _session_state == SessionState.PLAYING or _session_state == SessionState.BOSS_BATTLE:
 		pause_session()
 	elif _session_state == SessionState.PAUSED:
 		resume_session()
@@ -104,8 +108,9 @@ func start_session() -> void:
 
 
 func pause_session() -> void:
-	if _session_state != SessionState.PLAYING:
+	if _session_state != SessionState.PLAYING and _session_state != SessionState.BOSS_BATTLE:
 		return
+	_state_before_pause = _session_state
 	_session_state = SessionState.PAUSED
 	_pause_menu.show_menu()
 	_audio_feedback.set_session_paused(true)
@@ -118,7 +123,7 @@ func resume_session() -> void:
 	get_tree().paused = false
 	_pause_menu.visible = false
 	_audio_feedback.set_session_paused(false)
-	_session_state = SessionState.PLAYING
+	_session_state = _state_before_pause
 
 
 func return_to_main_menu() -> void:
@@ -129,11 +134,14 @@ func _enter_main_menu() -> void:
 	get_tree().paused = false
 	_enemy_spawner.stop()
 	_enemy_spawner.clear_formation()
+	_clear_boss()
 	_clear_combat_transients()
 	_visual_feedback.clear_effects()
 	_wave_announcement.cancel_announcement()
 	_pending_wave_index = 0
 	_audio_feedback.stop_combat_music()
+	_audio_feedback.stop_boss_music()
+	_hud.hide_boss_health_bar()
 	_player.clear_power_ups()
 	lives = STARTING_LIVES
 	score = 0
@@ -246,7 +254,12 @@ func _on_wave_cleared(_wave_index: int) -> void:
 		_hud.set_score(score)
 		_visual_feedback.play_score_popup(_player.global_position + Vector2(0, -50), CLEAN_WAVE_BONUS, true)
 	if wave >= TOTAL_WAVES:
-		_complete_mission()
+		# Transition to Boss encounter instead of completing mission directly
+		_session_state = SessionState.WAVE_TRANSITION
+		_enemy_spawner.stop()
+		_pending_wave_index = TOTAL_WAVES
+		_audio_feedback.stop_combat_music()
+		_wave_announcement.show_announcement(6, "¡AMENAZA COLOSAL DETECTADA!")
 		return
 	# Clear-wave fallback drop: if no power-up dropped this wave, try once more.
 	if not _power_up_dropped_this_wave and randf() < clear_wave_drop_chance:
@@ -262,6 +275,9 @@ func _on_wave_cleared(_wave_index: int) -> void:
 func _on_wave_announcement_finished() -> void:
 	if _session_state != SessionState.WAVE_TRANSITION or not _session_active:
 		return
+	if _pending_wave_index >= TOTAL_WAVES:
+		_start_boss_battle()
+		return
 	wave = _pending_wave_index + 1
 	_wave_is_clean = true
 	_power_up_dropped_this_wave = false
@@ -269,6 +285,60 @@ func _on_wave_announcement_finished() -> void:
 	_update_hud()
 	_enemy_spawner.start_wave(_pending_wave_index)
 	_session_state = SessionState.PLAYING
+
+
+func _start_boss_battle() -> void:
+	_session_state = SessionState.BOSS_BATTLE
+	_clear_boss()
+	var boss: Area2D = BOSS_SCENE.instantiate() as Area2D
+	if boss == null:
+		return
+	_active_boss = boss
+	boss.global_position = Vector2(get_viewport().get_visible_rect().size.x * 0.5, -100.0)
+	boss.health_changed.connect(_on_boss_health_changed)
+	boss.boss_defeated.connect(_on_boss_defeated)
+	boss.boss_contacted_player.connect(_on_boss_contacted_player)
+	add_child(boss)
+	var max_hp: int = int(boss.get("max_health")) if "max_health" in boss else 30
+	_hud.show_boss_health_bar("NAVE NODRIZA NEXUS", max_hp)
+	_audio_feedback.stop_combat_music()
+	_audio_feedback.start_boss_music()
+
+
+func _on_boss_health_changed(current: int, max_hp: int) -> void:
+	_hud.update_boss_health(current, max_hp)
+	_camera.shake(4.0, 0.15)
+
+
+func _on_boss_contacted_player(player: Node2D) -> void:
+	_request_player_damage(player)
+
+
+func _on_boss_defeated(boss: Area2D) -> void:
+	if not _session_active:
+		return
+	var explosion_pos: Vector2 = boss.global_position
+	_visual_feedback.play_enemy_explosion(explosion_pos)
+	_visual_feedback.play_enemy_explosion(explosion_pos + Vector2(-35, 15))
+	_visual_feedback.play_enemy_explosion(explosion_pos + Vector2(35, -15))
+	_visual_feedback.play_score_popup(explosion_pos, BOSS_POINTS, true)
+	_camera.shake(8.0, 0.35)
+	_audio_feedback.play_enemy_explosion()
+	score += BOSS_POINTS
+	_hud.set_score(score)
+	_audio_feedback.stop_boss_music()
+	_hud.hide_boss_health_bar()
+	_active_boss = null
+	_complete_mission()
+
+
+func _clear_boss() -> void:
+	if is_instance_valid(_active_boss):
+		_active_boss.queue_free()
+	_active_boss = null
+	for child: Node in get_children():
+		if child is Area2D and child.has_signal(&"boss_defeated"):
+			child.queue_free()
 
 
 func _pick_radar_phrase() -> String:
@@ -286,8 +356,11 @@ func _end_session() -> void:
 	_session_state = SessionState.GAME_OVER
 	_player.set_gameplay_enabled(false)
 	_enemy_spawner.stop()
+	_clear_boss()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
+	_audio_feedback.stop_boss_music()
+	_hud.hide_boss_health_bar()
 	var is_new_record: bool = _update_high_score_if_needed()
 	_game_over.show_game_over(score, is_new_record)
 
@@ -298,8 +371,11 @@ func _complete_mission() -> void:
 	_session_state = SessionState.MISSION_COMPLETE
 	_player.set_gameplay_enabled(false)
 	_enemy_spawner.stop()
+	_clear_boss()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
+	_audio_feedback.stop_boss_music()
+	_hud.hide_boss_health_bar()
 	var is_new_record: bool = _update_high_score_if_needed()
 	_hud.show_mission_complete(score, is_new_record)
 
@@ -316,11 +392,14 @@ func reset_session() -> void:
 	get_tree().paused = false
 	_enemy_spawner.stop()
 	_enemy_spawner.clear_formation()
+	_clear_boss()
 	_clear_combat_transients()
 	_visual_feedback.clear_effects()
 	_wave_announcement.cancel_announcement()
 	_pending_wave_index = 0
 	_audio_feedback.stop_combat_music()
+	_audio_feedback.stop_boss_music()
+	_hud.hide_boss_health_bar()
 	_player.clear_power_ups()
 	lives = STARTING_LIVES
 	score = 0

@@ -1,10 +1,11 @@
 # audio_feedback.gd
-# Owns the combat music and SFX players and exposes presentation intents
+# Owns the combat music, boss music and SFX players and exposes presentation intents
 # for Main to trigger. Does not modify lives, waves, score or power-ups.
 
 extends Node
 
 @onready var _combat_music: AudioStreamPlayer = $CombatMusic
+@onready var _boss_music: AudioStreamPlayer = $BossMusic
 @onready var _player_shot: AudioStreamPlayer = $PlayerShot
 @onready var _player_double_shot: AudioStreamPlayer = $PlayerDoubleShot
 @onready var _enemy_explosion: AudioStreamPlayer = $EnemyExplosion
@@ -20,10 +21,12 @@ const _POWER_UP_SHIELD: int = 1
 
 
 func _ready() -> void:
-	# Combat music must loop for the whole session. The imported AudioStreamMP3
+	# Combat and boss music must loop for the whole session. The imported AudioStreamMP3
 	# defaults to loop = false, so enable it on the assigned stream.
 	if _combat_music.stream is AudioStreamMP3:
 		(_combat_music.stream as AudioStreamMP3).loop = true
+	if _boss_music.stream is AudioStreamMP3:
+		(_boss_music.stream as AudioStreamMP3).loop = true
 
 
 func start_combat_music() -> void:
@@ -36,8 +39,19 @@ func stop_combat_music() -> void:
 	_combat_music.stream_paused = false
 
 
+func start_boss_music() -> void:
+	if not _boss_music.playing:
+		_boss_music.play()
+
+
+func stop_boss_music() -> void:
+	_boss_music.stop()
+	_boss_music.stream_paused = false
+
+
 func set_session_paused(paused: bool) -> void:
 	_combat_music.stream_paused = paused
+	_boss_music.stream_paused = paused
 
 
 func play_player_shot(is_double_shot: bool) -> void:
