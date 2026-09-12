@@ -27,11 +27,19 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var move_dir: Vector2 = direction.normalized() if direction != Vector2.ZERO else Vector2.UP
-	position += move_dir * speed * delta
+	global_position += move_dir * speed * delta
 
-	# Self-destruct when off-screen (bounds with safe margin around 720x960 viewport).
-	if position.y < -50.0 or position.y > 1020.0 or position.x < -50.0 or position.x > 770.0:
+	# Self-destruct when off-screen (dynamic viewport bounds with safe margin).
+	var max_x: float = 1180.0
+	var max_y: float = 1060.0
+	if is_inside_tree():
+		var vp: Rect2 = get_viewport_rect()
+		if vp.size.x > 0.0:
+			max_x = vp.end.x + 80.0
+			max_y = vp.end.y + 80.0
+	if global_position.y < -80.0 or global_position.y > max_y or global_position.x < -80.0 or global_position.x > max_x:
 		queue_free()
+
 
 
 func _on_area_entered(area: Area2D) -> void:

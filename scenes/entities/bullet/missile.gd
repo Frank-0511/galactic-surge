@@ -48,11 +48,19 @@ func _process(delta: float) -> void:
 
 	# Move forward along current facing direction.
 	var forward: Vector2 = Vector2.UP.rotated(rotation)
-	position += forward * _current_speed * delta
+	global_position += forward * _current_speed * delta
 
 	# Destroy when moving well beyond screen bounds.
-	if position.y < -100.0 or position.y > 1060.0 or position.x < -100.0 or position.x > 820.0:
+	var max_x: float = 1200.0
+	var max_y: float = 1080.0
+	if is_inside_tree():
+		var vp: Rect2 = get_viewport_rect()
+		if vp.size.x > 0.0:
+			max_x = vp.end.x + 100.0
+			max_y = vp.end.y + 100.0
+	if global_position.y < -100.0 or global_position.y > max_y or global_position.x < -100.0 or global_position.x > max_x:
 		queue_free()
+
 
 	queue_redraw()
 

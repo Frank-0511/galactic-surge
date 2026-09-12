@@ -125,12 +125,19 @@ func _assert_spread_bullet_contract() -> bool:
 		push_error("SpreadBullet must emit enemy_hit on enemy contact")
 		passed = false
 
-	if is_instance_valid(enemy):
-		enemy.queue_free()
-	if is_instance_valid(bullet):
-		bullet.queue_free()
+	# Test right screen edge persistence (1080 viewport bounds)
+	var right_bullet: Area2D = packed.instantiate() as Area2D
+	right_bullet.global_position = Vector2(1000.0, 500.0)
+	root.add_child(right_bullet)
+	right_bullet.call("_process", 0.016)
+	if not is_instance_valid(right_bullet) or right_bullet.is_queued_for_deletion():
+		push_error("SpreadBullet at x=1000.0 must not be destroyed off-screen on 1080px playfield")
+		passed = false
+	if is_instance_valid(right_bullet):
+		right_bullet.queue_free()
 
 	return passed
+
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +197,19 @@ func _assert_missile_contract() -> bool:
 	if is_instance_valid(missile):
 		missile.queue_free()
 
+	# Test right screen edge persistence (1080 viewport bounds)
+	var right_missile: Area2D = packed.instantiate() as Area2D
+	right_missile.global_position = Vector2(1000.0, 500.0)
+	root.add_child(right_missile)
+	right_missile.call("_process", 0.016)
+	if not is_instance_valid(right_missile) or right_missile.is_queued_for_deletion():
+		push_error("Missile at x=1000.0 must not be destroyed off-screen on 1080px playfield")
+		passed = false
+	if is_instance_valid(right_missile):
+		right_missile.queue_free()
+
 	return passed
+
 
 
 # ---------------------------------------------------------------------------
