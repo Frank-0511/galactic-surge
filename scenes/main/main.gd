@@ -357,6 +357,8 @@ func _on_loot_collected(loot_type: int) -> void:
 func _on_wave_cleared(_wave_index: int) -> void:
 	if not _session_active:
 		return
+	if _starfield != null and _starfield.has_method(&"trigger_warp_boost"):
+		_starfield.trigger_warp_boost(1.5, 4.0)
 	if _wave_is_clean:
 		score += CLEAN_WAVE_BONUS
 		_hud.set_score(score)

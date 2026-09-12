@@ -140,6 +140,8 @@ func _assert_initial_formation_viewport(main: Node2D) -> bool:
 	var formation_origin: Vector2 = layout.get_enemy_formation_origin()
 	if spawner.has_method("set_formation_layout"):
 		spawner.call("set_formation_layout", formation_origin, formation_origin.y)
+	if "fly_in_enabled" in spawner:
+		spawner.set("fly_in_enabled", false)
 	spawner.spawn_formation()
 	var enemies: Array[Area2D] = _get_formation_enemies(spawner)
 	if enemies.size() != 18:

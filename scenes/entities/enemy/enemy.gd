@@ -3,11 +3,16 @@
 
 extends Area2D
 
+const VectorMath: Script = preload("res://scripts/math/vector_math.gd")
+
 ## Emitted once when the enemy has been destroyed.
 signal destroyed(enemy: Area2D)
 
 ## Emitted when this enemy makes direct contact with the player.
 signal player_contacted(player: Node2D)
+
+## Emitted when the enemy completes its fly-in entrance curve.
+signal fly_in_completed
 
 ## Minimum delay in seconds before a shot.
 @export var min_shoot_cooldown: float = 1.25
@@ -27,21 +32,73 @@ var _destroyed: bool = false
 var _time: float = 0.0
 var _pulse_offset: float = 0.0
 
+var _is_flying_in: bool = false
+var _fly_in_p0: Vector2 = Vector2.ZERO
+var _fly_in_p1: Vector2 = Vector2.ZERO
+var _fly_in_p2: Vector2 = Vector2.ZERO
+var _fly_in_p3: Vector2 = Vector2.ZERO
+var _fly_in_duration: float = 1.0
+var _fly_in_elapsed: float = 0.0
+var _fly_in_delay: float = 0.0
+
 
 func _ready() -> void:
 	_pulse_offset = randf_range(0.0, TAU)
-	_schedule_next_shot()
+	if not _is_flying_in:
+		_schedule_next_shot()
 
 
 func _process(delta: float) -> void:
+	if _is_flying_in:
+		_fly_in_elapsed += delta
+		if _fly_in_elapsed >= _fly_in_delay:
+			var effective_t: float = (_fly_in_elapsed - _fly_in_delay) / _fly_in_duration
+			var t: float = clampf(effective_t, 0.0, 1.0)
+			position = VectorMath.cubic_bezier(_fly_in_p0, _fly_in_p1, _fly_in_p2, _fly_in_p3, t)
+			var deriv: Vector2 = VectorMath.cubic_bezier_derivative(_fly_in_p0, _fly_in_p1, _fly_in_p2, _fly_in_p3, t)
+			rotation = clampf(deriv.x * 0.0015, -0.45, 0.45) * (1.0 - t)
+			if t >= 1.0:
+				_is_flying_in = false
+				rotation = 0.0
+				position = _fly_in_p3
+				_schedule_next_shot()
+				fly_in_completed.emit()
 	_time += delta
 	queue_redraw()
+
+
+func start_fly_in(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, duration: float, delay: float = 0.0) -> void:
+	_fly_in_p0 = p0
+	_fly_in_p1 = p1
+	_fly_in_p2 = p2
+	_fly_in_p3 = p3
+	_fly_in_duration = maxf(duration, 0.001)
+	_fly_in_delay = maxf(delay, 0.0)
+	_fly_in_elapsed = 0.0
+	_is_flying_in = true
+	position = p0
+	if _shoot_cooldown != null:
+		_shoot_cooldown.stop()
+
+
+func is_flying_in() -> bool:
+	return _is_flying_in
+
+
+func cancel_fly_in() -> void:
+	if not _is_flying_in:
+		return
+	_is_flying_in = false
+	position = _fly_in_p3
+	rotation = 0.0
+	_schedule_next_shot()
 
 
 func destroy() -> void:
 	if _destroyed:
 		return
 	_destroyed = true
+	_is_flying_in = false
 	destroyed.emit(self)
 	queue_free()
 

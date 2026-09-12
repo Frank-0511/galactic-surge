@@ -9,8 +9,12 @@ const FAR_SPEED: float = 18.0
 const NEAR_SPEED: float = 72.0
 const RANDOM_SEED: int = 4_204_021
 
+## Speed multiplier for scroll speed (accelerated during warp boosts).
+var speed_multiplier: float = 1.0
+
 var _far_stars: Array[Vector2] = []
 var _near_stars: Array[Vector2] = []
+var _warp_tween: Tween = null
 
 
 func _ready() -> void:
@@ -19,18 +23,31 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var viewport_rect: Rect2 = get_viewport_rect()
-	_advance_layer(_far_stars, FAR_SPEED, delta, viewport_rect)
-	_advance_layer(_near_stars, NEAR_SPEED, delta, viewport_rect)
+	_advance_layer(_far_stars, FAR_SPEED * speed_multiplier, delta, viewport_rect)
+	_advance_layer(_near_stars, NEAR_SPEED * speed_multiplier, delta, viewport_rect)
 	queue_redraw()
 
 
 func reset_scroll() -> void:
+	if _warp_tween != null and _warp_tween.is_valid():
+		_warp_tween.kill()
+	speed_multiplier = 1.0
 	var random: RandomNumberGenerator = RandomNumberGenerator.new()
 	random.seed = RANDOM_SEED
 	var viewport_rect: Rect2 = get_viewport_rect()
 	_far_stars = _generate_stars(random, FAR_STAR_COUNT, viewport_rect)
 	_near_stars = _generate_stars(random, NEAR_STAR_COUNT, viewport_rect)
 	queue_redraw()
+
+
+## Triggers a warp speed surge effect using a Tween, accelerating scroll and easing back.
+func trigger_warp_boost(duration: float = 1.5, max_multiplier: float = 4.0) -> void:
+	if _warp_tween != null and _warp_tween.is_valid():
+		_warp_tween.kill()
+	var d: float = maxf(duration, 0.1)
+	_warp_tween = create_tween()
+	_warp_tween.tween_property(self, "speed_multiplier", max_multiplier, d * 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_warp_tween.tween_property(self, "speed_multiplier", 1.0, d * 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 
 func get_layer_count() -> int:
