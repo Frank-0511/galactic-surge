@@ -28,6 +28,7 @@ func _run_contracts() -> void:
 	var spawner_passed: bool = await _assert_spawner_contract()
 	var starfield_passed: bool = await _assert_starfield_warp_contract()
 	var main_passed: bool = await _assert_main_warp_integration_contract()
+	var bounds_passed: bool = await _assert_main_formation_bounds_contract()
 
 	var all_passed: bool = (
 		vmath_passed
@@ -36,6 +37,7 @@ func _run_contracts() -> void:
 		and spawner_passed
 		and starfield_passed
 		and main_passed
+		and bounds_passed
 	)
 
 	if all_passed:
@@ -275,8 +277,8 @@ func _assert_enemy_fly_in_contract() -> bool:
 	if not enemy.call("is_flying_in"):
 		push_error("Enemy is_flying_in() must return true after start_fly_in")
 		passed = false
-	if not enemy.position.is_equal_approx(p0):
-		push_error("Enemy position must be p0 immediately after start_fly_in")
+	if not enemy.global_position.is_equal_approx(p0):
+		push_error("Enemy global_position must be p0 immediately after start_fly_in")
 		passed = false
 
 	# Halfway process
@@ -285,8 +287,8 @@ func _assert_enemy_fly_in_contract() -> bool:
 		push_error("Enemy should still be flying in at t=0.5")
 		passed = false
 	var expected_pos: Vector2 = VectorMath.cubic_bezier(p0, p1, p2, p3, 0.5)
-	if not enemy.position.is_equal_approx(expected_pos):
-		push_error("Enemy position at t=0.5 must match Bézier point")
+	if not enemy.global_position.is_equal_approx(expected_pos):
+		push_error("Enemy global_position at t=0.5 must match Bézier point")
 		passed = false
 
 	# Complete fly in
@@ -294,8 +296,8 @@ func _assert_enemy_fly_in_contract() -> bool:
 	if enemy.call("is_flying_in"):
 		push_error("Enemy is_flying_in() must be false when t >= 1.0")
 		passed = false
-	if not enemy.position.is_equal_approx(p3):
-		push_error("Enemy position must equal p3 at finish")
+	if not enemy.global_position.is_equal_approx(p3):
+		push_error("Enemy global_position must equal p3 at finish")
 		passed = false
 	if absf(enemy.rotation) > 0.001:
 		push_error("Enemy rotation must reset to 0.0 at finish")
@@ -307,7 +309,7 @@ func _assert_enemy_fly_in_contract() -> bool:
 	# Test cancel_fly_in
 	enemy.call("start_fly_in", p0, p1, p2, p3, 1.0, 0.0)
 	enemy.call("cancel_fly_in")
-	if enemy.call("is_flying_in") or not enemy.position.is_equal_approx(p3) or absf(enemy.rotation) > 0.001:
+	if enemy.call("is_flying_in") or not enemy.global_position.is_equal_approx(p3) or absf(enemy.rotation) > 0.001:
 		push_error("cancel_fly_in must immediately reset to p3 with rotation 0 and is_flying_in false")
 		passed = false
 
@@ -456,3 +458,76 @@ func _assert_main_warp_integration_contract() -> bool:
 	root.remove_child(main)
 	main.queue_free()
 	return passed
+
+
+# ---------------------------------------------------------------------------
+# 7. Main Formation Bounds & Stability Contract
+# ---------------------------------------------------------------------------
+
+func _assert_main_formation_bounds_contract() -> bool:
+	if not ResourceLoader.exists(MAIN_PATH):
+		return false
+
+	var packed: PackedScene = load(MAIN_PATH) as PackedScene
+	var main: Node2D = packed.instantiate() as Node2D
+	root.add_child(main)
+	await process_frame
+
+	main.call("start_session")
+	var spawner: Node2D = main.get_node_or_null("EnemySpawner") as Node2D
+	if spawner == null:
+		push_error("Main missing EnemySpawner child in bounds contract")
+		root.remove_child(main)
+		main.queue_free()
+		return false
+
+	var enemies: Array[Node] = []
+	for child: Node in spawner.get_children():
+		if child is Area2D and child.is_in_group("enemies"):
+			enemies.append(child)
+
+	if enemies.is_empty():
+		push_error("Main EnemySpawner must have enemies after start_session")
+		root.remove_child(main)
+		main.queue_free()
+		return false
+
+	# Fast forward fly-in for all enemies
+	for enemy_node: Node in enemies:
+		if enemy_node.has_method("_process"):
+			enemy_node.call("_process", 5.0)
+
+	await process_frame
+	await process_frame
+
+	var passed: bool = true
+	var vp_rect: Rect2 = main.get_viewport().get_visible_rect()
+	var initial_y: float = -1.0
+
+	for enemy_node: Node in enemies:
+		var enemy: Area2D = enemy_node as Area2D
+		# All enemies must be strictly within viewport horizontally and in upper playfield
+		if enemy.global_position.x < vp_rect.position.x or enemy.global_position.x > vp_rect.end.x:
+			push_error("Enemy at global_position %s is outside horizontal viewport [0, %f]" % [enemy.global_position, vp_rect.end.x])
+			passed = false
+		if enemy.global_position.y < vp_rect.position.y or enemy.global_position.y > vp_rect.end.y * 0.6:
+			push_error("Enemy at global_position %s is outside upper playfield [0, %f]" % [enemy.global_position, vp_rect.end.y * 0.6])
+			passed = false
+
+	if not enemies.is_empty() and enemies[0] is Area2D:
+		initial_y = (enemies[0] as Area2D).position.y
+
+	# Simulate 10 frames of spawner movement
+	for frame_idx: int in range(10):
+		spawner.call("_process", 0.016)
+
+	if not enemies.is_empty() and enemies[0] is Area2D:
+		var current_y: float = (enemies[0] as Area2D).position.y
+		if absf(current_y - initial_y) > 32.0:
+			push_error("Enemies must not rapidly descend off screen; initial y was %f, after 10 frames got %f" % [initial_y, current_y])
+			passed = false
+
+	root.remove_child(main)
+	main.queue_free()
+	return passed
+
