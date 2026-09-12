@@ -1,7 +1,7 @@
 # boss.gd
 # Final boss entity ("Nave Nodriza Nexus") for Etapa 5.
 # Autonomous Area2D in group "enemies" with vector neon art, phase-based attack patterns,
-# hit flash feedback, dynamic core pulse, and health-based defeat signaling.
+# dynamic banking tilt, sinusoidal cruise oscillation, dive maneuvers, and health-based defeat signaling.
 
 extends Area2D
 
@@ -14,11 +14,23 @@ signal boss_defeated(boss: Area2D)
 ## Emitted when the boss makes direct physical contact with the player ship.
 signal boss_contacted_player(player: Node2D)
 
+## Movement states for autonomous flight navigation.
+enum MovementState {
+	ENTERING,
+	CRUISE,
+	DIVE_TELEGRAPH,
+	DIVE_DESCENT,
+	DIVE_ASCENT,
+}
+
 ## Maximum health points.
 @export var max_health: int = 30
 
 ## Projectile scene used for boss attacks.
 @export var boss_bullet_scene: PackedScene = preload("res://scenes/entities/boss/boss_bullet.tscn")
+
+## Base hover elevation in cruise mode.
+@export var base_y: float = 140.0
 
 ## Current health points.
 var health: int = 30
@@ -29,24 +41,33 @@ var is_enraged: bool = false
 
 @onready var _shoot_timer: Timer = $ShootTimer
 
+var _state: MovementState = MovementState.ENTERING
 var _is_defeated: bool = false
 var _is_entering: bool = true
 var _target_y: float = 140.0
+var _base_y: float = 140.0
 var _time: float = 0.0
 var _hit_flash_time: float = 0.0
 var _move_direction: float = 1.0
 var _left_margin: float = 110.0
 var _right_margin: float = 610.0
 
+var _dive_cooldown: float = 7.5
+var _telegraph_timer: float = 0.0
+var _dive_target: Vector2 = Vector2.ZERO
+
 
 func _ready() -> void:
 	health = max_health
 	current_health = max_health
+	_base_y = base_y
+	_target_y = _base_y
 	var vp_width: float = get_viewport_rect().size.x
 	if vp_width > 0.0:
 		_right_margin = vp_width - _left_margin
 	if _shoot_timer != null:
 		_shoot_timer.timeout.connect(_on_shoot_timer_timeout)
+	_dive_cooldown = 4.5 if is_enraged else 7.5
 
 
 func _process(delta: float) -> void:
@@ -54,23 +75,112 @@ func _process(delta: float) -> void:
 	if _hit_flash_time > 0.0:
 		_hit_flash_time = maxf(0.0, _hit_flash_time - delta)
 
-	if _is_entering:
-		global_position.y += 150.0 * delta
-		if global_position.y >= _target_y:
-			global_position.y = _target_y
-			_is_entering = false
-			_schedule_shoot(1.1)
-	else:
-		var speed: float = 160.0 if is_enraged else 110.0
-		global_position.x += _move_direction * speed * delta
-		if global_position.x <= _left_margin:
-			global_position.x = _left_margin
-			_move_direction = 1.0
-		elif global_position.x >= _right_margin:
-			global_position.x = _right_margin
-			_move_direction = -1.0
-
+	_update_movement(delta)
 	queue_redraw()
+
+
+func _update_movement(delta: float) -> void:
+	match _state:
+		MovementState.ENTERING:
+			_is_entering = true
+			global_position.y += 150.0 * delta
+			rotation = lerpf(rotation, 0.0, delta * 5.0)
+			if global_position.y >= _base_y:
+				global_position.y = _base_y
+				_is_entering = false
+				_state = MovementState.CRUISE
+				_dive_cooldown = 4.5 if is_enraged else 7.5
+				_schedule_shoot(1.1)
+
+		MovementState.CRUISE:
+			_is_entering = false
+			# 1. Horizontal movement with boundary bounce
+			var speed: float = 160.0 if is_enraged else 110.0
+			global_position.x += _move_direction * speed * delta
+			if global_position.x <= _left_margin:
+				global_position.x = _left_margin
+				_move_direction = 1.0
+			elif global_position.x >= _right_margin:
+				global_position.x = _right_margin
+				_move_direction = -1.0
+
+			# 2. Sinusoidal vertical oscillation around base_y
+			var vertical_amp: float = 90.0 if is_enraged else 60.0
+			var vertical_freq: float = 2.4 if is_enraged else 1.8
+			global_position.y = _base_y + sin(_time * vertical_freq) * vertical_amp
+
+			# 3. Dynamic banking tilt based on horizontal direction
+			var target_tilt: float = clampf(_move_direction * 0.25, -0.3, 0.3)
+			rotation = lerpf(rotation, target_tilt, delta * 5.0)
+
+			# 4. Dive maneuver cooldown
+			_dive_cooldown -= delta
+			if _dive_cooldown <= 0.0:
+				trigger_dive()
+
+		MovementState.DIVE_TELEGRAPH:
+			_is_entering = false
+			_telegraph_timer -= delta
+			rotation = lerpf(rotation, 0.0, delta * 8.0)
+			if _telegraph_timer <= 0.0:
+				_state = MovementState.DIVE_DESCENT
+
+		MovementState.DIVE_DESCENT:
+			_is_entering = false
+			var descent_speed: float = 480.0 if is_enraged else 380.0
+			global_position.y += descent_speed * delta
+
+			var diff_x: float = _dive_target.x - global_position.x
+			var steer_speed: float = clampf(diff_x * 3.5, -descent_speed * 0.75, descent_speed * 0.75)
+			global_position.x += steer_speed * delta
+			global_position.x = clampf(global_position.x, _left_margin, _right_margin)
+
+			var dive_tilt: float = clampf((steer_speed / descent_speed) * 0.5, -0.4, 0.4)
+			rotation = lerpf(rotation, dive_tilt, delta * 6.0)
+
+			if global_position.y >= _dive_target.y or global_position.y >= 740.0:
+				_state = MovementState.DIVE_ASCENT
+
+		MovementState.DIVE_ASCENT:
+			_is_entering = false
+			var ascent_speed: float = 320.0 if is_enraged else 260.0
+			global_position.y -= ascent_speed * delta
+
+			var speed_x: float = 140.0 if is_enraged else 100.0
+			global_position.x += _move_direction * speed_x * delta
+			if global_position.x <= _left_margin:
+				global_position.x = _left_margin
+				_move_direction = 1.0
+			elif global_position.x >= _right_margin:
+				global_position.x = _right_margin
+				_move_direction = -1.0
+
+			var ascent_tilt: float = clampf(_move_direction * 0.2, -0.3, 0.3)
+			rotation = lerpf(rotation, ascent_tilt, delta * 5.0)
+
+			if global_position.y <= _base_y:
+				global_position.y = _base_y
+				_state = MovementState.CRUISE
+				_dive_cooldown = 4.5 if is_enraged else 7.5
+
+
+## Triggers a dive maneuver telegraph towards player position or current X.
+func trigger_dive() -> void:
+	if _state != MovementState.CRUISE and _state != MovementState.ENTERING:
+		return
+	_state = MovementState.DIVE_TELEGRAPH
+	_telegraph_timer = 0.5
+	var target_x: float = global_position.x
+	if is_inside_tree():
+		var player: Node2D = get_tree().get_first_node_in_group(&"player") as Node2D
+		if player != null and is_instance_valid(player):
+			target_x = player.global_position.x
+	_dive_target = Vector2(clampf(target_x, _left_margin, _right_margin), 760.0)
+
+
+## Returns the current movement state.
+func get_movement_state() -> MovementState:
+	return _state
 
 
 func take_damage(amount: int = 1) -> void:
@@ -84,6 +194,7 @@ func take_damage(amount: int = 1) -> void:
 		is_enraged = true
 		if _shoot_timer != null:
 			_shoot_timer.wait_time = 0.85
+		_dive_cooldown = minf(_dive_cooldown, 4.5)
 
 	health_changed.emit(health, max_health)
 	queue_redraw()
@@ -120,9 +231,9 @@ func _spawn_bullet(offset: Vector2, dir: Vector2, bullet_speed: float) -> void:
 	var bullet: Area2D = boss_bullet_scene.instantiate() as Area2D
 	if bullet == null:
 		return
-	bullet.global_position = global_position + offset
+	bullet.global_position = global_position + offset.rotated(rotation)
 	if "direction" in bullet:
-		bullet.set("direction", dir)
+		bullet.set("direction", dir.rotated(rotation))
 	if "speed" in bullet:
 		bullet.set("speed", bullet_speed)
 	var parent_node: Node = get_parent()
@@ -167,11 +278,19 @@ func _on_body_entered(body: Node2D) -> void:
 
 func _draw() -> void:
 	var pulse_speed: float = 9.0 if is_enraged else 4.0
+	if _state == MovementState.DIVE_TELEGRAPH:
+		pulse_speed = 22.0
 	var core_pulse: float = 0.5 + 0.5 * sin(_time * pulse_speed)
 
 	var neon_primary: Color = Color(1.0, 0.22, 0.48) if is_enraged else Color(0.22, 0.9, 1.0)
 	var neon_secondary: Color = Color(1.0, 0.6, 0.1) if is_enraged else Color(0.68, 0.28, 1.0)
 	var hull_color: Color = Color(0.08, 0.04, 0.16)
+
+	# 0. Dive telegraph threat warning pulse
+	if _state == MovementState.DIVE_TELEGRAPH:
+		var warn_color: Color = Color(1.0, 0.2, 0.35, 0.55 + 0.35 * sin(_time * 24.0))
+		draw_arc(Vector2.ZERO, 72.0 + 8.0 * sin(_time * 16.0), 0.0, TAU, 32, warn_color, 3.5)
+		draw_circle(Vector2.ZERO, 85.0, Color(1.0, 0.1, 0.2, 0.12))
 
 	# 1. Soft atmospheric threat glow
 	draw_circle(Vector2.ZERO, 65.0 + 8.0 * core_pulse, Color(neon_primary.r, neon_primary.g, neon_primary.b, 0.12 + 0.08 * core_pulse))

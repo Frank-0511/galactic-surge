@@ -258,6 +258,48 @@ func _assert_boss_entity_contract() -> bool:
 		if is_instance_valid(boss2):
 			boss2.queue_free()
 
+	# Dynamic movement, banking tilt, and dive maneuver contract.
+	var boss3: Area2D = packed_scene.instantiate() as Area2D
+	if boss3 != null:
+		root.add_child(boss3)
+		boss3.global_position = Vector2(400, 140)
+		boss3._process(0.02) # Triggers ENTERING -> CRUISE transition
+
+		# Verify sinusoidal vertical oscillation in CRUISE
+		var min_y: float = 99999.0
+		var max_y: float = -99999.0
+		var has_tilted: bool = false
+		for i in 50:
+			boss3._process(0.05)
+			var cur_y: float = boss3.global_position.y
+			min_y = minf(min_y, cur_y)
+			max_y = maxf(max_y, cur_y)
+			if absf(boss3.rotation) > 0.05:
+				has_tilted = true
+
+		if (max_y - min_y) < 30.0:
+			push_error("Boss must vary dynamically in Y during combat, oscillation amplitude too small: min=%f, max=%f" % [min_y, max_y])
+			passed = false
+
+		if not has_tilted:
+			push_error("Boss must exhibit dynamic banking tilt during horizontal/diagonal navigation")
+			passed = false
+
+		# Verify dive maneuver reaching lower altitude
+		if boss3.has_method(&"trigger_dive"):
+			boss3.call("trigger_dive")
+			var max_dive_y: float = -99999.0
+			for i in 80:
+				boss3._process(0.05)
+				max_dive_y = maxf(max_dive_y, boss3.global_position.y)
+
+			if max_dive_y < 700.0:
+				push_error("Boss must reach lower altitudes during dive maneuvers, reached only Y=%f" % max_dive_y)
+				passed = false
+
+		if is_instance_valid(boss3):
+			boss3.queue_free()
+
 	if is_instance_valid(boss):
 		root.remove_child(boss)
 		boss.free()
