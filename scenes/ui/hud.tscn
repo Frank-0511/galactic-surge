@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/hud.gd" id="1_hud"]
 
@@ -25,6 +25,78 @@ corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_weapon_normal"]
+bg_color = Color(0.06, 0.08, 0.16, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.35, 0.5, 0.5)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_weapon_active"]
+bg_color = Color(0.12, 0.25, 0.45, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.22, 0.9, 1.0, 1.0)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_heat_bg"]
+bg_color = Color(0.05, 0.06, 0.12, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.3, 0.45, 0.6)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_heat_fill"]
+bg_color = Color(0.2, 0.85, 1.0, 1.0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.5, 0.95, 1.0, 1.0)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_combo_bg"]
+bg_color = Color(0.05, 0.06, 0.12, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.35, 0.15, 0.6)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_combo_fill"]
+bg_color = Color(1.0, 0.85, 0.2, 1.0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1.0, 0.95, 0.5, 1.0)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -117,6 +189,154 @@ offset_bottom = 92.0
 theme_override_font_sizes/font_size = 20
 theme_override_colors/font_color = Color(0.35, 0.92, 1.0, 1.0)
 text = "Oleada: 1"
+
+[node name="WeaponSelectorContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -336.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 46.0
+grow_horizontal = 0
+theme_override_constants/separation = 4
+
+[node name="WeaponButton0" type="Button" parent="WeaponSelectorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_weapon_active")
+text = "BLASTER [1]"
+
+[node name="WeaponButton1" type="Button" parent="WeaponSelectorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_weapon_normal")
+text = "SPREAD [2]"
+
+[node name="WeaponButton2" type="Button" parent="WeaponSelectorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_weapon_normal")
+text = "MISIL [3]"
+
+[node name="WeaponButton3" type="Button" parent="WeaponSelectorContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 0
+theme_override_font_sizes/font_size = 10
+theme_override_styles/normal = SubResource("StyleBoxFlat_weapon_normal")
+text = "LÁSER [4]"
+
+[node name="HeatContainer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -336.0
+offset_top = 52.0
+offset_right = -16.0
+offset_bottom = 90.0
+grow_horizontal = 0
+
+[node name="HeatLabel" type="Label" parent="HeatContainer"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = -120.0
+offset_bottom = 20.0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.85, 0.92, 1.0, 1.0)
+text = "CALOR: 0%"
+
+[node name="OverheatWarningLabel" type="Label" parent="HeatContainer"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -120.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 20.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(1.0, 0.25, 0.25, 1.0)
+theme_override_constants/outline_size = 2
+theme_override_colors/font_outline_color = Color(0.4, 0.0, 0.0, 0.9)
+text = "¡SOBRECARGA!"
+horizontal_alignment = 2
+visible = false
+
+[node name="HeatProgressBar" type="ProgressBar" parent="HeatContainer"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = -14.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/background = SubResource("StyleBoxFlat_heat_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_heat_fill")
+max_value = 100.0
+value = 0.0
+show_percentage = false
+
+[node name="ComboContainer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -90.0
+offset_top = 74.0
+offset_right = 90.0
+offset_bottom = 114.0
+grow_horizontal = 2
+visible = false
+
+[node name="ComboLabel" type="Label" parent="ComboContainer"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 24.0
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(1.0, 0.85, 0.2, 1.0)
+theme_override_constants/outline_size = 3
+theme_override_colors/font_outline_color = Color(0.1, 0.08, 0.0, 0.9)
+text = "COMBO x2!"
+horizontal_alignment = 1
+
+[node name="ComboProgressBar" type="ProgressBar" parent="ComboContainer"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -10.0
+offset_right = -10.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/background = SubResource("StyleBoxFlat_combo_bg")
+theme_override_styles/fill = SubResource("StyleBoxFlat_combo_fill")
+max_value = 1.0
+value = 1.0
+show_percentage = false
 
 [node name="VictoryLabel" type="Label" parent="."]
 layout_mode = 1

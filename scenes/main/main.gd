@@ -40,6 +40,7 @@ var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tsc
 @onready var _audio_feedback: Node = $AudioFeedback
 @onready var _wave_announcement: CanvasLayer = $WaveAnnouncement
 @onready var _camera: Camera2D = $Camera2D
+@onready var _combo_system: Node = get_node_or_null("ComboSystem") as Node
 
 ## Current player lives, score, and 1-based wave number for this session.
 var lives: int = STARTING_LIVES
@@ -70,10 +71,43 @@ var _game_layout: GameLayout = GameLayout.new()
 
 
 func _ready() -> void:
+	if _combo_system == null:
+		var combo_script: Script = load("res://scripts/systems/combo_system.gd") as Script
+		if combo_script != null:
+			_combo_system = combo_script.new() as Node
+			_combo_system.name = "ComboSystem"
+			add_child(_combo_system)
+
 	_player.bullet_scene = bullet_scene
 	_player.damage_requested.connect(_on_player_damage_requested)
 	if _player.has_signal(&"shot_fired"):
 		_player.shot_fired.connect(_on_player_shot_fired)
+
+	if _player.has_signal(&"weapon_changed") and _hud.has_method(&"set_active_weapon"):
+		_player.weapon_changed.connect(_hud.set_active_weapon)
+
+	if _player.has_signal(&"heat_changed") and _hud.has_method(&"set_heat"):
+		_player.heat_changed.connect(func(cur: float, m: float) -> void:
+			_hud.set_heat(cur, m, _player.is_weapon_overheated() if _player.has_method(&"is_weapon_overheated") else false)
+		)
+
+	if _player.has_signal(&"overheat_state_changed"):
+		_player.overheat_state_changed.connect(func(overheated: bool) -> void:
+			if _hud.has_method(&"set_heat"):
+				_hud.set_heat(_player.heat if "heat" in _player else 0.0, _player.max_heat if "max_heat" in _player else 100.0, overheated)
+			if overheated and _session_active and _audio_feedback != null and _audio_feedback.has_method(&"play_overheat_warning"):
+				_audio_feedback.play_overheat_warning()
+		)
+
+	if _hud.has_signal(&"weapon_selected_by_user") and _player.has_method(&"set_weapon"):
+		_hud.weapon_selected_by_user.connect(_player.set_weapon)
+
+	if _combo_system != null:
+		if _combo_system.has_signal(&"combo_updated") and _hud.has_method(&"set_combo"):
+			_combo_system.combo_updated.connect(_hud.set_combo)
+		if _combo_system.has_signal(&"combo_reset") and _hud.has_method(&"set_combo"):
+			_combo_system.combo_reset.connect(func() -> void: _hud.set_combo(1, 0, 0.0))
+
 	_enemy_spawner.enemy_contacted_player.connect(_on_enemy_contacted_player)
 	_enemy_spawner.enemy_destroyed.connect(_on_enemy_destroyed)
 	_enemy_spawner.wave_cleared.connect(_on_wave_cleared)
@@ -88,6 +122,7 @@ func _ready() -> void:
 	_wave_announcement.announcement_finished.connect(_on_wave_announcement_finished)
 	child_entered_tree.connect(_on_child_entered_tree)
 	_high_score = HighScore.load_value()
+	_configure_game_layout()
 	_update_hud()
 	_enter_main_menu()
 
@@ -146,6 +181,20 @@ func _enter_main_menu() -> void:
 	_audio_feedback.stop_boss_music()
 	_hud.hide_boss_health_bar()
 	_player.clear_power_ups()
+	if _combo_system != null and _combo_system.has_method(&"reset_combo"):
+		_combo_system.reset_combo()
+	if _player != null:
+		if _player.has_method(&"reset_heat"):
+			_player.reset_heat()
+		if _player.has_method(&"set_weapon"):
+			_player.set_weapon(0)
+	if _hud != null:
+		if _hud.has_method(&"set_active_weapon"):
+			_hud.set_active_weapon(0)
+		if _hud.has_method(&"set_heat"):
+			_hud.set_heat(0.0, _player.max_heat if _player != null and "max_heat" in _player else 100.0, false)
+		if _hud.has_method(&"set_combo"):
+			_hud.set_combo(1, 0, 0.0)
 	lives = STARTING_LIVES
 	score = 0
 	wave = 1
@@ -186,6 +235,8 @@ func _request_player_damage(player: Node2D) -> void:
 func _on_player_damage_requested() -> void:
 	if not _session_active:
 		return
+	if _combo_system != null and _combo_system.has_method(&"reset_combo"):
+		_combo_system.reset_combo()
 	_visual_feedback.play_damage_flash()
 	_camera.shake(6.0, 0.2)
 	_audio_feedback.play_player_damage()
@@ -200,7 +251,10 @@ func _on_player_damage_requested() -> void:
 
 func _on_player_shot_fired(is_double_shot: bool) -> void:
 	if _session_active:
-		_audio_feedback.play_player_shot(is_double_shot)
+		if _player != null and _audio_feedback != null and _audio_feedback.has_method(&"play_weapon_shot"):
+			_audio_feedback.play_weapon_shot(_player.get_weapon() if _player.has_method(&"get_weapon") else 0)
+		elif _audio_feedback != null:
+			_audio_feedback.play_player_shot(is_double_shot)
 
 
 func _on_enemy_destroyed(enemy: Area2D) -> void:
@@ -208,12 +262,14 @@ func _on_enemy_destroyed(enemy: Area2D) -> void:
 		return
 	var explosion_position: Vector2 = enemy.global_position
 	_visual_feedback.play_enemy_explosion(explosion_position)
-	_visual_feedback.play_score_popup(explosion_position, POINTS_PER_ENEMY)
+	var multiplier: int = _combo_system.register_kill() if (_combo_system != null and _combo_system.has_method(&"register_kill")) else 1
+	var points_earned: int = POINTS_PER_ENEMY * multiplier
+	score += points_earned
+	_hud.set_score(score)
+	_visual_feedback.play_score_popup(explosion_position, points_earned, multiplier > 1)
 	_audio_feedback.play_enemy_explosion()
 	if explosion_position.distance_to(_player.global_position) < NEARBY_SHAKE_RADIUS:
 		_camera.shake(3.0, 0.12)
-	score += POINTS_PER_ENEMY
-	_hud.set_score(score)
 	_try_spawn_enemy_loot(explosion_position)
 
 
@@ -449,6 +505,20 @@ func reset_session() -> void:
 	_audio_feedback.stop_boss_music()
 	_hud.hide_boss_health_bar()
 	_player.clear_power_ups()
+	if _combo_system != null and _combo_system.has_method(&"reset_combo"):
+		_combo_system.reset_combo()
+	if _player != null:
+		if _player.has_method(&"reset_heat"):
+			_player.reset_heat()
+		if _player.has_method(&"set_weapon"):
+			_player.set_weapon(0)
+	if _hud != null:
+		if _hud.has_method(&"set_active_weapon"):
+			_hud.set_active_weapon(0)
+		if _hud.has_method(&"set_heat"):
+			_hud.set_heat(0.0, _player.max_heat if _player != null and "max_heat" in _player else 100.0, false)
+		if _hud.has_method(&"set_combo"):
+			_hud.set_combo(1, 0, 0.0)
 	lives = STARTING_LIVES
 	score = 0
 	wave = 1
@@ -471,7 +541,10 @@ func reset_session() -> void:
 
 
 func _configure_game_layout() -> void:
-	_game_layout.configure(get_viewport().get_visible_rect().size)
+	var vp_size: Vector2 = get_viewport().get_visible_rect().size
+	_game_layout.configure(vp_size)
+	if _camera != null:
+		_camera.position = vp_size * 0.5
 	_player.set_horizontal_limits(_game_layout.get_player_horizontal_limits())
 	var formation_origin: Vector2 = _game_layout.get_enemy_formation_origin()
 	_enemy_spawner.set_formation_layout(formation_origin, formation_origin.y)
@@ -479,7 +552,8 @@ func _configure_game_layout() -> void:
 
 func _clear_combat_transients() -> void:
 	for transient: Node in get_tree().get_nodes_in_group(&"combat_transients"):
-		transient.queue_free()
+		if is_instance_valid(transient) and transient.get_parent() != _player and (_player == null or not _player.is_ancestor_of(transient)):
+			transient.queue_free()
 
 
 func _clear_enemy_bullets() -> void:
@@ -496,6 +570,19 @@ func _update_hud() -> void:
 	_hud.set_lives(lives)
 	_hud.set_score(score)
 	_hud.set_wave(wave)
+	if _hud != null:
+		if _hud.has_method(&"set_active_weapon"):
+			_hud.set_active_weapon(_player.get_weapon() if (_player != null and _player.has_method(&"get_weapon")) else 0)
+		if _hud.has_method(&"set_heat"):
+			var cur_h: float = _player.heat if (_player != null and "heat" in _player) else 0.0
+			var max_h: float = _player.max_heat if (_player != null and "max_heat" in _player) else 100.0
+			var is_oh: bool = _player.is_weapon_overheated() if (_player != null and _player.has_method(&"is_weapon_overheated")) else false
+			_hud.set_heat(cur_h, max_h, is_oh)
+		if _hud.has_method(&"set_combo"):
+			var mult: int = _combo_system.get_multiplier() if (_combo_system != null and _combo_system.has_method(&"get_multiplier")) else 1
+			var kills: int = _combo_system.get_kills() if (_combo_system != null and _combo_system.has_method(&"get_kills")) else 0
+			var ratio: float = _combo_system.get_time_ratio() if (_combo_system != null and _combo_system.has_method(&"get_time_ratio")) else 0.0
+			_hud.set_combo(mult, kills, ratio)
 
 
 ## Returns true and persists the new best if this session's score beats

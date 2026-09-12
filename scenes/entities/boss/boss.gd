@@ -42,6 +42,9 @@ var _right_margin: float = 610.0
 func _ready() -> void:
 	health = max_health
 	current_health = max_health
+	var vp_width: float = get_viewport_rect().size.x
+	if vp_width > 0.0:
+		_right_margin = vp_width - _left_margin
 	if _shoot_timer != null:
 		_shoot_timer.timeout.connect(_on_shoot_timer_timeout)
 
@@ -137,9 +140,22 @@ func _schedule_shoot(delay: float) -> void:
 func _on_area_entered(area: Area2D) -> void:
 	if _is_defeated:
 		return
+	if area.has_method(&"is_beam") and area.call(&"is_beam"):
+		return
 	# Player bullet layer is 2
 	if (area.collision_layer & 2) != 0 or area.is_in_group(&"player_bullets"):
-		take_damage(1)
+		if area.get("damage_applied") == true:
+			return
+		if "damage_applied" in area:
+			area.set("damage_applied", true)
+		var damage_amount: int = 1
+		if "damage" in area and area.damage != null:
+			damage_amount = int(area.damage)
+		elif area.get("damage") != null:
+			damage_amount = int(area.get("damage"))
+		elif area.has_meta(&"damage"):
+			damage_amount = int(area.get_meta(&"damage"))
+		take_damage(damage_amount)
 
 
 func _on_body_entered(body: Node2D) -> void:

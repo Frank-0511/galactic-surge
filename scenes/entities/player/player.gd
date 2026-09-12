@@ -1,24 +1,76 @@
 # player.gd
-# Player ship controller. Handles horizontal movement, shooting, and 4B
-# power-up modifiers: persistent double shot and a renewable 10s shield.
+# Player ship controller. Handles horizontal movement, modular arsenal switching
+# (Blaster, Spread, Missile, Laser), thermal overheat regulation, power-ups, and respawns.
 
 extends CharacterBody2D
 
+## Emitted when the ship requests life loss from valid hostile contact.
 signal damage_requested
+
+## Emitted when the post-respawn invulnerability blink window expires.
 signal invulnerability_ended
+
+## Emitted upon firing any weapon; receives true if double shot is engaged.
 signal shot_fired(is_double_shot: bool)
 
-## Movement speed in pixels per second.
+## Emitted when active weapon changes (WeaponType enum value).
+signal weapon_changed(new_weapon: int)
+
+## Emitted when barrel heat changes.
+signal heat_changed(current_heat: float, max_heat: float)
+
+## Emitted when thermal lock activates or clears.
+signal overheat_state_changed(is_overheated: bool)
+
+## Available weapon systems in the modular arsenal.
+enum WeaponType {
+	BLASTER = 0,
+	SPREAD = 1,
+	MISSILE = 2,
+	LASER = 3,
+}
+
+## Horizontal movement speed in pixels per second.
 @export var speed: float = 400.0
 
-## Scene to instantiate when shooting.
-@export var bullet_scene: PackedScene
+## Default blaster projectile scene.
+@export var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tscn")
+
+## Fan-spread projectile scene.
+@export var spread_bullet_scene: PackedScene = preload("res://scenes/entities/bullet/spread_bullet.tscn")
+
+## Homing missile projectile scene.
+@export var missile_scene: PackedScene = preload("res://scenes/entities/bullet/missile.tscn")
+
+## Continuous laser beam scene.
+@export var laser_beam_scene: PackedScene = preload("res://scenes/entities/bullet/laser_beam.tscn")
 
 ## Duration in seconds after respawning during which damage is ignored.
 @export var invulnerability_duration: float = 1.5
 
 ## Interval in seconds between Player visibility changes while invulnerable.
 @export var blink_interval: float = 0.15
+
+## Currently selected weapon in the arsenal.
+var current_weapon: int = WeaponType.BLASTER
+
+## Current barrel heat level (0.0 to 100.0).
+var heat: float = 0.0
+
+## Maximum barrel heat capacity.
+var max_heat: float = 100.0
+
+## True when firing is locked due to thermal overload.
+var is_overheated: bool = false
+
+## Passive cooling rate (% heat dissipated per second).
+var cooling_rate: float = 35.0
+
+## Delay in seconds before passive cooling begins after the last shot.
+var cooling_delay: float = 0.25
+
+## Duration in seconds of the thermal lock when 100% heat is reached.
+var overheat_duration: float = 2.5
 
 ## Margin from the ship center to the screen edge.
 const MARGIN: float = 16.0
@@ -31,34 +83,63 @@ const DOUBLE_SHOT_SPREAD: float = 12.0
 @onready var _blink_timer: Timer = $BlinkTimer
 @onready var _shield_timer: Timer = $ShieldTimer
 @onready var _shield_ring: Node2D = $ShieldRing
+@onready var _laser_beam: Area2D = get_node_or_null("LaserBeam") as Area2D
 
+var _cooling_delay_timer: float = 0.0
+var _overheat_timer: float = 0.0
 var _is_invulnerable: bool = false
 var _gameplay_enabled: bool = true
 var _double_shot_enabled: bool = false
 var _shield_active: bool = false
 var _horizontal_limits: Vector2 = Vector2.ZERO
 
-## Local clock used only to animate the engine flicker and nav lights.
+## Local clock used only to animate engine flicker, lights, and heat pulsation.
 var _time: float = 0.0
 
 
 func _ready() -> void:
-	_invulnerability_timer.timeout.connect(_on_invulnerability_timer_timeout)
-	_blink_timer.timeout.connect(_on_blink_timer_timeout)
-	_shield_timer.timeout.connect(_on_shield_timer_timeout)
+	if bullet_scene == null:
+		bullet_scene = load("res://scenes/entities/bullet/bullet.tscn") as PackedScene
+	if spread_bullet_scene == null:
+		spread_bullet_scene = load("res://scenes/entities/bullet/spread_bullet.tscn") as PackedScene
+	if missile_scene == null:
+		missile_scene = load("res://scenes/entities/bullet/missile.tscn") as PackedScene
+	if laser_beam_scene == null:
+		laser_beam_scene = load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene
+
+	if _laser_beam == null and laser_beam_scene != null:
+		_laser_beam = laser_beam_scene.instantiate() as Area2D
+		if _laser_beam != null:
+			_laser_beam.position = Vector2(0.0, -20.0)
+			add_child(_laser_beam)
+
+	if _laser_beam != null:
+		if _laser_beam.has_method(&"set_firing"):
+			_laser_beam.call(&"set_firing", false)
+		else:
+			_laser_beam.visible = false
+
+	if _invulnerability_timer != null:
+		_invulnerability_timer.timeout.connect(_on_invulnerability_timer_timeout)
+	if _blink_timer != null:
+		_blink_timer.timeout.connect(_on_blink_timer_timeout)
+	if _shield_timer != null:
+		_shield_timer.timeout.connect(_on_shield_timer_timeout)
 
 
 func _process(delta: float) -> void:
-	# Idle visuals (engine flicker, nav lights) keep animating even when
-	# gameplay input is disabled, e.g. during menus or wave transitions.
 	_time += delta
+	_process_overheat_and_cooling(delta)
 	queue_redraw()
 
 	if not _gameplay_enabled:
 		velocity = Vector2.ZERO
+		_set_laser_active(false)
 		return
 
-	# --- Movement ---
+	_handle_weapon_selection_inputs()
+
+	# Horizontal movement
 	var direction: float = Input.get_axis("move_left", "move_right")
 	velocity = Vector2(direction * speed, 0.0)
 	move_and_slide()
@@ -70,11 +151,281 @@ func _process(delta: float) -> void:
 		var viewport_rect: Rect2 = get_viewport_rect()
 		position.x = clampf(position.x, viewport_rect.position.x + MARGIN, viewport_rect.end.x - MARGIN)
 
-	# --- Shooting ---
-	if Input.is_action_pressed("shoot") and _shoot_cooldown.is_stopped():
-		_shoot()
-		_shoot_cooldown.start()
+	# Firing handling
+	_handle_shooting(delta)
 
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _gameplay_enabled:
+		return
+	if event.is_action_pressed("weapon_1"):
+		set_weapon(WeaponType.BLASTER)
+	elif event.is_action_pressed("weapon_2"):
+		set_weapon(WeaponType.SPREAD)
+	elif event.is_action_pressed("weapon_3"):
+		set_weapon(WeaponType.MISSILE)
+	elif event.is_action_pressed("weapon_4"):
+		set_weapon(WeaponType.LASER)
+	elif event.is_action_pressed("weapon_prev"):
+		cycle_weapon(false)
+	elif event.is_action_pressed("weapon_next"):
+		cycle_weapon(true)
+
+
+func _handle_weapon_selection_inputs() -> void:
+	if Input.is_action_just_pressed("weapon_1"):
+		set_weapon(WeaponType.BLASTER)
+	elif Input.is_action_just_pressed("weapon_2"):
+		set_weapon(WeaponType.SPREAD)
+	elif Input.is_action_just_pressed("weapon_3"):
+		set_weapon(WeaponType.MISSILE)
+	elif Input.is_action_just_pressed("weapon_4"):
+		set_weapon(WeaponType.LASER)
+	elif Input.is_action_just_pressed("weapon_prev"):
+		cycle_weapon(false)
+	elif Input.is_action_just_pressed("weapon_next"):
+		cycle_weapon(true)
+
+
+# ---------------------------------------------------------------------------
+# Arsenal management API
+# ---------------------------------------------------------------------------
+
+## Selects an active weapon from WeaponType.
+func set_weapon(type: int) -> void:
+	if type < 0 or type > 3:
+		return
+	if current_weapon == type:
+		return
+	if current_weapon == WeaponType.LASER:
+		_set_laser_active(false)
+	current_weapon = type
+	weapon_changed.emit(current_weapon)
+
+
+## Returns the currently active weapon type.
+func get_weapon() -> int:
+	return current_weapon
+
+
+## Cycles through weapons forward or backward.
+func cycle_weapon(forward: bool = true) -> void:
+	var delta_dir: int = 1 if forward else -1
+	var next_type: int = (current_weapon + delta_dir) % 4
+	if next_type < 0:
+		next_type += 4
+	set_weapon(next_type)
+
+
+# ---------------------------------------------------------------------------
+# Overheat and thermal regulation API
+# ---------------------------------------------------------------------------
+
+## Adds heat to the ship's barrel. Automatically engages overheat lock at max_heat.
+func add_heat(amount: float) -> void:
+	if is_overheated:
+		return
+	_cooling_delay_timer = cooling_delay
+	var prev_heat: float = heat
+	heat = minf(max_heat, heat + amount)
+	if heat >= max_heat:
+		heat = max_heat
+		is_overheated = true
+		_overheat_timer = overheat_duration
+		_set_laser_active(false)
+		heat_changed.emit(heat, max_heat)
+		overheat_state_changed.emit(true)
+	elif heat != prev_heat:
+		heat_changed.emit(heat, max_heat)
+
+
+## Dissipates an explicit amount of heat.
+func cool_down(amount: float) -> void:
+	var prev_heat: float = heat
+	heat = maxf(0.0, heat - amount)
+	if is_overheated and heat <= 0.0:
+		heat = 0.0
+		is_overheated = false
+		_overheat_timer = 0.0
+		heat_changed.emit(heat, max_heat)
+		overheat_state_changed.emit(false)
+	elif heat != prev_heat:
+		heat_changed.emit(heat, max_heat)
+
+
+## Immediately resets heat to 0 and clears overheat lock.
+func reset_heat() -> void:
+	var was_overheated: bool = is_overheated
+	heat = 0.0
+	_cooling_delay_timer = 0.0
+	_overheat_timer = 0.0
+	is_overheated = false
+	if was_overheated:
+		overheat_state_changed.emit(false)
+	heat_changed.emit(heat, max_heat)
+
+
+## Returns true if the weapon system is currently locked due to overheat.
+func is_weapon_overheated() -> bool:
+	return is_overheated
+
+
+func _process_overheat_and_cooling(delta: float) -> void:
+	if is_overheated:
+		_overheat_timer = maxf(0.0, _overheat_timer - delta)
+		var decay_rate: float = max_heat / overheat_duration
+		var prev_heat: float = heat
+		heat = maxf(0.0, heat - decay_rate * delta)
+		if _overheat_timer <= 0.0 or heat <= 0.0:
+			heat = 0.0
+			is_overheated = false
+			_overheat_timer = 0.0
+			overheat_state_changed.emit(false)
+		if heat != prev_heat:
+			heat_changed.emit(heat, max_heat)
+	else:
+		if _cooling_delay_timer > 0.0:
+			_cooling_delay_timer = maxf(0.0, _cooling_delay_timer - delta)
+		elif heat > 0.0:
+			var prev_heat: float = heat
+			heat = maxf(0.0, heat - cooling_rate * delta)
+			if heat != prev_heat:
+				heat_changed.emit(heat, max_heat)
+
+
+# ---------------------------------------------------------------------------
+# Shooting mechanics
+# ---------------------------------------------------------------------------
+
+func _handle_shooting(delta: float) -> void:
+	if current_weapon == WeaponType.LASER:
+		if Input.is_action_pressed("shoot") and not is_overheated:
+			if Input.is_action_just_pressed("shoot"):
+				shot_fired.emit(false)
+			_set_laser_active(true)
+			add_heat(30.0 * delta)
+		else:
+			_set_laser_active(false)
+	else:
+		_set_laser_active(false)
+		if Input.is_action_pressed("shoot") and _shoot_cooldown.is_stopped() and not is_overheated:
+			_shoot()
+
+
+func _shoot() -> void:
+	if is_overheated:
+		return
+	match current_weapon:
+		WeaponType.BLASTER:
+			_shoot_blaster()
+		WeaponType.SPREAD:
+			_shoot_spread()
+		WeaponType.MISSILE:
+			_shoot_missile()
+		WeaponType.LASER:
+			_shoot_laser_pulse()
+
+
+func _shoot_blaster() -> void:
+	if bullet_scene == null:
+		return
+	if _double_shot_enabled:
+		_spawn_bullet(-DOUBLE_SHOT_SPREAD)
+		_spawn_bullet(DOUBLE_SHOT_SPREAD)
+	else:
+		_spawn_bullet(0.0)
+	add_heat(8.0)
+	_shoot_cooldown.start(0.25)
+	shot_fired.emit(_double_shot_enabled)
+
+
+func _shoot_spread() -> void:
+	var scene: PackedScene = spread_bullet_scene if spread_bullet_scene != null else bullet_scene
+	if scene == null:
+		return
+	var angles: Array[float] = [-18.0, 0.0, 18.0]
+	for angle_deg: float in angles:
+		var rad: float = deg_to_rad(angle_deg)
+		var dir: Vector2 = Vector2(sin(rad), -cos(rad))
+		var bullet: Area2D = scene.instantiate() as Area2D
+		if bullet != null:
+			bullet.global_position = global_position + Vector2(0.0, -20.0)
+			if "direction" in bullet:
+				bullet.set("direction", dir)
+			_add_combat_transient(bullet)
+	add_heat(15.0)
+	_shoot_cooldown.start(0.35)
+	shot_fired.emit(false)
+
+
+func _shoot_missile() -> void:
+	var scene: PackedScene = missile_scene if missile_scene != null else bullet_scene
+	if scene == null:
+		return
+	var missile: Area2D = scene.instantiate() as Area2D
+	if missile != null:
+		missile.global_position = global_position + Vector2(0.0, -20.0)
+		_add_combat_transient(missile)
+	add_heat(25.0)
+	_shoot_cooldown.start(0.55)
+	shot_fired.emit(false)
+
+
+func _shoot_laser_pulse() -> void:
+	_set_laser_active(true)
+	add_heat(10.0)
+	_shoot_cooldown.start(0.25)
+	shot_fired.emit(false)
+
+
+func _ensure_laser_beam() -> Area2D:
+	if is_instance_valid(_laser_beam):
+		return _laser_beam
+	var existing: Area2D = get_node_or_null("LaserBeam") as Area2D
+	if is_instance_valid(existing):
+		_laser_beam = existing
+		return _laser_beam
+	if laser_beam_scene == null:
+		laser_beam_scene = load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene
+	if laser_beam_scene != null:
+		_laser_beam = laser_beam_scene.instantiate() as Area2D
+		_laser_beam.position = Vector2(0.0, -20.0)
+		add_child(_laser_beam)
+		if _laser_beam.has_method(&"set_firing"):
+			_laser_beam.call(&"set_firing", false)
+		else:
+			_laser_beam.visible = false
+	return _laser_beam
+
+
+func _set_laser_active(active: bool) -> void:
+	var beam: Area2D = _ensure_laser_beam()
+	if beam != null and is_instance_valid(beam):
+		if beam.has_method(&"set_firing"):
+			beam.call(&"set_firing", active)
+		else:
+			beam.visible = active
+
+
+func _spawn_bullet(offset_x: float) -> void:
+	var bullet: Node2D = bullet_scene.instantiate() as Node2D
+	bullet.global_position = global_position + Vector2(offset_x, -20.0)
+	_add_combat_transient(bullet)
+
+
+func _add_combat_transient(node: Node) -> void:
+	var container: Node = get_tree().current_scene if get_tree() != null else null
+	if container == null:
+		container = get_parent()
+	if container != null:
+		container.add_child(node)
+	else:
+		add_child(node)
+
+
+# ---------------------------------------------------------------------------
+# Damage and respawn
+# ---------------------------------------------------------------------------
 
 func take_damage() -> bool:
 	if _is_invulnerable or not _gameplay_enabled:
@@ -89,14 +440,19 @@ func respawn(respawn_position: Vector2) -> void:
 	position = respawn_position
 	_is_invulnerable = true
 	visible = true
-	_invulnerability_timer.start(invulnerability_duration)
-	_blink_timer.start(blink_interval)
+	_set_laser_active(false)
+	reset_heat()
+	if _invulnerability_timer != null:
+		_invulnerability_timer.start(invulnerability_duration)
+	if _blink_timer != null:
+		_blink_timer.start(blink_interval)
 
 
 func set_gameplay_enabled(enabled: bool) -> void:
 	_gameplay_enabled = enabled
 	if not _gameplay_enabled:
 		velocity = Vector2.ZERO
+		_set_laser_active(false)
 
 
 ## Sets the horizontal movement limits (min_x, max_x) from GameLayout.
@@ -105,7 +461,7 @@ func set_horizontal_limits(limits: Vector2) -> void:
 
 
 # ---------------------------------------------------------------------------
-# 4B power-up APIs
+# Power-up APIs (4B compatible)
 # ---------------------------------------------------------------------------
 
 func enable_double_shot() -> void:
@@ -122,9 +478,11 @@ func has_double_shot() -> bool:
 
 func activate_shield(duration: float) -> void:
 	_shield_active = true
-	_shield_ring.visible = true
-	_shield_timer.wait_time = duration
-	_shield_timer.start()
+	if _shield_ring != null:
+		_shield_ring.visible = true
+	if _shield_timer != null:
+		_shield_timer.wait_time = duration
+		_shield_timer.start()
 
 
 func has_shield() -> bool:
@@ -134,32 +492,11 @@ func has_shield() -> bool:
 func clear_power_ups() -> void:
 	_double_shot_enabled = false
 	_shield_active = false
-	_shield_timer.stop()
-	_shield_ring.visible = false
-
-
-# ---------------------------------------------------------------------------
-# Shooting helper
-# ---------------------------------------------------------------------------
-
-func _shoot() -> void:
-	if bullet_scene == null:
-		return
-	if _double_shot_enabled:
-		_spawn_bullet(-DOUBLE_SHOT_SPREAD)
-		_spawn_bullet(DOUBLE_SHOT_SPREAD)
-	else:
-		_spawn_bullet(0.0)
-	shot_fired.emit(_double_shot_enabled)
-
-
-func _spawn_bullet(offset_x: float) -> void:
-	var bullet: Node2D = bullet_scene.instantiate() as Node2D
-	bullet.global_position = global_position + Vector2(offset_x, -20.0)
-	var container: Node = get_tree().current_scene
-	if container == null:
-		container = get_parent()
-	container.add_child(bullet)
+	if _shield_timer != null:
+		_shield_timer.stop()
+	if _shield_ring != null:
+		_shield_ring.visible = false
+	_set_laser_active(false)
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +510,8 @@ func simulate_shot() -> void:
 
 func _on_invulnerability_timer_timeout() -> void:
 	_is_invulnerable = false
-	_blink_timer.stop()
+	if _blink_timer != null:
+		_blink_timer.stop()
 	visible = true
 	invulnerability_ended.emit()
 
@@ -185,17 +523,25 @@ func _on_blink_timer_timeout() -> void:
 
 func _on_shield_timer_timeout() -> void:
 	_shield_active = false
-	_shield_ring.visible = false
+	if _shield_ring != null:
+		_shield_ring.visible = false
 
+
+# ---------------------------------------------------------------------------
+# Visual rendering
+# ---------------------------------------------------------------------------
 
 func _draw() -> void:
-	# Wide ambient glow announces a bolder silhouette without padding the hitbox.
+	var heat_ratio: float = clampf(heat / max_heat, 0.0, 1.0)
+
+	# Wide ambient glow announces silhouette.
+	var glow_color: Color = Color(0.35, 0.55, 1.0, 0.14).lerp(Color(1.0, 0.3, 0.1, 0.25), heat_ratio)
 	var glow: PackedVector2Array = PackedVector2Array([
 		Vector2(0, -22), Vector2(-23, 12), Vector2(23, 12),
 	])
-	draw_colored_polygon(glow, Color(0.35, 0.55, 1.0, 0.14))
+	draw_colored_polygon(glow, glow_color)
 
-	# Slender fuselage, narrower than the old hull so the new delta wings read clearly.
+	# Fuselage
 	var fuselage: PackedVector2Array = PackedVector2Array([
 		Vector2(0, -20), Vector2(-4, -9), Vector2(-3, 3),
 		Vector2(-5, 13), Vector2(0, 16), Vector2(5, 13),
@@ -204,9 +550,10 @@ func _draw() -> void:
 	draw_colored_polygon(fuselage, Color(0.08, 0.10, 0.19))
 	var fuselage_outline: PackedVector2Array = fuselage.duplicate()
 	fuselage_outline.append(fuselage[0])
-	draw_polyline(fuselage_outline, Color(0.45, 0.95, 1.0), 1.5)
+	var outline_color: Color = Color(0.45, 0.95, 1.0).lerp(Color(1.0, 0.4, 0.2), heat_ratio * 0.7)
+	draw_polyline(fuselage_outline, outline_color, 1.5)
 
-	# Broad swept-back delta wings replace the old triangular hull for a bolder silhouette.
+	# Delta wings
 	var wing_l: PackedVector2Array = PackedVector2Array([
 		Vector2(-3, -1), Vector2(-21, 9), Vector2(-15, 14), Vector2(-4, 9),
 	])
@@ -222,7 +569,7 @@ func _draw() -> void:
 	draw_polyline(wing_l_outline, Color(0.85, 0.45, 1.0), 1.25)
 	draw_polyline(wing_r_outline, Color(0.85, 0.45, 1.0), 1.25)
 
-	# Wingtip fins add a sharper, more aggressive edge to the new profile.
+	# Wingtip fins
 	draw_colored_polygon(PackedVector2Array([
 		Vector2(-21, 9), Vector2(-25, 15), Vector2(-17, 12),
 	]), Color(0.85, 0.45, 1.0, 0.8))
@@ -230,20 +577,28 @@ func _draw() -> void:
 		Vector2(21, 9), Vector2(25, 15), Vector2(17, 12),
 	]), Color(0.85, 0.45, 1.0, 0.8))
 
-	# Elongated glowing canopy, larger and more forward than before.
+	# Glowing canopy
 	var canopy: PackedVector2Array = PackedVector2Array([
 		Vector2(0, -14), Vector2(-3.5, -4), Vector2(0, 2), Vector2(3.5, -4),
 	])
 	draw_colored_polygon(canopy, Color(0.28, 0.85, 1.0))
 	draw_polyline(PackedVector2Array([Vector2(0, -13), Vector2(0, 1)]), Color(0.65, 0.98, 1.0, 0.85), 1.0)
 
-	# Wing-mounted cannons give the new silhouette a clear armament read.
+	# Wing-mounted cannons
 	draw_rect(Rect2(-22, 4, 6, 2.4), Color(0.55, 0.6, 0.68))
 	draw_rect(Rect2(16, 4, 6, 2.4), Color(0.55, 0.6, 0.68))
-	draw_circle(Vector2(-22, 5.2), 1.1, Color(0.85, 0.45, 1.0, 0.7))
-	draw_circle(Vector2(22, 5.2), 1.1, Color(0.85, 0.45, 1.0, 0.7))
 
-	# Twin wing-root engines plus a center thruster read as a proper tri-engine layout.
+	# Cannon thermal muzzle glow
+	var muzzle_color: Color = Color(0.85, 0.45, 1.0, 0.7).lerp(Color(1.0, 0.35, 0.1, 0.95), heat_ratio)
+	draw_circle(Vector2(-22, 5.2), 1.1 + 1.2 * heat_ratio, muzzle_color)
+	draw_circle(Vector2(22, 5.2), 1.1 + 1.2 * heat_ratio, muzzle_color)
+
+	# Overheat warning pulse
+	if is_overheated:
+		var warning_pulse: float = 0.5 + 0.5 * sin(_time * 16.0)
+		draw_arc(Vector2.ZERO, 25.0, 0.0, TAU, 28, Color(1.0, 0.2, 0.15, 0.65 * warning_pulse), 1.8)
+
+	# Engines
 	draw_rect(Rect2(-9, 9, 4, 6), Color(0.95, 0.35, 0.12))
 	draw_rect(Rect2(5, 9, 4, 6), Color(0.95, 0.35, 0.12))
 	draw_rect(Rect2(-2.5, 12, 5, 5), Color(0.95, 0.35, 0.12))
@@ -251,7 +606,7 @@ func _draw() -> void:
 	draw_rect(Rect2(5.5, 13, 2.5, 3), Color(1.0, 0.8, 0.25))
 	draw_rect(Rect2(-1.7, 15, 3.4, 2.5), Color(1.0, 0.8, 0.25))
 
-	# Flickering exhaust glow across all three engines.
+	# Flickering exhaust glow
 	var flicker: float = 0.7 + 0.3 * absf(sin(_time * 14.0)) * absf(cos(_time * 5.0))
 	var flame_h: float = 5.0 * flicker
 	draw_colored_polygon(PackedVector2Array([
@@ -264,7 +619,7 @@ func _draw() -> void:
 		Vector2(-1, 18), Vector2(0, 18 + flame_h * 1.1), Vector2(1, 18),
 	]), Color(1.0, 0.85, 0.3, 0.85 * flicker))
 
-	# Slow-blinking wingtip nav lights (red on the left, green on the right).
+	# Nav lights
 	var blink: float = 1.0 if fmod(_time, 1.0) < 0.6 else 0.2
 	draw_circle(Vector2(-23, 12), 1.4, Color(1.0, 0.25, 0.25, blink))
 	draw_circle(Vector2(23, 12), 1.4, Color(0.3, 1.0, 0.4, blink))

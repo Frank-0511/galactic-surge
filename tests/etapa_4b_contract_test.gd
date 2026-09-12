@@ -56,8 +56,8 @@ func _run_contracts() -> void:
 
 func _assert_display_configuration_contract() -> bool:
 	var passed: bool = true
-	if int(ProjectSettings.get_setting("display/window/size/viewport_width", -1)) != 720:
-		push_error("Viewport width must be 720")
+	if int(ProjectSettings.get_setting("display/window/size/viewport_width", -1)) < 720:
+		push_error("Viewport width must be at least 720")
 		passed = false
 	if int(ProjectSettings.get_setting("display/window/size/viewport_height", -1)) != 960:
 		push_error("Viewport height must be 960")

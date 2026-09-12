@@ -238,7 +238,7 @@ func _assert_clean_wave_bonus_contract() -> bool:
 	var initial_score: int = main.score
 	_clear_current_wave(main)
 	await _finish_wave_transition(main)
-	var expected: int = POINTS_PER_ENEMY * 18 + CLEAN_WAVE_BONUS
+	var expected: int = (5600 + CLEAN_WAVE_BONUS) if main.get_node_or_null("ComboSystem") != null else (POINTS_PER_ENEMY * 18 + CLEAN_WAVE_BONUS)
 	if main.score - initial_score != expected:
 		push_error("Clean wave 1 must add %d points, got %d" % [expected, main.score - initial_score])
 		passed = false

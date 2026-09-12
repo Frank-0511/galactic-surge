@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/entities/player/player.tscn" id="2"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://scenes/audio/audio_feedback.tscn" id="10"]
 [ext_resource type="PackedScene" path="res://scenes/ui/wave_announcement.tscn" id="11"]
 [ext_resource type="Script" path="res://scenes/main/camera_shake.gd" id="12_camera_shake"]
+[ext_resource type="Script" path="res://scripts/systems/combo_system.gd" id="13_combo_system"]
 
 [node name="Main" type="Node2D"]
 process_mode = 3
@@ -30,15 +31,18 @@ color = Color(0.02, 0.03, 0.15, 1)
 [node name="Starfield" parent="." instance=ExtResource("6")]
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(360, 480)
+position = Vector2(540, 480)
 current = true
 script = ExtResource("12_camera_shake")
 
 [node name="Player" parent="." instance=ExtResource("2")]
-position = Vector2(300, 700)
+position = Vector2(540, 700)
 
 [node name="EnemySpawner" parent="." instance=ExtResource("3")]
-position = Vector2(300, 0)
+position = Vector2(540, 0)
+
+[node name="ComboSystem" type="Node" parent="."]
+script = ExtResource("13_combo_system")
 
 [node name="VisualFeedback" parent="." instance=ExtResource("7")]
 
