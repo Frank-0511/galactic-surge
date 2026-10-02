@@ -1,7 +1,7 @@
 # hud.gd
-# Displays player lives, score, wave, boss health bar, arsenal selection,
+# Displays player lives, score, wave, boss health bar,
 # barrel overheat status, and active combo multipliers.
-# Emits semantic signals for player weapon choice, retries, and menu navigation.
+# Emits semantic signals for player retries and menu navigation.
 
 extends CanvasLayer
 
@@ -15,12 +15,12 @@ signal weapon_selected_by_user(weapon_index: int)
 @onready var _lives_label: Label = $Margin/LivesLabel
 @onready var _score_label: Label = $Margin/ScoreLabel
 @onready var _wave_label: Label = $Margin/WaveLabel
+@onready var _active_weapon_label: Label = get_node_or_null("Margin/ActiveWeaponLabel") as Label
 
 @onready var _boss_container: Control = $BossContainer
 @onready var _boss_name_label: Label = $BossContainer/BossNameLabel
 @onready var _boss_progress_bar: ProgressBar = $BossContainer/BossProgressBar
 
-@onready var _weapon_selector_container: Control = get_node_or_null("WeaponSelectorContainer") as Control
 @onready var _heat_container: Control = get_node_or_null("HeatContainer") as Control
 @onready var _heat_label: Label = get_node_or_null("HeatContainer/HeatLabel") as Label
 @onready var _overheat_warning_label: Label = get_node_or_null("HeatContainer/OverheatWarningLabel") as Label
@@ -36,17 +36,16 @@ signal weapon_selected_by_user(weapon_index: int)
 @onready var _retry_button: Button = $RetryButton
 @onready var _main_menu_button: Button = $MainMenuButton
 
-var _weapon_buttons: Array[Button] = []
-var _active_weapon_style: StyleBoxFlat = null
-var _inactive_weapon_style: StyleBoxFlat = null
+var _current_weapon_level: int = 1
+var _current_weapon_type: int = 0
 var _heat_fill_style: StyleBoxFlat = null
 var _overheat_pulse_time: float = 0.0
 
 
 func _ready() -> void:
-	_init_weapon_buttons()
 	_init_styles()
-	set_active_weapon(0)
+	set_active_weapon(_current_weapon_type)
+	set_weapon_level(1, 0)
 	set_heat(0.0, 100.0, false)
 	set_combo(1, 0, 0.0)
 
@@ -58,29 +57,7 @@ func _process(delta: float) -> void:
 		_overheat_warning_label.modulate = Color(1.0, 1.0, 1.0, 0.4 + 0.6 * alpha)
 
 
-func _init_weapon_buttons() -> void:
-	_weapon_buttons.clear()
-	for i: int in range(4):
-		var btn: Button = get_node_or_null("WeaponSelectorContainer/WeaponButton%d" % i) as Button
-		if btn != null:
-			_weapon_buttons.append(btn)
-			var idx: int = i
-			btn.pressed.connect(func() -> void: weapon_selected_by_user.emit(idx))
-
-
 func _init_styles() -> void:
-	_active_weapon_style = StyleBoxFlat.new()
-	_active_weapon_style.bg_color = Color(0.12, 0.25, 0.45, 0.95)
-	_active_weapon_style.border_color = Color(0.22, 0.9, 1.0, 1.0)
-	_active_weapon_style.set_border_width_all(2)
-	_active_weapon_style.set_corner_radius_all(3)
-
-	_inactive_weapon_style = StyleBoxFlat.new()
-	_inactive_weapon_style.bg_color = Color(0.06, 0.08, 0.16, 0.8)
-	_inactive_weapon_style.border_color = Color(0.25, 0.35, 0.5, 0.5)
-	_inactive_weapon_style.set_border_width_all(1)
-	_inactive_weapon_style.set_corner_radius_all(3)
-
 	if _heat_progress_bar != null:
 		var base_fill: StyleBox = _heat_progress_bar.get_theme_stylebox(&"fill")
 		if base_fill is StyleBoxFlat:
@@ -92,28 +69,28 @@ func _init_styles() -> void:
 		_heat_progress_bar.add_theme_stylebox_override(&"fill", _heat_fill_style)
 
 
-## Updates visual button styles to highlight the currently equipped weapon.
+## Updates active weapon text and neon color theme in the HUD.
 func set_active_weapon(weapon_index: int) -> void:
-	for i: int in range(_weapon_buttons.size()):
-		var btn: Button = _weapon_buttons[i]
-		if btn == null:
-			continue
-		if i == weapon_index:
-			btn.add_theme_color_override(&"font_color", Color(0.2, 0.95, 1.0, 1.0))
-			btn.add_theme_color_override(&"font_hover_color", Color(0.5, 1.0, 1.0, 1.0))
-			btn.add_theme_color_override(&"font_pressed_color", Color(0.2, 0.95, 1.0, 1.0))
-			if _active_weapon_style != null:
-				btn.add_theme_stylebox_override(&"normal", _active_weapon_style)
-				btn.add_theme_stylebox_override(&"hover", _active_weapon_style)
-				btn.add_theme_stylebox_override(&"pressed", _active_weapon_style)
-		else:
-			btn.add_theme_color_override(&"font_color", Color(0.7, 0.75, 0.85, 0.8))
-			btn.add_theme_color_override(&"font_hover_color", Color(0.9, 0.95, 1.0, 1.0))
-			btn.add_theme_color_override(&"font_pressed_color", Color(0.7, 0.75, 0.85, 0.8))
-			if _inactive_weapon_style != null:
-				btn.add_theme_stylebox_override(&"normal", _inactive_weapon_style)
-				btn.add_theme_stylebox_override(&"hover", _inactive_weapon_style)
-				btn.add_theme_stylebox_override(&"pressed", _inactive_weapon_style)
+	_current_weapon_type = weapon_index
+	if _active_weapon_label != null:
+		var weapon_names: Array[String] = ["BLASTER", "SPREAD", "MISIL", "LÁSER"]
+		var weapon_colors: Array[Color] = [
+			Color(0.2, 0.6, 1.0),
+			Color(0.1, 1.0, 0.4),
+			Color(1.0, 0.55, 0.1),
+			Color(1.0, 0.2, 0.25)
+		]
+		var idx: int = clampi(weapon_index, 0, 3)
+		_active_weapon_label.text = "ARMA: %s" % weapon_names[idx]
+		_active_weapon_label.modulate = weapon_colors[idx]
+
+
+## Maintained for backwards compatibility; weapon power is displayed diegetically through projectiles.
+func set_weapon_level(level: int, weapon_type: int = -1) -> void:
+	if weapon_type >= 0:
+		_current_weapon_type = weapon_type
+	_current_weapon_level = clampi(level, 1, 5)
+
 
 
 ## Updates heat level indicator, text label, and thermal overload warning.

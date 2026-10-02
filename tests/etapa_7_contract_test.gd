@@ -576,18 +576,7 @@ func _assert_hud_contract() -> bool:
 		push_error("HUD missing signal: weapon_selected_by_user")
 		passed = false
 
-	# Check required node hierarchy
-	var weapon_container: Control = hud.get_node_or_null("WeaponSelectorContainer") as Control
-	if weapon_container == null:
-		push_error("HUD missing WeaponSelectorContainer")
-		passed = false
-	else:
-		for i: int in range(4):
-			var btn: Button = weapon_container.get_node_or_null("WeaponButton%d" % i) as Button
-			if btn == null:
-				push_error("HUD missing WeaponButton%d" % i)
-				passed = false
-
+	# Check required node hierarchy (Heat and Combo must be present; WeaponSelectorContainer is deprecated)
 	var heat_container: Control = hud.get_node_or_null("HeatContainer") as Control
 	if heat_container == null:
 		push_error("HUD missing HeatContainer")
@@ -615,17 +604,7 @@ func _assert_hud_contract() -> bool:
 			push_error("ComboContainer missing ComboProgressBar")
 			passed = false
 
-	# Test weapon button interaction
-	var clicked_weapon: Array[int] = []
-	hud.connect(&"weapon_selected_by_user", func(idx: int) -> void: clicked_weapon.append(idx))
-	var btn2: Button = hud.get_node_or_null("WeaponSelectorContainer/WeaponButton2") as Button
-	if btn2 != null:
-		btn2.pressed.emit()
-		if clicked_weapon.is_empty() or clicked_weapon[-1] != 2:
-			push_error("Pressing WeaponButton2 must emit weapon_selected_by_user(2)")
-			passed = false
-
-	# Test set_active_weapon
+	# Test set_active_weapon (backward compatibility)
 	hud.call("set_active_weapon", 1)
 
 	# Test set_heat

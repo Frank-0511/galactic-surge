@@ -22,9 +22,21 @@ signal enemy_hit(enemy: Area2D)
 ## Effective width of the beam corridor in pixels.
 @export var beam_width: float = 12.0
 
+var _power_level: int = 1
 var _tick_timer: float = 0.0
 var _time: float = 0.0
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
+
+
+func set_power_level(level: int) -> void:
+	_power_level = clampi(level, 1, 5)
+	beam_width = 10.0 + float(_power_level) * 3.0
+	damage_per_tick = 1 + int(_power_level >= 4)
+	if _collision_shape != null and _collision_shape.shape is RectangleShape2D:
+		var rect_shape: RectangleShape2D = _collision_shape.shape as RectangleShape2D
+		rect_shape.size.x = beam_width
+	queue_redraw()
+
 
 
 func _ready() -> void:

@@ -16,6 +16,9 @@ signal shot_fired(is_double_shot: bool)
 ## Emitted when active weapon changes (WeaponType enum value).
 signal weapon_changed(new_weapon: int)
 
+## Emitted when active weapon power level changes (1 to 5).
+signal weapon_level_changed(new_level: int)
+
 ## Emitted when barrel heat changes.
 signal heat_changed(current_heat: float, max_heat: float)
 
@@ -29,6 +32,9 @@ enum WeaponType {
 	MISSILE = 2,
 	LASER = 3,
 }
+
+## Power level of the current weapon system (1 to 5).
+@export_range(1, 5) var weapon_level: int = 1
 
 ## Horizontal movement speed in pixels per second.
 @export var speed: float = 400.0
@@ -114,6 +120,8 @@ func _ready() -> void:
 			add_child(_laser_beam)
 
 	if _laser_beam != null:
+		if _laser_beam.has_method(&"set_power_level"):
+			_laser_beam.call(&"set_power_level", weapon_level)
 		if _laser_beam.has_method(&"set_firing"):
 			_laser_beam.call(&"set_firing", false)
 		else:
@@ -137,8 +145,6 @@ func _process(delta: float) -> void:
 		_set_laser_active(false)
 		return
 
-	_handle_weapon_selection_inputs()
-
 	# Horizontal movement
 	var direction: float = Input.get_axis("move_left", "move_right")
 	velocity = Vector2(direction * speed, 0.0)
@@ -155,38 +161,6 @@ func _process(delta: float) -> void:
 	_handle_shooting(delta)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if not _gameplay_enabled:
-		return
-	if event.is_action_pressed("weapon_1"):
-		set_weapon(WeaponType.BLASTER)
-	elif event.is_action_pressed("weapon_2"):
-		set_weapon(WeaponType.SPREAD)
-	elif event.is_action_pressed("weapon_3"):
-		set_weapon(WeaponType.MISSILE)
-	elif event.is_action_pressed("weapon_4"):
-		set_weapon(WeaponType.LASER)
-	elif event.is_action_pressed("weapon_prev"):
-		cycle_weapon(false)
-	elif event.is_action_pressed("weapon_next"):
-		cycle_weapon(true)
-
-
-func _handle_weapon_selection_inputs() -> void:
-	if Input.is_action_just_pressed("weapon_1"):
-		set_weapon(WeaponType.BLASTER)
-	elif Input.is_action_just_pressed("weapon_2"):
-		set_weapon(WeaponType.SPREAD)
-	elif Input.is_action_just_pressed("weapon_3"):
-		set_weapon(WeaponType.MISSILE)
-	elif Input.is_action_just_pressed("weapon_4"):
-		set_weapon(WeaponType.LASER)
-	elif Input.is_action_just_pressed("weapon_prev"):
-		cycle_weapon(false)
-	elif Input.is_action_just_pressed("weapon_next"):
-		cycle_weapon(true)
-
-
 # ---------------------------------------------------------------------------
 # Arsenal management API
 # ---------------------------------------------------------------------------
@@ -199,8 +173,19 @@ func set_weapon(type: int) -> void:
 		return
 	if current_weapon == WeaponType.LASER:
 		_set_laser_active(false)
+	_double_shot_enabled = false
 	current_weapon = type
 	weapon_changed.emit(current_weapon)
+	queue_redraw()
+
+
+func _get_weapon_color() -> Color:
+	match current_weapon:
+		WeaponType.BLASTER: return Color(0.2, 0.6, 1.0)
+		WeaponType.SPREAD: return Color(0.1, 1.0, 0.4)
+		WeaponType.MISSILE: return Color(1.0, 0.55, 0.1)
+		WeaponType.LASER: return Color(1.0, 0.2, 0.25)
+		_: return Color(0.28, 0.85, 1.0)
 
 
 ## Returns the currently active weapon type.
@@ -215,6 +200,43 @@ func cycle_weapon(forward: bool = true) -> void:
 	if next_type < 0:
 		next_type += 4
 	set_weapon(next_type)
+
+
+## Returns current weapon level (1 to 5).
+func get_weapon_level() -> int:
+	return weapon_level
+
+
+## Sets weapon power level clamped between 1 and 5, emitting weapon_level_changed.
+func set_weapon_level(level: int) -> void:
+	var clamped: int = clampi(level, 1, 5)
+	weapon_level = clamped
+	if _laser_beam != null and _laser_beam.has_method(&"set_power_level"):
+		_laser_beam.call(&"set_power_level", weapon_level)
+	weapon_level_changed.emit(weapon_level)
+
+
+## Applies a medallion drop. If it matches current weapon, upgrades level (+1).
+## If it differs, switches weapon and preserves the accumulated weapon level (Chicken Invaders model).
+func apply_medallion(weapon_type: int) -> void:
+	if weapon_type == current_weapon:
+		set_weapon_level(weapon_level + 1)
+	else:
+		set_weapon(weapon_type)
+		set_weapon_level(weapon_level)
+
+
+## Applies a power atom drop. Upgrades weapon level (+1) without changing current weapon.
+func apply_power_atom() -> void:
+	set_weapon_level(weapon_level + 1)
+
+
+## Decrements weapon level by 1 on player death (if > 1) and returns lost levels (1 or 0).
+func penalize_weapon_on_death() -> int:
+	if weapon_level > 1:
+		set_weapon_level(weapon_level - 1)
+		return 1
+	return 0
 
 
 # ---------------------------------------------------------------------------
@@ -329,21 +351,48 @@ func _shoot() -> void:
 func _shoot_blaster() -> void:
 	if bullet_scene == null:
 		return
-	if _double_shot_enabled:
+	if weapon_level == 1:
+		if _double_shot_enabled:
+			_spawn_bullet(-DOUBLE_SHOT_SPREAD)
+			_spawn_bullet(DOUBLE_SHOT_SPREAD)
+		else:
+			_spawn_bullet(0.0)
+	elif weapon_level == 2:
 		_spawn_bullet(-DOUBLE_SHOT_SPREAD)
 		_spawn_bullet(DOUBLE_SHOT_SPREAD)
-	else:
+	elif weapon_level == 3:
+		_spawn_bullet(-DOUBLE_SHOT_SPREAD)
 		_spawn_bullet(0.0)
+		_spawn_bullet(DOUBLE_SHOT_SPREAD)
+	elif weapon_level == 4:
+		var offsets: Array[float] = [-18.0, -6.0, 6.0, 18.0]
+		for ox: float in offsets:
+			_spawn_bullet(ox)
+	else: # weapon_level >= 5
+		var offsets: Array[float] = [-24.0, -12.0, 0.0, 12.0, 24.0]
+		for ox: float in offsets:
+			_spawn_bullet(ox)
 	add_heat(8.0)
 	_shoot_cooldown.start(0.25)
-	shot_fired.emit(_double_shot_enabled)
+	shot_fired.emit(_double_shot_enabled or weapon_level >= 2)
 
 
 func _shoot_spread() -> void:
 	var scene: PackedScene = spread_bullet_scene if spread_bullet_scene != null else bullet_scene
 	if scene == null:
 		return
-	var angles: Array[float] = [-18.0, 0.0, 18.0]
+	var angles: Array[float]
+	match weapon_level:
+		1:
+			angles = [-15.0, 0.0, 15.0]
+		2:
+			angles = [-24.0, -12.0, 0.0, 12.0, 24.0]
+		3:
+			angles = [-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0]
+		4:
+			angles = [-36.0, -27.0, -18.0, -9.0, 0.0, 9.0, 18.0, 27.0, 36.0]
+		_:
+			angles = [-40.0, -32.0, -24.0, -16.0, -8.0, 0.0, 8.0, 16.0, 24.0, 32.0, 40.0]
 	for angle_deg: float in angles:
 		var rad: float = deg_to_rad(angle_deg)
 		var dir: Vector2 = Vector2(sin(rad), -cos(rad))
@@ -362,10 +411,23 @@ func _shoot_missile() -> void:
 	var scene: PackedScene = missile_scene if missile_scene != null else bullet_scene
 	if scene == null:
 		return
-	var missile: Area2D = scene.instantiate() as Area2D
-	if missile != null:
-		missile.global_position = global_position + Vector2(0.0, -20.0)
-		_add_combat_transient(missile)
+	var offsets: Array[float]
+	match weapon_level:
+		1:
+			offsets = [0.0]
+		2:
+			offsets = [-14.0, 14.0]
+		3:
+			offsets = [-16.0, 0.0, 16.0]
+		4:
+			offsets = [-20.0, -8.0, 8.0, 20.0]
+		_:
+			offsets = [-24.0, -12.0, 0.0, 12.0, 24.0]
+	for ox: float in offsets:
+		var missile: Area2D = scene.instantiate() as Area2D
+		if missile != null:
+			missile.global_position = global_position + Vector2(ox, -20.0)
+			_add_combat_transient(missile)
 	add_heat(25.0)
 	_shoot_cooldown.start(0.55)
 	shot_fired.emit(false)
@@ -380,10 +442,14 @@ func _shoot_laser_pulse() -> void:
 
 func _ensure_laser_beam() -> Area2D:
 	if is_instance_valid(_laser_beam):
+		if _laser_beam.has_method(&"set_power_level"):
+			_laser_beam.call(&"set_power_level", weapon_level)
 		return _laser_beam
 	var existing: Area2D = get_node_or_null("LaserBeam") as Area2D
 	if is_instance_valid(existing):
 		_laser_beam = existing
+		if _laser_beam.has_method(&"set_power_level"):
+			_laser_beam.call(&"set_power_level", weapon_level)
 		return _laser_beam
 	if laser_beam_scene == null:
 		laser_beam_scene = load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene
@@ -391,6 +457,8 @@ func _ensure_laser_beam() -> Area2D:
 		_laser_beam = laser_beam_scene.instantiate() as Area2D
 		_laser_beam.position = Vector2(0.0, -20.0)
 		add_child(_laser_beam)
+		if _laser_beam.has_method(&"set_power_level"):
+			_laser_beam.call(&"set_power_level", weapon_level)
 		if _laser_beam.has_method(&"set_firing"):
 			_laser_beam.call(&"set_firing", false)
 		else:
@@ -505,7 +573,9 @@ func clear_power_ups() -> void:
 
 ## Simulates a single shot bypassing input and cooldown. Used by contract tests.
 func simulate_shot() -> void:
+	reset_heat()
 	_shoot()
+
 
 
 func _on_invulnerability_timer_timeout() -> void:
@@ -578,18 +648,19 @@ func _draw() -> void:
 	]), Color(0.85, 0.45, 1.0, 0.8))
 
 	# Glowing canopy
+	var w_color: Color = _get_weapon_color()
 	var canopy: PackedVector2Array = PackedVector2Array([
 		Vector2(0, -14), Vector2(-3.5, -4), Vector2(0, 2), Vector2(3.5, -4),
 	])
-	draw_colored_polygon(canopy, Color(0.28, 0.85, 1.0))
-	draw_polyline(PackedVector2Array([Vector2(0, -13), Vector2(0, 1)]), Color(0.65, 0.98, 1.0, 0.85), 1.0)
+	draw_colored_polygon(canopy, w_color)
+	draw_polyline(PackedVector2Array([Vector2(0, -13), Vector2(0, 1)]), w_color.lerp(Color.WHITE, 0.5), 1.0)
 
 	# Wing-mounted cannons
 	draw_rect(Rect2(-22, 4, 6, 2.4), Color(0.55, 0.6, 0.68))
 	draw_rect(Rect2(16, 4, 6, 2.4), Color(0.55, 0.6, 0.68))
 
 	# Cannon thermal muzzle glow
-	var muzzle_color: Color = Color(0.85, 0.45, 1.0, 0.7).lerp(Color(1.0, 0.35, 0.1, 0.95), heat_ratio)
+	var muzzle_color: Color = w_color.lerp(Color(1.0, 0.35, 0.1, 0.95), heat_ratio)
 	draw_circle(Vector2(-22, 5.2), 1.1 + 1.2 * heat_ratio, muzzle_color)
 	draw_circle(Vector2(22, 5.2), 1.1 + 1.2 * heat_ratio, muzzle_color)
 

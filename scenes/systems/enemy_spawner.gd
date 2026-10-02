@@ -53,6 +53,12 @@ signal formation_rejoined(enemy: Area2D)
 ## Vertical step applied after reaching a viewport edge.
 @export var descent_distance: float = 32.0
 
+## Maximum vertical descent accumulated for the formation.
+@export var max_formation_descent_y: float = 380.0
+
+## Maximum Y position allowed for the lowest enemy in formation.
+@export var max_formation_bottom_y: float = 480.0
+
 ## Whether enemies enter using Bézier curve fly-in.
 @export var fly_in_enabled: bool = true
 
@@ -114,32 +120,32 @@ func _process(delta: float) -> void:
 		if _wave_timer >= enrage_time:
 			_trigger_enrage()
 
-	# Dive attack countdown
-	_dive_cooldown_timer -= delta
-	if _dive_cooldown_timer <= 0.0:
-		var dive_count: int = 1
-		if _current_wave >= 2 or _is_enraged:
-			dive_count = 2 if randf() < 0.65 else 1
-		trigger_dive(dive_count)
-		_dive_cooldown_timer = randf_range(1.2, 2.0) if _is_enraged else randf_range(2.8, 4.5)
-
-	# Formation movement: only considers and displaces enemies actively IN FORMATION
 	var all_enemies: Array[Area2D] = _get_valid_enemies()
 	if all_enemies.is_empty():
 		return
 
+	# Formation movement: only considers and displaces enemies actively IN FORMATION
 	var formation_enemies: Array[Area2D] = []
 	for enemy: Area2D in all_enemies:
 		if enemy.has_method(&"is_in_formation") and not enemy.is_in_formation():
 			continue
 		formation_enemies.append(enemy)
 
-	var horizontal_delta: float = _direction * formation_speed * delta
+	# Dive attack countdown: only tick down when at least one candidate is in formation
+	if not formation_enemies.is_empty():
+		_dive_cooldown_timer -= delta
+		if _dive_cooldown_timer <= 0.0:
+			var dive_count: int = 1
+			if _current_wave >= 2 or _is_enraged:
+				dive_count = 2 if randf() < 0.65 else 1
+			trigger_dive(dive_count)
+			_dive_cooldown_timer = randf_range(1.6, 2.5) if _is_enraged else randf_range(3.2, 5.0)
 
+	# If no enemies are currently in formation, freeze formation shift to prevent off-screen drift
 	if formation_enemies.is_empty():
-		_formation_shift.x += horizontal_delta
 		return
 
+	var horizontal_delta: float = _direction * formation_speed * delta
 	var viewport_rect: Rect2 = get_viewport_rect()
 	var left_edge: float = formation_enemies[0].global_position.x - ENEMY_HALF_WIDTH
 	var right_edge: float = formation_enemies[0].global_position.x + ENEMY_HALF_WIDTH
@@ -147,11 +153,38 @@ func _process(delta: float) -> void:
 		left_edge = minf(left_edge, enemy.global_position.x - ENEMY_HALF_WIDTH)
 		right_edge = maxf(right_edge, enemy.global_position.x + ENEMY_HALF_WIDTH)
 
-	if left_edge + horizontal_delta < viewport_rect.position.x or right_edge + horizontal_delta > viewport_rect.end.x:
-		_direction *= -1.0
-		_formation_shift.y += descent_distance
-		for enemy: Area2D in formation_enemies:
-			enemy.position.y += descent_distance
+	# Strict edge bounce: only reverse direction if moving toward that wall
+	var hit_right: bool = (_direction > 0.0 and right_edge + horizontal_delta >= viewport_rect.end.x)
+	var hit_left: bool = (_direction < 0.0 and left_edge + horizontal_delta <= viewport_rect.position.x)
+
+	if hit_right or hit_left:
+		_direction = -1.0 if hit_right else 1.0
+
+		# Clamp positions to prevent formation from remaining outside viewport bounds
+		var clamp_x: float = 0.0
+		if hit_right and right_edge > viewport_rect.end.x:
+			clamp_x = viewport_rect.end.x - right_edge
+		elif hit_left and left_edge < viewport_rect.position.x:
+			clamp_x = viewport_rect.position.x - left_edge
+
+		if absf(clamp_x) > 0.001:
+			_formation_shift.x += clamp_x
+			for enemy: Area2D in formation_enemies:
+				enemy.position.x += clamp_x
+
+		# Check descent ceiling: only descend if formation bottom remains within safe limits
+		var can_descend: bool = (_formation_shift.y + descent_distance <= max_formation_descent_y)
+		if can_descend:
+			var lowest_y: float = -INF
+			for enemy: Area2D in formation_enemies:
+				lowest_y = maxf(lowest_y, enemy.global_position.y)
+			if lowest_y + descent_distance > max_formation_bottom_y:
+				can_descend = false
+
+		if can_descend:
+			_formation_shift.y += descent_distance
+			for enemy: Area2D in formation_enemies:
+				enemy.position.y += descent_distance
 		return
 
 	_formation_shift.x += horizontal_delta
@@ -319,8 +352,9 @@ func trigger_dive(count: int = 1) -> Array[Area2D]:
 		if enemy.has_method(&"set_slot_getter"):
 			enemy.set_slot_getter(slot_getter)
 
-		if not enemy.returned_to_formation.is_connected(_on_enemy_returned_to_formation):
-			enemy.returned_to_formation.connect(_on_enemy_returned_to_formation.bind(enemy))
+		var bound_callback: Callable = _on_enemy_returned_to_formation.bind(enemy)
+		if not enemy.returned_to_formation.is_connected(bound_callback):
+			enemy.returned_to_formation.connect(bound_callback, CONNECT_ONE_SHOT)
 
 		attackers.append(enemy)
 		enemy_dived.emit(enemy)
@@ -329,9 +363,16 @@ func trigger_dive(count: int = 1) -> Array[Area2D]:
 
 
 func _on_enemy_returned_to_formation(enemy: Area2D) -> void:
-	if enemy.returned_to_formation.is_connected(_on_enemy_returned_to_formation):
-		enemy.returned_to_formation.disconnect(_on_enemy_returned_to_formation)
+	var bound: Callable = _on_enemy_returned_to_formation.bind(enemy)
+	if is_instance_valid(enemy):
+		if enemy.returned_to_formation.is_connected(bound):
+			enemy.returned_to_formation.disconnect(bound)
+		elif enemy.returned_to_formation.is_connected(_on_enemy_returned_to_formation):
+			enemy.returned_to_formation.disconnect(_on_enemy_returned_to_formation)
 	formation_rejoined.emit(enemy)
+	# Grace period: ensure cooldown is at least 3.8s (or 2.2s if enraged) so player has ample time to shoot
+	var min_grace: float = 2.2 if _is_enraged else 3.8
+	_dive_cooldown_timer = maxf(_dive_cooldown_timer, min_grace)
 
 
 func _trigger_enrage() -> void:

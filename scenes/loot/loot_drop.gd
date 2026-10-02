@@ -5,7 +5,19 @@
 class_name LootDrop
 extends Area2D
 
-enum Type { SCORE, DOUBLE_SHOT, SHIELD, EXTRA_LIFE, BOMB }
+enum Type {
+	SCORE,
+	DOUBLE_SHOT,
+	SHIELD,
+	EXTRA_LIFE,
+	BOMB,
+	MEDALLION_BLASTER,
+	MEDALLION_SPREAD,
+	MEDALLION_MISSILE,
+	MEDALLION_LASER,
+	POWER_ATOM,
+	RECOVERY_CAPSULE,
+}
 
 signal collected(loot_type: Type)
 
@@ -14,6 +26,7 @@ signal collected(loot_type: Type)
 @export var wave_frequency: float = 3.0
 @export var magnet_radius: float = 150.0
 @export var magnet_acceleration: float = 900.0
+@export var lifetime: float = 0.0
 
 var _type: Type = Type.SCORE
 var _target: Node2D = null
@@ -29,6 +42,18 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_elapsed += delta
+
+	# Lifetime countdown for temporary drops (such as death recovery capsules)
+	if lifetime > 0.0:
+		lifetime -= delta
+		if lifetime <= 0.0:
+			queue_free()
+			return
+		if lifetime <= 1.0:
+			var blink: float = 0.25 + 0.75 * absf(sin(_elapsed * 20.0))
+			modulate.a = blink
+		else:
+			modulate.a = 1.0
 
 	# Viewport bounds despawn check
 	var viewport_rect: Rect2 = get_viewport_rect()
@@ -54,18 +79,29 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-func configure(loot_type: int, spawn_position: Vector2, target: Node2D = null) -> void:
+func configure(loot_type: int, spawn_position: Vector2, target: Node2D = null, custom_lifetime: float = 0.0) -> void:
 	_type = loot_type as Type
 	global_position = spawn_position
 	_target = target
 	_velocity = Vector2.ZERO
 	_elapsed = 0.0
 	_collected = false
+	if custom_lifetime > 0.0:
+		lifetime = custom_lifetime
+	elif _type == Type.RECOVERY_CAPSULE:
+		lifetime = 3.0
+	else:
+		lifetime = 0.0
+	modulate.a = 1.0
 	queue_redraw()
 
 
 func get_type() -> Type:
 	return _type
+
+
+func get_lifetime() -> float:
+	return lifetime
 
 
 func _on_body_entered(body: Node2D) -> void:
@@ -98,6 +134,18 @@ func _draw() -> void:
 			_draw_extra_life()
 		Type.BOMB:
 			_draw_bomb()
+		Type.MEDALLION_BLASTER:
+			_draw_medallion_blaster()
+		Type.MEDALLION_SPREAD:
+			_draw_medallion_spread()
+		Type.MEDALLION_MISSILE:
+			_draw_medallion_missile()
+		Type.MEDALLION_LASER:
+			_draw_medallion_laser()
+		Type.POWER_ATOM:
+			_draw_power_atom()
+		Type.RECOVERY_CAPSULE:
+			_draw_recovery_capsule()
 
 
 func _get_type_glow_color() -> Color:
@@ -112,8 +160,21 @@ func _get_type_glow_color() -> Color:
 			return Color(1.0, 0.09, 0.27) # Red / Magenta
 		Type.BOMB:
 			return Color(1.0, 0.57, 0.0) # Orange / Amber
+		Type.MEDALLION_BLASTER:
+			return Color(0.2, 0.6, 1.0) # Neon Blue
+		Type.MEDALLION_SPREAD:
+			return Color(0.1, 1.0, 0.4) # Neon Emerald
+		Type.MEDALLION_MISSILE:
+			return Color(1.0, 0.55, 0.1) # Neon Orange
+		Type.MEDALLION_LASER:
+			return Color(1.0, 0.2, 0.25) # Neon Crimson
+		Type.POWER_ATOM:
+			return Color(1.0, 0.85, 0.2) # Neon Golden
+		Type.RECOVERY_CAPSULE:
+			return Color(0.1, 0.95, 1.0) # Radiant Cyan
 		_:
 			return Color.WHITE
+
 
 
 func _draw_score() -> void:
@@ -179,3 +240,82 @@ func _draw_bomb() -> void:
 		draw_line(dir_v * 5.5, dir_v * 9.5, orange, 1.8, true)
 	draw_circle(Vector2.ZERO, 5.0, orange)
 	draw_circle(Vector2.ZERO, 2.2, Color(1.0, 0.95, 0.8))
+
+
+func _draw_medallion_blaster() -> void:
+	var blue: Color = Color(0.2, 0.6, 1.0)
+	var chevron: PackedVector2Array = PackedVector2Array([
+		Vector2(0, -7), Vector2(6, 4), Vector2(0, 1), Vector2(-6, 4)
+	])
+	draw_colored_polygon(chevron, blue)
+	draw_line(Vector2(0, -8), Vector2(0, 0), Color.WHITE, 1.8, true)
+	draw_circle(Vector2(0, -6), 1.5, Color.WHITE)
+
+
+func _draw_medallion_spread() -> void:
+	var green: Color = Color(0.1, 1.0, 0.4)
+	draw_line(Vector2(0, 4), Vector2(0, -8), green, 2.0, true)
+	draw_line(Vector2(0, 4), Vector2(-7, -5), green, 1.8, true)
+	draw_line(Vector2(0, 4), Vector2(7, -5), green, 1.8, true)
+	draw_circle(Vector2(0, -8), 1.5, Color.WHITE)
+	draw_circle(Vector2(-7, -5), 1.5, Color.WHITE)
+	draw_circle(Vector2(7, -5), 1.5, Color.WHITE)
+
+
+func _draw_medallion_missile() -> void:
+	var orange: Color = Color(1.0, 0.55, 0.1)
+	var missile_shape: PackedVector2Array = PackedVector2Array([
+		Vector2(0, -8), Vector2(3, -2), Vector2(3, 5), Vector2(6, 8),
+		Vector2(-6, 8), Vector2(-3, 5), Vector2(-3, -2)
+	])
+	draw_colored_polygon(missile_shape, orange)
+	draw_line(Vector2(0, -6), Vector2(0, 4), Color.WHITE, 1.4, true)
+	draw_circle(Vector2(0, 7), 1.6, Color(1.0, 0.9, 0.4))
+
+
+func _draw_medallion_laser() -> void:
+	var red: Color = Color(1.0, 0.2, 0.25)
+	draw_line(Vector2(0, -8), Vector2(0, 8), red, 4.0, true)
+	draw_line(Vector2(0, -8), Vector2(0, 8), Color.WHITE, 1.6, true)
+	draw_arc(Vector2.ZERO, 5.0, 0.0, TAU, 16, red, 1.4, true)
+	draw_circle(Vector2.ZERO, 2.0, Color.WHITE)
+
+
+func _draw_power_atom() -> void:
+	var gold: Color = Color(1.0, 0.85, 0.2)
+	var pulse: float = 0.8 + 0.2 * sin(_elapsed * 6.0)
+	draw_circle(Vector2.ZERO, 3.8 * pulse, gold)
+	draw_circle(Vector2.ZERO, 2.0 * pulse, Color.WHITE)
+	# Orbit 1
+	var a1: float = _elapsed * 3.0
+	var pts1: PackedVector2Array = PackedVector2Array()
+	for i in range(16):
+		var t: float = float(i) / 16.0 * TAU
+		var p: Vector2 = Vector2(cos(t) * 8.0, sin(t) * 3.5).rotated(a1)
+		pts1.append(p)
+	pts1.append(pts1[0])
+	draw_polyline(pts1, Color(1.0, 0.9, 0.4, 0.75), 1.2, true)
+	# Orbit 2
+	var a2: float = -_elapsed * 2.5 + PI / 3.0
+	var pts2: PackedVector2Array = PackedVector2Array()
+	for i in range(16):
+		var t: float = float(i) / 16.0 * TAU
+		var p: Vector2 = Vector2(cos(t) * 8.0, sin(t) * 3.5).rotated(a2)
+		pts2.append(p)
+	pts2.append(pts2[0])
+	draw_polyline(pts2, Color(1.0, 0.9, 0.4, 0.75), 1.2, true)
+
+
+func _draw_recovery_capsule() -> void:
+	var cyan: Color = Color(0.1, 0.95, 1.0)
+	var pulse: float = 0.85 + 0.15 * sin(_elapsed * 8.0)
+	var diamond: PackedVector2Array = PackedVector2Array([
+		Vector2(0, -9 * pulse), Vector2(7 * pulse, 0), Vector2(0, 9 * pulse), Vector2(-7 * pulse, 0)
+	])
+	draw_colored_polygon(diamond, Color(0.08, 0.18, 0.32, 0.9))
+	draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), cyan, 2.0, true)
+	# Glowing core chevron
+	draw_line(Vector2(-3.5, 2), Vector2(0, -4), Color.WHITE, 1.8, true)
+	draw_line(Vector2(0, -4), Vector2(3.5, 2), Color.WHITE, 1.8, true)
+	draw_circle(Vector2(0, -4), 1.5, Color.WHITE)
+

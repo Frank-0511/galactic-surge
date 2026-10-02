@@ -1,0 +1,457 @@
+# etapa_10_contract_test.gd
+# Contract test harness for Etapa 10: Medallones Neón, Niveles 1-5 y Riesgo/Recompensa.
+# Verifies:
+# 1. LootDrop enum types (Medallions, Power Atom, Recovery Capsule) and lifetime countdown.
+# 2. Player weapon level scaling, tactical dilemma (upgrade vs switch/reset), power atom, and death penalty.
+# 3. Scaled firing patterns for Blaster, Spread, Missile, and Laser width across levels 1 to 5.
+# 4. Extra life milestone rewards per 1,000,000 points in Main.
+# 5. HUD weapon level text and glowing neon pips synchronization.
+# 6. Main integration: medallion collection, death capsule spawn, and session reset.
+
+extends SceneTree
+
+const PLAYER_PATH := "res://scenes/entities/player/player.tscn"
+const LOOT_PATH := "res://scenes/loot/loot_drop.tscn"
+const HUD_PATH := "res://scenes/ui/hud.tscn"
+const MAIN_PATH := "res://scenes/main/main.tscn"
+
+
+func _init() -> void:
+	call_deferred("_run_contracts")
+
+
+func _run_contracts() -> void:
+	var loot_contract_passed: bool = await _assert_loot_contract()
+	var player_dilemma_passed: bool = await _assert_player_dilemma_contract()
+	var firing_patterns_passed: bool = await _assert_firing_patterns_contract()
+	var hud_contract_passed: bool = await _assert_hud_contract()
+	var extra_life_passed: bool = await _assert_extra_life_contract()
+	var main_integration_passed: bool = await _assert_main_integration_contract()
+
+	var all_passed: bool = (
+		loot_contract_passed
+		and player_dilemma_passed
+		and firing_patterns_passed
+		and hud_contract_passed
+		and extra_life_passed
+		and main_integration_passed
+	)
+
+	if all_passed:
+		print("ETAPA 10 CONTRACT TESTS: ALL PASSED")
+	else:
+		push_error("ETAPA 10 CONTRACT TESTS: FAILURES DETECTED")
+
+	quit(0 if all_passed else 1)
+
+
+# ---------------------------------------------------------------------------
+# 1. LootDrop Types and Lifetime Contract
+# ---------------------------------------------------------------------------
+
+func _assert_loot_contract() -> bool:
+	if not ResourceLoader.exists(LOOT_PATH):
+		push_error("Missing LootDrop scene: %s" % LOOT_PATH)
+		return false
+
+	var packed: PackedScene = load(LOOT_PATH) as PackedScene
+	var loot: LootDrop = packed.instantiate() as LootDrop
+	root.add_child(loot)
+	await process_frame
+
+	var passed: bool = true
+
+	# Verify enum keys exist
+	if not ("MEDALLION_BLASTER" in LootDrop.Type):
+		push_error("LootDrop.Type missing MEDALLION_BLASTER")
+		passed = false
+	if not ("MEDALLION_SPREAD" in LootDrop.Type):
+		push_error("LootDrop.Type missing MEDALLION_SPREAD")
+		passed = false
+	if not ("MEDALLION_MISSILE" in LootDrop.Type):
+		push_error("LootDrop.Type missing MEDALLION_MISSILE")
+		passed = false
+	if not ("MEDALLION_LASER" in LootDrop.Type):
+		push_error("LootDrop.Type missing MEDALLION_LASER")
+		passed = false
+	if not ("POWER_ATOM" in LootDrop.Type):
+		push_error("LootDrop.Type missing POWER_ATOM")
+		passed = false
+	if not ("RECOVERY_CAPSULE" in LootDrop.Type):
+		push_error("LootDrop.Type missing RECOVERY_CAPSULE")
+		passed = false
+
+	# Test custom lifetime configuration
+	loot.configure(LootDrop.Type.MEDALLION_BLASTER, Vector2(100, 100), null, 5.0)
+	if loot.get_lifetime() != 5.0:
+		push_error("LootDrop configure custom_lifetime failed: got %f expected 5.0" % loot.get_lifetime())
+		passed = false
+
+	# Test default recovery capsule lifetime = 3.0
+	loot.configure(LootDrop.Type.RECOVERY_CAPSULE, Vector2(100, 100), null, 0.0)
+	if loot.get_lifetime() != 3.0:
+		push_error("Recovery capsule must default to 3.0s lifetime, got %f" % loot.get_lifetime())
+		passed = false
+
+	# Test colors
+	var c_blaster: Color = loot.call(&"_get_type_glow_color")
+	if c_blaster != Color(0.2, 0.6, 1.0) and loot.get_type() == LootDrop.Type.RECOVERY_CAPSULE:
+		pass # Verified below per type
+
+	loot.configure(LootDrop.Type.MEDALLION_BLASTER, Vector2.ZERO)
+	if loot.call(&"_get_type_glow_color") != Color(0.2, 0.6, 1.0):
+		push_error("MEDALLION_BLASTER glow color mismatch")
+		passed = false
+
+	loot.configure(LootDrop.Type.MEDALLION_SPREAD, Vector2.ZERO)
+	if loot.call(&"_get_type_glow_color") != Color(0.1, 1.0, 0.4):
+		push_error("MEDALLION_SPREAD glow color mismatch")
+		passed = false
+
+	loot.configure(LootDrop.Type.MEDALLION_MISSILE, Vector2.ZERO)
+	if loot.call(&"_get_type_glow_color") != Color(1.0, 0.55, 0.1):
+		push_error("MEDALLION_MISSILE glow color mismatch")
+		passed = false
+
+	loot.configure(LootDrop.Type.MEDALLION_LASER, Vector2.ZERO)
+	if loot.call(&"_get_type_glow_color") != Color(1.0, 0.2, 0.25):
+		push_error("MEDALLION_LASER glow color mismatch")
+		passed = false
+
+	loot.configure(LootDrop.Type.POWER_ATOM, Vector2.ZERO)
+	if loot.call(&"_get_type_glow_color") != Color(1.0, 0.85, 0.2):
+		push_error("POWER_ATOM glow color mismatch")
+		passed = false
+
+	loot.queue_free()
+	await process_frame
+	return passed
+
+
+# ---------------------------------------------------------------------------
+# 2. Player Tactical Dilemma & Level Progression Contract
+# ---------------------------------------------------------------------------
+
+func _assert_player_dilemma_contract() -> bool:
+	if not ResourceLoader.exists(PLAYER_PATH):
+		push_error("Missing Player scene: %s" % PLAYER_PATH)
+		return false
+
+	var packed: PackedScene = load(PLAYER_PATH) as PackedScene
+	var player: CharacterBody2D = packed.instantiate() as CharacterBody2D
+	root.add_child(player)
+	await process_frame
+
+	var passed: bool = true
+
+	# Initial level must be 1
+	if player.get_weapon_level() != 1:
+		push_error("Initial weapon_level must be 1, got %d" % player.get_weapon_level())
+		passed = false
+
+	# Signal emission on set_weapon_level
+	var last_emitted_level: Array[int] = [-1]
+	player.weapon_level_changed.connect(func(lvl: int) -> void: last_emitted_level[0] = lvl)
+
+	player.set_weapon_level(3)
+	if player.get_weapon_level() != 3 or last_emitted_level[0] != 3:
+		push_error("set_weapon_level failed to set or emit level 3")
+		passed = false
+
+	# Clamping between 1 and 5
+	player.set_weapon_level(10)
+	if player.get_weapon_level() != 5:
+		push_error("set_weapon_level(10) must clamp to 5, got %d" % player.get_weapon_level())
+		passed = false
+
+	player.set_weapon_level(-2)
+	if player.get_weapon_level() != 1:
+		push_error("set_weapon_level(-2) must clamp to 1, got %d" % player.get_weapon_level())
+		passed = false
+
+	# Same medallion -> level upgrade (+1) up to 5
+	player.set_weapon(0) # BLASTER
+	player.set_weapon_level(1)
+	player.apply_medallion(0)
+	if player.get_weapon_level() != 2:
+		push_error("apply_medallion with same weapon must upgrade level to 2, got %d" % player.get_weapon_level())
+		passed = false
+
+	player.apply_medallion(0) # -> 3
+	player.apply_medallion(0) # -> 4
+	player.apply_medallion(0) # -> 5
+	player.apply_medallion(0) # capped at 5
+	if player.get_weapon_level() != 5:
+		push_error("apply_medallion must cap at level 5, got %d" % player.get_weapon_level())
+		passed = false
+
+	# Different medallion -> Chicken Invaders model: switches weapon and preserves weapon level
+	player.apply_medallion(1) # SPREAD
+	if player.get_weapon() != 1 or player.get_weapon_level() != 5:
+		push_error("apply_medallion with different weapon must switch to SPREAD and preserve level 5 (got weapon %d, level %d)" % [player.get_weapon(), player.get_weapon_level()])
+		passed = false
+
+	# Power atom -> upgrades level (+1) without changing current weapon
+	player.set_weapon_level(2)
+	player.apply_power_atom()
+	if player.get_weapon() != 1 or player.get_weapon_level() != 3:
+		push_error("apply_power_atom must preserve weapon (1) and increment level to 3 (got %d)" % player.get_weapon_level())
+		passed = false
+
+	# Death penalty: penalize_weapon_on_death
+	player.set_weapon_level(4)
+	var lost: int = player.penalize_weapon_on_death()
+	if lost != 1 or player.get_weapon_level() != 3:
+		push_error("penalize_weapon_on_death must reduce 4 to 3 and return 1 (got %d lost, %d level)" % [lost, player.get_weapon_level()])
+		passed = false
+
+	player.set_weapon_level(1)
+	lost = player.penalize_weapon_on_death()
+	if lost != 0 or player.get_weapon_level() != 1:
+		push_error("penalize_weapon_on_death at level 1 must return 0 and keep level 1 (got %d lost, %d level)" % [lost, player.get_weapon_level()])
+		passed = false
+
+	player.queue_free()
+	await process_frame
+	return passed
+
+
+# ---------------------------------------------------------------------------
+# 3. Firing Patterns Across Weapon Levels
+# ---------------------------------------------------------------------------
+
+func _assert_firing_patterns_contract() -> bool:
+	var packed: PackedScene = load(PLAYER_PATH) as PackedScene
+	var player: CharacterBody2D = packed.instantiate() as CharacterBody2D
+	root.add_child(player)
+	await process_frame
+
+	var passed: bool = true
+
+	# Test Blaster bullet counts: Level 1..5
+	player.set_weapon(0) # BLASTER
+	var expected_blaster_counts: Array[int] = [1, 2, 3, 4, 5]
+	for lvl: int in range(1, 6):
+		player.set_weapon_level(lvl)
+		var pre_count: int = root.get_child_count()
+		player.simulate_shot()
+		var spawned: int = root.get_child_count() - pre_count
+		if spawned != expected_blaster_counts[lvl - 1]:
+			push_error("Blaster level %d expected %d bullets, spawned %d" % [lvl, expected_blaster_counts[lvl - 1], spawned])
+			passed = false
+		_cleanup_bullets()
+
+	# Test Spread bullet counts: Level 1..5 -> [3, 5, 7, 9, 11]
+	player.set_weapon(1) # SPREAD
+	var expected_spread_counts: Array[int] = [3, 5, 7, 9, 11]
+	for lvl: int in range(1, 6):
+		player.set_weapon_level(lvl)
+		var pre_count: int = root.get_child_count()
+		player.simulate_shot()
+		var spawned: int = root.get_child_count() - pre_count
+		if spawned != expected_spread_counts[lvl - 1]:
+			push_error("Spread level %d expected %d bullets, spawned %d" % [lvl, expected_spread_counts[lvl - 1], spawned])
+			passed = false
+		_cleanup_bullets()
+
+	# Test Missile counts: Level 1..5 -> [1, 2, 3, 4, 5]
+	player.set_weapon(2) # MISSILE
+	var expected_missile_counts: Array[int] = [1, 2, 3, 4, 5]
+	for lvl: int in range(1, 6):
+		player.set_weapon_level(lvl)
+		var pre_count: int = root.get_child_count()
+		player.simulate_shot()
+		var spawned: int = root.get_child_count() - pre_count
+		if spawned != expected_missile_counts[lvl - 1]:
+			push_error("Missile level %d expected %d missiles, spawned %d" % [lvl, expected_missile_counts[lvl - 1], spawned])
+			passed = false
+		_cleanup_bullets()
+
+	# Test Laser scaling
+	player.set_weapon(3) # LASER
+	player.set_weapon_level(1)
+	var beam: Area2D = player.call(&"_ensure_laser_beam")
+	if beam == null:
+		push_error("Laser beam Area2D missing")
+		passed = false
+	else:
+		var width_lvl1: float = float(beam.get("beam_width"))
+		player.set_weapon_level(5)
+		var width_lvl5: float = float(beam.get("beam_width"))
+		if width_lvl5 <= width_lvl1:
+			push_error("Laser beam_width must scale with level (lvl1: %f, lvl5: %f)" % [width_lvl1, width_lvl5])
+			passed = false
+
+	player.queue_free()
+	await process_frame
+	return passed
+
+
+func _cleanup_bullets() -> void:
+	for child: Node in root.get_children():
+		if child.is_in_group(&"player_bullets") or child.name.begins_with("Bullet") or child.name.begins_with("Spread") or child.name.begins_with("Missile"):
+			child.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 4. HUD Diegetic & Clean Minimalist Interface Contract
+# ---------------------------------------------------------------------------
+
+func _assert_hud_contract() -> bool:
+	if not ResourceLoader.exists(HUD_PATH):
+		push_error("Missing HUD scene: %s" % HUD_PATH)
+		return false
+
+	var packed: PackedScene = load(HUD_PATH) as PackedScene
+	var hud: CanvasLayer = packed.instantiate() as CanvasLayer
+	root.add_child(hud)
+	await process_frame
+
+	var passed: bool = true
+
+	# Chicken Invaders diegetic HUD: WeaponLevelContainer and WeaponSelectorContainer are removed.
+	if hud.get_node_or_null("WeaponSelectorContainer") != null:
+		push_error("HUD should not contain obsolete WeaponSelectorContainer")
+		passed = false
+	if hud.get_node_or_null("WeaponLevelContainer") != null:
+		push_error("HUD should not contain obsolete WeaponLevelContainer; weapon power is diegetic")
+		passed = false
+
+	# API methods must exist for backwards compatibility without error
+	if not hud.has_method(&"set_weapon_level") or not hud.has_method(&"set_active_weapon"):
+		push_error("HUD missing backward compatible set_weapon_level or set_active_weapon methods")
+		passed = false
+	else:
+		hud.set_weapon_level(4, 0)
+		hud.set_active_weapon(2)
+
+	# Essential combat HUD elements must remain active
+	if hud.get_node_or_null("Margin/LivesLabel") == null:
+		push_error("HUD missing Margin/LivesLabel")
+		passed = false
+	if hud.get_node_or_null("Margin/ScoreLabel") == null:
+		push_error("HUD missing Margin/ScoreLabel")
+		passed = false
+	if hud.get_node_or_null("Margin/WaveLabel") == null:
+		push_error("HUD missing Margin/WaveLabel")
+		passed = false
+	if hud.get_node_or_null("HeatContainer") == null:
+		push_error("HUD missing HeatContainer")
+		passed = false
+
+	hud.queue_free()
+	await process_frame
+	return passed
+
+
+# ---------------------------------------------------------------------------
+# 5. Extra Life Milestone Contract
+# ---------------------------------------------------------------------------
+
+func _assert_extra_life_contract() -> bool:
+	if not ResourceLoader.exists(MAIN_PATH):
+		push_error("Missing Main scene: %s" % MAIN_PATH)
+		return false
+
+	var packed: PackedScene = load(MAIN_PATH) as PackedScene
+	var main: Node2D = packed.instantiate() as Node2D
+	root.add_child(main)
+	await process_frame
+
+	var passed: bool = true
+
+	# Reset session to clean state
+	main.reset_session()
+	var initial_lives: int = int(main.get("lives"))
+
+	# Cross 1,000,000 threshold
+	main.set("score", 1_050_000)
+	main.call(&"_check_score_milestones")
+	var new_lives: int = int(main.get("lives"))
+	if new_lives != initial_lives + 1:
+		push_error("Reaching 1M points must award +1 life (initial %d, got %d)" % [initial_lives, new_lives])
+		passed = false
+
+	# Check duplicate check does not double-award
+	main.call(&"_check_score_milestones")
+	if int(main.get("lives")) != new_lives:
+		push_error("Re-checking same score milestone should not duplicate extra lives")
+		passed = false
+
+	# Cross 2,000,000 threshold
+	main.set("score", 2_100_000)
+	main.call(&"_check_score_milestones")
+	if int(main.get("lives")) != initial_lives + 2:
+		push_error("Reaching 2M points must award +2 total extra lives")
+		passed = false
+
+	main.queue_free()
+	await process_frame
+	return passed
+
+
+# ---------------------------------------------------------------------------
+# 6. Main Integration Contract: Medallions, Death Recovery Capsule, Reset
+# ---------------------------------------------------------------------------
+
+func _assert_main_integration_contract() -> bool:
+	var packed: PackedScene = load(MAIN_PATH) as PackedScene
+	var main: Node2D = packed.instantiate() as Node2D
+	root.add_child(main)
+	await process_frame
+
+	var passed: bool = true
+	main.reset_session()
+
+	var player: CharacterBody2D = main.get_node_or_null("Player") as CharacterBody2D
+	if player == null:
+		push_error("Main missing Player node")
+		passed = false
+		main.queue_free()
+		return false
+
+	# Test collecting Medallions upgrades player
+	player.set_weapon(0)
+	player.set_weapon_level(1)
+	main.call(&"_on_loot_collected", LootDrop.Type.MEDALLION_BLASTER)
+	if player.get_weapon_level() != 2:
+		push_error("Main _on_loot_collected(MEDALLION_BLASTER) failed to upgrade player to level 2 (got %d)" % player.get_weapon_level())
+		passed = false
+
+	# Test Power Atom
+	main.call(&"_on_loot_collected", LootDrop.Type.POWER_ATOM)
+	if player.get_weapon_level() != 3:
+		push_error("Main _on_loot_collected(POWER_ATOM) failed to upgrade player to level 3 (got %d)" % player.get_weapon_level())
+		passed = false
+
+	# Test player damage generates Recovery Capsule when level > 1
+	var pre_child_count: int = main.get_child_count()
+	main.call(&"_on_player_damage_requested")
+	# Level should be penalized from 3 to 2
+	if player.get_weapon_level() != 2:
+		push_error("Player level after death must be penalized to 2, got %d" % player.get_weapon_level())
+		passed = false
+
+	# Check for spawned recovery capsule
+	var found_capsule: bool = false
+	for child: Node in main.get_children():
+		if child is LootDrop and (child as LootDrop).get_type() == LootDrop.Type.RECOVERY_CAPSULE:
+			found_capsule = true
+			if (child as LootDrop).get_lifetime() != 3.0:
+				push_error("Spawned recovery capsule must have 3.0s lifetime")
+				passed = false
+			break
+
+	if not found_capsule:
+		push_error("Main must spawn a RECOVERY_CAPSULE when player dies with level > 1")
+		passed = false
+
+	# Test reset_session resets weapon level to 1
+	main.reset_session()
+	if player.get_weapon_level() != 1:
+		push_error("reset_session must reset weapon_level to 1, got %d" % player.get_weapon_level())
+		passed = false
+
+	main.queue_free()
+	await process_frame
+	return passed

@@ -131,3 +131,42 @@ func play_power_up_collected(power_up_type: int) -> void:
 				_pickup_shield.play()
 		_:
 			push_warning("AudioFeedback: unknown power-up type %d" % power_up_type)
+
+
+func play_medallion_collected(weapon_type: int = 0) -> void:
+	if _pickup_double_shot != null:
+		var pitches: Array[float] = [1.1, 1.3, 0.85, 1.5]
+		var idx: int = clampi(weapon_type, 0, 3)
+		_pickup_double_shot.pitch_scale = pitches[idx]
+		_pickup_double_shot.play()
+	elif _pickup_shield != null:
+		_pickup_shield.play()
+
+
+func play_weapon_switched(weapon_type: int = 0) -> void:
+	if _pickup_double_shot != null:
+		var pitches: Array[float] = [1.25, 1.45, 0.75, 1.7]
+		var idx: int = clampi(weapon_type, 0, 3)
+		_pickup_double_shot.pitch_scale = pitches[idx]
+		_pickup_double_shot.play()
+	elif _pickup_shield != null:
+		_pickup_shield.play()
+
+
+func play_power_atom_collected() -> void:
+	if _pickup_shield != null:
+		_pickup_shield.pitch_scale = 1.45
+		_pickup_shield.play()
+	elif _pickup_double_shot != null:
+		_pickup_double_shot.pitch_scale = 1.4
+		_pickup_double_shot.play()
+
+
+func play_extra_life() -> void:
+	if _pickup_shield != null:
+		_pickup_shield.pitch_scale = 1.85
+		_pickup_shield.play()
+	elif _pickup_double_shot != null:
+		_pickup_double_shot.pitch_scale = 1.75
+		_pickup_double_shot.play()
+

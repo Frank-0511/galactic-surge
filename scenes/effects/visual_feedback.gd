@@ -31,6 +31,28 @@ func play_score_popup(popup_position: Vector2, points: int, is_bonus: bool = fal
 	_explosion_layer.add_child(popup)
 
 
+func play_text_popup(popup_position: Vector2, text: String, color: Color = Color.WHITE) -> void:
+	var popup: Node2D = SCORE_POPUP_SCRIPT.new(text, color) as Node2D
+	if popup == null:
+		return
+	popup.name = "TextPopup"
+	popup.global_position = popup_position
+	_explosion_layer.add_child(popup)
+
+
+func play_level_up(position: Vector2, new_level: int) -> void:
+	play_text_popup(position, "NIVEL %d!" % new_level, Color(0.2, 0.95, 1.0))
+
+
+func play_weapon_switched(position: Vector2, weapon_name: String, color: Color) -> void:
+	play_text_popup(position, "¡%s!" % weapon_name.to_upper(), color)
+
+
+func play_extra_life_alert(position: Vector2) -> void:
+	play_text_popup(position, "1UP!", Color(1.0, 0.2, 0.4))
+
+
+
 func play_damage_flash() -> void:
 	if is_instance_valid(_flash_tween):
 		_flash_tween.kill()

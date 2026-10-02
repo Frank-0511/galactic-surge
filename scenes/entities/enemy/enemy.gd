@@ -127,10 +127,11 @@ func _process_diving(delta: float) -> void:
 
 	if t >= 1.0:
 		if _slot_getter.is_valid():
-			var vp_h: float = get_viewport_rect().size.y if is_inside_tree() else 960.0
-			if global_position.y > vp_h * 0.9:
+			var vp_rect: Rect2 = get_viewport_rect() if is_inside_tree() else Rect2(0, 0, 1080, 960)
+			if global_position.y > vp_rect.size.y * 0.9:
 				global_position.y = -30.0
-			return_to_slot(_slot_getter, 1.6 if not _is_enraged else 1.2)
+				global_position.x = clampf(global_position.x, 60.0, vp_rect.size.x - 60.0)
+			return_to_slot(_slot_getter, 2.0 if not _is_enraged else 1.5)
 		else:
 			_state = State.FORMATION
 			rotation = 0.0
@@ -154,7 +155,7 @@ func _process_returning(delta: float) -> void:
 	else:
 		rotation = 0.0
 
-	if t >= 1.0 or global_position.distance_to(target_slot) < 6.0:
+	if t >= 1.0 or (t > 0.8 and global_position.distance_to(target_slot) < 6.0):
 		global_position = target_slot
 		rotation = 0.0
 		_state = State.FORMATION

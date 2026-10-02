@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/hud.gd" id="1_hud"]
 
@@ -25,30 +25,6 @@ corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_weapon_normal"]
-bg_color = Color(0.06, 0.08, 0.16, 0.8)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.25, 0.35, 0.5, 0.5)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_weapon_active"]
-bg_color = Color(0.12, 0.25, 0.45, 0.9)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.22, 0.9, 1.0, 1.0)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_heat_bg"]
 bg_color = Color(0.05, 0.06, 0.12, 0.85)
@@ -190,49 +166,17 @@ theme_override_font_sizes/font_size = 20
 theme_override_colors/font_color = Color(0.35, 0.92, 1.0, 1.0)
 text = "Oleada: 1"
 
-[node name="WeaponSelectorContainer" type="HBoxContainer" parent="."]
+[node name="ActiveWeaponLabel" type="Label" parent="Margin"]
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
+anchors_preset = 10
 anchor_right = 1.0
-offset_left = -336.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = 46.0
-grow_horizontal = 0
-theme_override_constants/separation = 4
-
-[node name="WeaponButton0" type="Button" parent="WeaponSelectorContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_override_font_sizes/font_size = 10
-theme_override_styles/normal = SubResource("StyleBoxFlat_weapon_active")
-text = "BLASTER [1]"
-
-[node name="WeaponButton1" type="Button" parent="WeaponSelectorContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_override_font_sizes/font_size = 10
-theme_override_styles/normal = SubResource("StyleBoxFlat_weapon_normal")
-text = "SPREAD [2]"
-
-[node name="WeaponButton2" type="Button" parent="WeaponSelectorContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_override_font_sizes/font_size = 10
-theme_override_styles/normal = SubResource("StyleBoxFlat_weapon_normal")
-text = "MISIL [3]"
-
-[node name="WeaponButton3" type="Button" parent="WeaponSelectorContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-focus_mode = 0
-theme_override_font_sizes/font_size = 10
-theme_override_styles/normal = SubResource("StyleBoxFlat_weapon_normal")
-text = "LÁSER [4]"
+offset_left = 0.0
+offset_top = 96.0
+offset_right = 0.0
+offset_bottom = 124.0
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.2, 0.6, 1.0, 1.0)
+text = "ARMA: BLASTER"
 
 [node name="HeatContainer" type="Control" parent="."]
 layout_mode = 1
@@ -240,9 +184,9 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -336.0
-offset_top = 52.0
+offset_top = 16.0
 offset_right = -16.0
-offset_bottom = 90.0
+offset_bottom = 54.0
 grow_horizontal = 0
 
 [node name="HeatLabel" type="Label" parent="HeatContainer"]
