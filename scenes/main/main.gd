@@ -111,6 +111,8 @@ func _ready() -> void:
 	_enemy_spawner.enemy_contacted_player.connect(_on_enemy_contacted_player)
 	_enemy_spawner.enemy_destroyed.connect(_on_enemy_destroyed)
 	_enemy_spawner.wave_cleared.connect(_on_wave_cleared)
+	if _enemy_spawner.has_signal(&"enrage_triggered"):
+		_enemy_spawner.enrage_triggered.connect(_on_enrage_triggered)
 	_game_over.retry_requested.connect(_on_game_over_retry_requested)
 	_game_over.main_menu_requested.connect(return_to_main_menu)
 	_hud.retry_mission_requested.connect(_on_hud_retry_mission_requested)
@@ -271,6 +273,23 @@ func _on_enemy_destroyed(enemy: Area2D) -> void:
 	if explosion_position.distance_to(_player.global_position) < NEARBY_SHAKE_RADIUS:
 		_camera.shake(3.0, 0.12)
 	_try_spawn_enemy_loot(explosion_position)
+
+
+func _on_enrage_triggered() -> void:
+	if not _session_active:
+		return
+	if _camera != null:
+		_camera.shake(5.0, 0.25)
+	if _audio_feedback != null:
+		if _audio_feedback.has_method(&"play_enrage_warning"):
+			_audio_feedback.play_enrage_warning()
+		elif _audio_feedback.has_method(&"play_overheat_warning"):
+			_audio_feedback.play_overheat_warning()
+	if _visual_feedback != null:
+		if _visual_feedback.has_method(&"play_enrage_alert"):
+			_visual_feedback.play_enrage_alert()
+		elif _visual_feedback.has_method(&"play_damage_flash"):
+			_visual_feedback.play_damage_flash()
 
 
 func _pick_loot_type() -> int:

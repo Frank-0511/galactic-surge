@@ -39,6 +39,20 @@ func play_damage_flash() -> void:
 	_flash_tween.tween_property(_flash, "modulate:a", 0.0, 0.18)
 
 
+func play_enrage_alert() -> void:
+	if is_instance_valid(_flash_tween):
+		_flash_tween.kill()
+	if _flash != null:
+		_flash.color = Color(1.0, 0.2, 0.1)
+		_flash.modulate.a = 0.5
+		_flash_tween = create_tween()
+		_flash_tween.tween_property(_flash, "modulate:a", 0.0, 0.35)
+		_flash_tween.tween_callback(func() -> void:
+			if _flash != null:
+				_flash.color = Color.WHITE
+		)
+
+
 func clear_effects() -> void:
 	if is_instance_valid(_flash_tween):
 		_flash_tween.kill()

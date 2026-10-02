@@ -100,6 +100,16 @@ func play_overheat_warning() -> void:
 		_player_damage.play()
 
 
+## Plays acoustic alert when enemy formation enrages.
+func play_enrage_warning() -> void:
+	if _overheat_warning != null:
+		_overheat_warning.pitch_scale = 1.35
+		_overheat_warning.play()
+	elif _player_damage != null:
+		_player_damage.pitch_scale = 1.6
+		_player_damage.play()
+
+
 func play_enemy_explosion() -> void:
 	if _enemy_explosion != null:
 		_enemy_explosion.play()

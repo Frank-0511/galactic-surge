@@ -1,9 +1,14 @@
 # enemy.gd
-# Enemy ship that shoots downward and reports collisions to its formation spawner.
+# Enemy ship that shoots downward, executes formation movement, fly-in entrances,
+# dynamic dive swoops toward the player, and returns to its formation slot.
+# Features visual enrage escalation with crimson/amber styling and reactive banking tilt.
 
 extends Area2D
 
 const VectorMath: Script = preload("res://scripts/math/vector_math.gd")
+
+## High-level tactical lifecycle states of the enemy.
+enum State { FORMATION, FLY_IN, DIVING, RETURNING }
 
 ## Emitted once when the enemy has been destroyed.
 signal destroyed(enemy: Area2D)
@@ -13,6 +18,12 @@ signal player_contacted(player: Node2D)
 
 ## Emitted when the enemy completes its fly-in entrance curve.
 signal fly_in_completed
+
+## Emitted when this enemy begins an offensive dive.
+signal dive_started
+
+## Emitted when this enemy finishes its return journey and locks into formation.
+signal returned_to_formation
 
 ## Minimum delay in seconds before a shot.
 @export var min_shoot_cooldown: float = 1.25
@@ -32,7 +43,12 @@ var _destroyed: bool = false
 var _time: float = 0.0
 var _pulse_offset: float = 0.0
 
+## Active behavioral state.
+var _state: State = State.FORMATION
 var _is_flying_in: bool = false
+var _is_enraged: bool = false
+
+## Fly-in entrance curve parameters (Stage 8)
 var _fly_in_p0: Vector2 = Vector2.ZERO
 var _fly_in_p1: Vector2 = Vector2.ZERO
 var _fly_in_p2: Vector2 = Vector2.ZERO
@@ -41,30 +57,184 @@ var _fly_in_duration: float = 1.0
 var _fly_in_elapsed: float = 0.0
 var _fly_in_delay: float = 0.0
 
+## Dynamic dive parameters (Stage 9)
+var _dive_p0: Vector2 = Vector2.ZERO
+var _dive_p1: Vector2 = Vector2.ZERO
+var _dive_p2: Vector2 = Vector2.ZERO
+var _dive_p3: Vector2 = Vector2.ZERO
+var _dive_duration: float = 2.0
+var _dive_elapsed: float = 0.0
+
+## Return to formation parameters (Stage 9)
+var _return_start_pos: Vector2 = Vector2.ZERO
+var _slot_getter: Callable = Callable()
+var _return_duration: float = 1.6
+var _return_elapsed: float = 0.0
+
 
 func _ready() -> void:
 	_pulse_offset = randf_range(0.0, TAU)
-	if not _is_flying_in:
+	if _state == State.FORMATION:
 		_schedule_next_shot()
 
 
 func _process(delta: float) -> void:
-	if _is_flying_in:
-		_fly_in_elapsed += delta
-		if _fly_in_elapsed >= _fly_in_delay:
-			var effective_t: float = (_fly_in_elapsed - _fly_in_delay) / _fly_in_duration
-			var t: float = clampf(effective_t, 0.0, 1.0)
-			global_position = VectorMath.cubic_bezier(_fly_in_p0, _fly_in_p1, _fly_in_p2, _fly_in_p3, t)
-			var deriv: Vector2 = VectorMath.cubic_bezier_derivative(_fly_in_p0, _fly_in_p1, _fly_in_p2, _fly_in_p3, t)
-			rotation = clampf(deriv.x * 0.0015, -0.45, 0.45) * (1.0 - t)
-			if t >= 1.0:
-				_is_flying_in = false
-				rotation = 0.0
-				global_position = _fly_in_p3
-				_schedule_next_shot()
-				fly_in_completed.emit()
+	match _state:
+		State.FLY_IN:
+			_process_fly_in(delta)
+		State.DIVING:
+			_process_diving(delta)
+		State.RETURNING:
+			_process_returning(delta)
+		State.FORMATION:
+			pass
+
 	_time += delta
 	queue_redraw()
+
+
+func _process_fly_in(delta: float) -> void:
+	_fly_in_elapsed += delta
+	if _fly_in_elapsed >= _fly_in_delay:
+		var effective_t: float = (_fly_in_elapsed - _fly_in_delay) / _fly_in_duration
+		var t: float = clampf(effective_t, 0.0, 1.0)
+		global_position = VectorMath.cubic_bezier(_fly_in_p0, _fly_in_p1, _fly_in_p2, _fly_in_p3, t)
+		var deriv: Vector2 = VectorMath.cubic_bezier_derivative(_fly_in_p0, _fly_in_p1, _fly_in_p2, _fly_in_p3, t)
+		rotation = clampf(deriv.x * 0.0015, -0.45, 0.45) * (1.0 - t)
+		if t >= 1.0:
+			_state = State.FORMATION
+			_is_flying_in = false
+			rotation = 0.0
+			global_position = _fly_in_p3
+			_schedule_next_shot()
+			fly_in_completed.emit()
+
+
+func _process_diving(delta: float) -> void:
+	_dive_elapsed += delta
+	var t: float = clampf(_dive_elapsed / _dive_duration, 0.0, 1.0)
+	global_position = VectorMath.cubic_bezier(_dive_p0, _dive_p1, _dive_p2, _dive_p3, t)
+	var deriv: Vector2 = VectorMath.cubic_bezier_derivative(_dive_p0, _dive_p1, _dive_p2, _dive_p3, t)
+
+	# Banking tilt ~15-20 deg (+/- 0.2618 to 0.3491 rad) based on lateral derivative
+	var max_tilt: float = deg_to_rad(20.0)
+	var min_tilt: float = deg_to_rad(15.0)
+	if absf(deriv.x) > 30.0:
+		var factor: float = clampf(absf(deriv.x) / 350.0, 0.0, 1.0)
+		rotation = signf(deriv.x) * lerpf(min_tilt, max_tilt, factor)
+	else:
+		rotation = signf(deriv.x) * min_tilt * (absf(deriv.x) / 30.0)
+
+	if t >= 1.0:
+		if _slot_getter.is_valid():
+			var vp_h: float = get_viewport_rect().size.y if is_inside_tree() else 960.0
+			if global_position.y > vp_h * 0.9:
+				global_position.y = -30.0
+			return_to_slot(_slot_getter, 1.6 if not _is_enraged else 1.2)
+		else:
+			_state = State.FORMATION
+			rotation = 0.0
+			_schedule_next_shot()
+			returned_to_formation.emit()
+
+
+func _process_returning(delta: float) -> void:
+	_return_elapsed += delta
+	var t: float = clampf(_return_elapsed / _return_duration, 0.0, 1.0)
+	var target_slot: Vector2 = _slot_getter.call() if _slot_getter.is_valid() else _return_start_pos
+	var smooth_t: float = smoothstep(0.0, 1.0, t)
+	global_position = _return_start_pos.lerp(target_slot, smooth_t)
+
+	var return_dx: float = (target_slot.x - _return_start_pos.x)
+	var max_tilt: float = deg_to_rad(20.0)
+	var min_tilt: float = deg_to_rad(15.0)
+	if absf(return_dx) > 30.0:
+		var factor: float = clampf(absf(return_dx) / 300.0, 0.0, 1.0)
+		rotation = signf(return_dx) * lerpf(min_tilt, max_tilt, factor) * (1.0 - smooth_t)
+	else:
+		rotation = 0.0
+
+	if t >= 1.0 or global_position.distance_to(target_slot) < 6.0:
+		global_position = target_slot
+		rotation = 0.0
+		_state = State.FORMATION
+		_schedule_next_shot()
+		returned_to_formation.emit()
+
+
+func get_state() -> State:
+	return _state
+
+
+func is_in_formation() -> bool:
+	return _state == State.FORMATION
+
+
+func is_diving() -> bool:
+	return _state == State.DIVING
+
+
+func is_returning() -> bool:
+	return _state == State.RETURNING
+
+
+func is_flying_in() -> bool:
+	return _state == State.FLY_IN or _is_flying_in
+
+
+func set_slot_getter(getter: Callable) -> void:
+	_slot_getter = getter
+
+
+func start_dive(target_pos: Vector2, duration: float = 2.0, _dive_type: String = "swoop", slot_getter: Callable = Callable()) -> void:
+	if slot_getter.is_valid():
+		_slot_getter = slot_getter
+	_state = State.DIVING
+	_is_flying_in = false
+	_dive_duration = maxf(duration, 0.001)
+	_dive_elapsed = 0.0
+
+	var p0: Vector2 = global_position
+	# Determine swoop lateral curvature
+	var side: float = 1.0 if target_pos.x >= p0.x else -1.0
+	if absf(target_pos.x - p0.x) < 40.0:
+		side = 1.0 if p0.x <= 540.0 else -1.0
+
+	var p1: Vector2 = p0 + Vector2(side * 220.0, 160.0)
+	var p2: Vector2 = Vector2(target_pos.x + side * 140.0, target_pos.y - 120.0)
+	var p3: Vector2 = Vector2(target_pos.x - side * 80.0, 1040.0)
+
+	_dive_p0 = p0
+	_dive_p1 = p1
+	_dive_p2 = p2
+	_dive_p3 = p3
+
+	dive_started.emit()
+
+
+func return_to_slot(slot_getter: Callable, duration: float = 1.6) -> void:
+	_state = State.RETURNING
+	_is_flying_in = false
+	_slot_getter = slot_getter
+	_return_start_pos = global_position
+	_return_duration = maxf(duration, 0.001)
+	_return_elapsed = 0.0
+
+
+func set_enraged(enraged: bool) -> void:
+	if _is_enraged == enraged:
+		return
+	_is_enraged = enraged
+	if _is_enraged:
+		min_shoot_cooldown *= 0.5
+		max_shoot_cooldown *= 0.5
+	else:
+		min_shoot_cooldown *= 2.0
+		max_shoot_cooldown *= 2.0
+
+
+func is_enraged() -> bool:
+	return _is_enraged
 
 
 func start_fly_in(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, duration: float, delay: float = 0.0) -> void:
@@ -76,23 +246,20 @@ func start_fly_in(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, duration: 
 	_fly_in_delay = maxf(delay, 0.0)
 	_fly_in_elapsed = 0.0
 	_is_flying_in = true
+	_state = State.FLY_IN
 	global_position = p0
 	if _shoot_cooldown != null:
 		_shoot_cooldown.stop()
 
 
-func is_flying_in() -> bool:
-	return _is_flying_in
-
-
 func cancel_fly_in() -> void:
-	if not _is_flying_in:
+	if _state != State.FLY_IN and not _is_flying_in:
 		return
 	_is_flying_in = false
+	_state = State.FORMATION
 	global_position = _fly_in_p3
 	rotation = 0.0
 	_schedule_next_shot()
-
 
 
 func destroy() -> void:
@@ -134,25 +301,38 @@ func _schedule_next_shot() -> void:
 
 
 func _draw() -> void:
-	var pulse: float = 0.5 + 0.5 * sin(_time * 3.0 + _pulse_offset)
+	var pulse_speed: float = 6.0 if _is_enraged else 3.0
+	var pulse: float = 0.5 + 0.5 * sin(_time * pulse_speed + _pulse_offset)
 
-	# Toxic ambient glow separates the alien silhouette from the starfield.
-	draw_circle(Vector2.ZERO, 16.0 + 2.0 * pulse, Color(0.45, 1.0, 0.35, 0.07 + 0.05 * pulse))
+	# Glow colors: toxic green normally, reacting amber/crimson when enraged
+	var ambient_glow_color: Color = Color(1.0, 0.35, 0.15, 0.12 + 0.08 * pulse) if _is_enraged else Color(0.45, 1.0, 0.35, 0.07 + 0.05 * pulse)
+	var shadow_color: Color = Color(1.0, 0.20, 0.05, 0.14 + 0.08 * pulse) if _is_enraged else Color(0.35, 0.95, 0.3, 0.10 + 0.06 * pulse)
+	var carapace_color: Color = Color(0.38, 0.06, 0.12) if _is_enraged else Color(0.22, 0.05, 0.32)
+	var carapace_outline_color: Color = Color(1.0, 0.40, 0.15) if _is_enraged else Color(0.55, 1.0, 0.4)
+	var claw_color: Color = Color(0.44, 0.08, 0.16) if _is_enraged else Color(0.28, 0.06, 0.4)
+	var claw_outline_color: Color = Color(1.0, 0.45, 0.20) if _is_enraged else Color(0.6, 1.0, 0.45)
+	var antenna_color: Color = Color(1.0, 0.55, 0.22) if _is_enraged else Color(0.65, 1.0, 0.5)
+	var eye_outer_color: Color = Color(1.0, 0.35, 0.15, 0.4 + 0.3 * pulse) if _is_enraged else Color(0.55, 1.0, 0.35, 0.3 + 0.2 * pulse)
+	var eye_inner_color: Color = Color(1.0, 0.85, 0.25, 0.9 + 0.1 * pulse) if _is_enraged else Color(0.9, 1.0, 0.55, 0.8 + 0.2 * pulse)
+	var leg_color: Color = Color(1.0, 0.45, 0.20, 0.9) if _is_enraged else Color(0.5, 0.95, 0.4, 0.8)
 
-	# Soft hover shadow beneath the carapace suggests it floats rather than flies.
-	draw_circle(Vector2(0, 13), 8.0, Color(0.35, 0.95, 0.3, 0.10 + 0.06 * pulse))
+	# Ambient glow
+	draw_circle(Vector2.ZERO, 16.0 + 2.0 * pulse, ambient_glow_color)
 
-	# Compact beetle-like carapace replaces the old swept-wing fighter silhouette.
+	# Soft hover shadow beneath carapace
+	draw_circle(Vector2(0, 13), 8.0, shadow_color)
+
+	# Compact beetle-like carapace
 	var carapace: PackedVector2Array = PackedVector2Array([
 		Vector2(-8, -10), Vector2(0, -12), Vector2(8, -10),
 		Vector2(10, 1), Vector2(6, 9), Vector2(0, 11), Vector2(-6, 9), Vector2(-10, 1),
 	])
-	draw_colored_polygon(carapace, Color(0.22, 0.05, 0.32))
+	draw_colored_polygon(carapace, carapace_color)
 	var carapace_outline: PackedVector2Array = carapace.duplicate()
 	carapace_outline.append(carapace[0])
-	draw_polyline(carapace_outline, Color(0.55, 1.0, 0.4), 1.5)
+	draw_polyline(carapace_outline, carapace_outline_color, 1.5)
 
-	# Crab-like pincer claws give the alien a distinct, non-jet profile.
+	# Crab-like pincer claws
 	var claw_l: PackedVector2Array = PackedVector2Array([
 		Vector2(-9, -3), Vector2(-17, -6), Vector2(-21, -9),
 		Vector2(-16, -1), Vector2(-21, 4), Vector2(-16, 5), Vector2(-10, 2),
@@ -161,27 +341,27 @@ func _draw() -> void:
 		Vector2(9, -3), Vector2(17, -6), Vector2(21, -9),
 		Vector2(16, -1), Vector2(21, 4), Vector2(16, 5), Vector2(10, 2),
 	])
-	draw_colored_polygon(claw_l, Color(0.28, 0.06, 0.4))
-	draw_colored_polygon(claw_r, Color(0.28, 0.06, 0.4))
+	draw_colored_polygon(claw_l, claw_color)
+	draw_colored_polygon(claw_r, claw_color)
 	var claw_l_outline: PackedVector2Array = claw_l.duplicate()
 	claw_l_outline.append(claw_l[0])
 	var claw_r_outline: PackedVector2Array = claw_r.duplicate()
 	claw_r_outline.append(claw_r[0])
-	draw_polyline(claw_l_outline, Color(0.6, 1.0, 0.45), 1.25)
-	draw_polyline(claw_r_outline, Color(0.6, 1.0, 0.45), 1.25)
+	draw_polyline(claw_l_outline, claw_outline_color, 1.25)
+	draw_polyline(claw_r_outline, claw_outline_color, 1.25)
 
-	# Twin antennae keep a whisper of the old sensor pair, now bioluminescent.
-	draw_line(Vector2(-3, -11), Vector2(-4.5, -17), Color(0.65, 1.0, 0.5), 1.2)
-	draw_line(Vector2(3, -11), Vector2(4.5, -17), Color(0.65, 1.0, 0.5), 1.2)
-	draw_circle(Vector2(-4.5, -17), 1.2, Color(0.7, 1.0, 0.45, 0.9))
-	draw_circle(Vector2(4.5, -17), 1.2, Color(0.7, 1.0, 0.45, 0.9))
+	# Twin antennae
+	draw_line(Vector2(-3, -11), Vector2(-4.5, -17), antenna_color, 1.2)
+	draw_line(Vector2(3, -11), Vector2(4.5, -17), antenna_color, 1.2)
+	draw_circle(Vector2(-4.5, -17), 1.2, antenna_color)
+	draw_circle(Vector2(4.5, -17), 1.2, antenna_color)
 
-	# Pulsing central eye reads as a clear, readable focal point at a glance.
-	draw_circle(Vector2(0, -1), 4.0, Color(0.55, 1.0, 0.35, 0.3 + 0.2 * pulse))
-	draw_circle(Vector2(0, -1), 2.0, Color(0.9, 1.0, 0.55, 0.8 + 0.2 * pulse))
+	# Pulsing central eye
+	draw_circle(Vector2(0, -1), 4.0, eye_outer_color)
+	draw_circle(Vector2(0, -1), 2.0, eye_inner_color)
 
-	# Three thin wriggling legs suggest a hovering, skittering gait.
+	# Three thin wriggling legs
 	for i in range(3):
 		var leg_x: float = (i - 1) * 4.0
 		var wag: float = sin(_time * 6.0 + _pulse_offset + i) * 1.5
-		draw_line(Vector2(leg_x, 9), Vector2(leg_x + wag, 15), Color(0.5, 0.95, 0.4, 0.8), 1.1)
+		draw_line(Vector2(leg_x, 9), Vector2(leg_x + wag, 15), leg_color, 1.1)

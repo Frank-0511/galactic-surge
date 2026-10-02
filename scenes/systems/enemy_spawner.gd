@@ -1,6 +1,7 @@
 # enemy_spawner.gd
 # Creates and moves the enemy formation as one synchronized group.
 # Owns the progressive wave system: five waves with increasing speed, patterns, and Bézier fly-in.
+# Manages dynamic offensive dives (1-on-1 and pairs) and the wave enrage countdown timer.
 
 extends Node2D
 
@@ -21,6 +22,15 @@ signal all_waves_cleared
 
 ## Emitted when all flying-in enemies of the current wave have settled into formation.
 signal fly_in_completed_all
+
+## Emitted when the formation enrage threshold is reached.
+signal enrage_triggered
+
+## Emitted when an enemy begins an offensive dive toward the player.
+signal enemy_dived(enemy: Area2D)
+
+## Emitted when an enemy returns from a dive and re-enters formation.
+signal formation_rejoined(enemy: Area2D)
 
 ## Scene used for every member of the formation.
 @export var enemy_scene: PackedScene = preload("res://scenes/entities/enemy/enemy.tscn")
@@ -49,6 +59,12 @@ signal fly_in_completed_all
 ## Duration in seconds of each enemy's Bézier fly-in entrance.
 @export var fly_in_duration: float = 1.2
 
+## Wave elapsed seconds before enemies enter enrage state.
+@export var enrage_time: float = 35.0
+
+## Base interval in seconds between offensive dives.
+@export var base_dive_interval: float = 4.2
+
 ## Half of the 36 px Enemy collision shape width.
 const ENEMY_HALF_WIDTH: float = 18.0
 
@@ -74,6 +90,13 @@ var _first_row_y: float = 120.0
 var _current_pattern_type: String = "grid"
 var _current_trajectory: String = "swoop_left"
 
+## Stage 9 temporal escalation and slot tracking
+var _wave_timer: float = 0.0
+var _is_enraged: bool = false
+var _dive_cooldown_timer: float = 3.5
+var _enemy_base_slots: Dictionary = {} # Area2D -> Vector2
+var _formation_shift: Vector2 = Vector2.ZERO
+
 
 ## Sets the formation origin (center_x, first_row_y) from GameLayout.
 func set_formation_layout(origin: Vector2, first_row_y: float) -> void:
@@ -84,22 +107,55 @@ func set_formation_layout(origin: Vector2, first_row_y: float) -> void:
 func _process(delta: float) -> void:
 	if not _is_running or _is_flying_in:
 		return
-	var enemies: Array[Area2D] = _get_valid_enemies()
-	if enemies.is_empty():
+
+	# Temporal escalation (enrage countdown)
+	if not _is_enraged:
+		_wave_timer += delta
+		if _wave_timer >= enrage_time:
+			_trigger_enrage()
+
+	# Dive attack countdown
+	_dive_cooldown_timer -= delta
+	if _dive_cooldown_timer <= 0.0:
+		var dive_count: int = 1
+		if _current_wave >= 2 or _is_enraged:
+			dive_count = 2 if randf() < 0.65 else 1
+		trigger_dive(dive_count)
+		_dive_cooldown_timer = randf_range(1.2, 2.0) if _is_enraged else randf_range(2.8, 4.5)
+
+	# Formation movement: only considers and displaces enemies actively IN FORMATION
+	var all_enemies: Array[Area2D] = _get_valid_enemies()
+	if all_enemies.is_empty():
 		return
-	var viewport_rect: Rect2 = get_viewport_rect()
+
+	var formation_enemies: Array[Area2D] = []
+	for enemy: Area2D in all_enemies:
+		if enemy.has_method(&"is_in_formation") and not enemy.is_in_formation():
+			continue
+		formation_enemies.append(enemy)
+
 	var horizontal_delta: float = _direction * formation_speed * delta
-	var left_edge: float = enemies[0].global_position.x - ENEMY_HALF_WIDTH
-	var right_edge: float = enemies[0].global_position.x + ENEMY_HALF_WIDTH
-	for enemy: Area2D in enemies:
+
+	if formation_enemies.is_empty():
+		_formation_shift.x += horizontal_delta
+		return
+
+	var viewport_rect: Rect2 = get_viewport_rect()
+	var left_edge: float = formation_enemies[0].global_position.x - ENEMY_HALF_WIDTH
+	var right_edge: float = formation_enemies[0].global_position.x + ENEMY_HALF_WIDTH
+	for enemy: Area2D in formation_enemies:
 		left_edge = minf(left_edge, enemy.global_position.x - ENEMY_HALF_WIDTH)
 		right_edge = maxf(right_edge, enemy.global_position.x + ENEMY_HALF_WIDTH)
+
 	if left_edge + horizontal_delta < viewport_rect.position.x or right_edge + horizontal_delta > viewport_rect.end.x:
 		_direction *= -1.0
-		for enemy: Area2D in enemies:
+		_formation_shift.y += descent_distance
+		for enemy: Area2D in formation_enemies:
 			enemy.position.y += descent_distance
 		return
-	for enemy: Area2D in enemies:
+
+	_formation_shift.x += horizontal_delta
+	for enemy: Area2D in formation_enemies:
 		enemy.position.x += horizontal_delta
 
 
@@ -108,19 +164,28 @@ func spawn_formation() -> void:
 	if enemy_scene == null:
 		return
 
-	var pattern: int = FormationPatterns.pattern_from_string(_current_pattern_type)
-	var slots: Array[Vector2] = FormationPatterns.calculate_slots(
-		pattern, rows, columns, horizontal_spacing, vertical_spacing,
-		Vector2(_formation_origin.x, _first_row_y)
-	)
-
 	var vp_rect: Rect2 = get_viewport_rect() if is_inside_tree() else Rect2(0, 0, 1080, 960)
 	if vp_rect.size == Vector2.ZERO:
 		vp_rect = Rect2(0, 0, 1080, 960)
 
+	var origin: Vector2 = _formation_origin
+	if origin == Vector2.ZERO:
+		origin = Vector2(vp_rect.get_center().x, _first_row_y)
+
+	var pattern: int = FormationPatterns.pattern_from_string(_current_pattern_type)
+	var slots: Array[Vector2] = FormationPatterns.calculate_slots(
+		pattern, rows, columns, horizontal_spacing, vertical_spacing,
+		origin
+	)
+
 	var should_fly_in: bool = fly_in_enabled and fly_in_duration > 0.0
 	_is_flying_in = should_fly_in
 	_flying_in_count = 0
+	_enemy_base_slots.clear()
+	_formation_shift = Vector2.ZERO
+	_wave_timer = 0.0
+	_is_enraged = false
+	_dive_cooldown_timer = 3.5
 
 	for i: int in range(slots.size()):
 		var slot_pos: Vector2 = slots[i]
@@ -131,6 +196,7 @@ func spawn_formation() -> void:
 		enemy.player_contacted.connect(_on_enemy_player_contacted)
 		enemy.destroyed.connect(_on_enemy_destroyed)
 		_alive_count += 1
+		_enemy_base_slots[enemy] = slot_pos
 
 		if should_fly_in:
 			_flying_in_count += 1
@@ -157,6 +223,11 @@ func clear_formation() -> void:
 	_flying_in_count = 0
 	_is_flying_in = false
 	_wave_cleared_emitted = false
+	_enemy_base_slots.clear()
+	_formation_shift = Vector2.ZERO
+	_wave_timer = 0.0
+	_is_enraged = false
+	_dive_cooldown_timer = 3.5
 
 
 func stop() -> void:
@@ -183,6 +254,10 @@ func is_flying_in() -> bool:
 	return _is_flying_in
 
 
+func is_enraged() -> bool:
+	return _is_enraged
+
+
 func get_wave_config(wave_index: int) -> Dictionary:
 	if wave_index < 0 or wave_index >= _WAVE_CONFIGS.size():
 		return {}
@@ -201,6 +276,73 @@ func start_wave(wave_index: int) -> void:
 	_current_pattern_type = String(config.get("formation_type", "grid"))
 	_current_trajectory = String(config.get("fly_in_trajectory", "swoop_left"))
 	spawn_formation()
+
+
+func get_enemy_slot_position(enemy: Area2D) -> Vector2:
+	if _enemy_base_slots.has(enemy):
+		return _enemy_base_slots[enemy] + _formation_shift
+	return enemy.global_position
+
+
+func trigger_dive(count: int = 1) -> Array[Area2D]:
+	var candidates: Array[Area2D] = []
+	for enemy: Area2D in _get_valid_enemies():
+		if enemy.has_method(&"is_in_formation") and enemy.is_in_formation():
+			candidates.append(enemy)
+
+	if candidates.is_empty():
+		return []
+
+	# Prioritize lower rows (higher Y)
+	candidates.sort_custom(func(a: Area2D, b: Area2D) -> bool:
+		return a.global_position.y > b.global_position.y
+	)
+
+	var target_pos: Vector2 = Vector2(540.0, 850.0)
+	if is_inside_tree():
+		var players: Array[Node] = get_tree().get_nodes_in_group(&"player")
+		if not players.is_empty() and is_instance_valid(players[0]) and players[0] is Node2D:
+			target_pos = (players[0] as Node2D).global_position
+
+	var selected_count: int = mini(count, candidates.size())
+	var attackers: Array[Area2D] = []
+
+	for i: int in range(selected_count):
+		var enemy: Area2D = candidates[i]
+		var dive_dur: float = 1.6 if _is_enraged else 2.0
+		var enemy_ref: Area2D = enemy
+		var slot_getter: Callable = func() -> Vector2:
+			return get_enemy_slot_position(enemy_ref)
+
+		if enemy.has_method(&"start_dive"):
+			enemy.start_dive(target_pos, dive_dur, "swoop", slot_getter)
+		if enemy.has_method(&"set_slot_getter"):
+			enemy.set_slot_getter(slot_getter)
+
+		if not enemy.returned_to_formation.is_connected(_on_enemy_returned_to_formation):
+			enemy.returned_to_formation.connect(_on_enemy_returned_to_formation.bind(enemy))
+
+		attackers.append(enemy)
+		enemy_dived.emit(enemy)
+
+	return attackers
+
+
+func _on_enemy_returned_to_formation(enemy: Area2D) -> void:
+	if enemy.returned_to_formation.is_connected(_on_enemy_returned_to_formation):
+		enemy.returned_to_formation.disconnect(_on_enemy_returned_to_formation)
+	formation_rejoined.emit(enemy)
+
+
+func _trigger_enrage() -> void:
+	if _is_enraged:
+		return
+	_is_enraged = true
+	formation_speed *= 1.4
+	enrage_triggered.emit()
+	for enemy: Area2D in _get_valid_enemies():
+		if enemy.has_method(&"set_enraged"):
+			enemy.set_enraged(true)
 
 
 func _generate_bezier_points(trajectory: String, slot_pos: Vector2, index: int, vp_rect: Rect2) -> Array[Vector2]:
@@ -273,6 +415,7 @@ func _on_enemy_fly_in_completed() -> void:
 
 
 func _on_enemy_destroyed(enemy: Area2D) -> void:
+	_enemy_base_slots.erase(enemy)
 	if _is_flying_in:
 		_flying_in_count -= 1
 		if _flying_in_count <= 0:
