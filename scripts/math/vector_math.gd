@@ -62,3 +62,28 @@ static func sample_cubic_path(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2
 		var t: float = float(i) / float(count)
 		points[i] = cubic_bezier(p0, p1, p2, p3, t)
 	return points
+
+
+## Calculates the position of a ballistic projectile at time t under constant gravity (MRUA).
+## Formula: r(t) = origin + v0 * t + 0.5 * Vector2(0, g * t^2)
+static func calculate_ballistic_position(origin: Vector2, initial_velocity: Vector2, gravity: float, t: float) -> Vector2:
+	var time: float = maxf(t, 0.0)
+	return origin + (initial_velocity * time) + Vector2(0.0, 0.5 * gravity * time * time)
+
+
+## Calculates the instantaneous velocity vector at time t under constant gravity.
+## Formula: v(t) = v0 + Vector2(0, g * t)
+static func calculate_ballistic_velocity(initial_velocity: Vector2, gravity: float, t: float) -> Vector2:
+	var time: float = maxf(t, 0.0)
+	return initial_velocity + Vector2(0.0, gravity * time)
+
+
+## Calculates the initial launch velocity required to reach a target position within a specified flight time.
+## Solves: target = origin + v0 * T + 0.5 * g * T^2  =>  v0 = (target - origin - 0.5 * Vector2(0, g * T^2)) / T
+static func calculate_ballistic_launch_velocity(origin: Vector2, target: Vector2, gravity: float, flight_time: float) -> Vector2:
+	var t: float = maxf(flight_time, 0.001)
+	var displacement: Vector2 = target - origin
+	var vx: float = displacement.x / t
+	var vy: float = (displacement.y - 0.5 * gravity * t * t) / t
+	return Vector2(vx, vy)
+

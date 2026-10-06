@@ -286,15 +286,96 @@ func _on_body_entered(body: Node2D) -> void:
 	destroy()
 
 
+## Optional forced bullet variant for testing/scripting (-1 for standard probability).
+var _forced_bullet_variant: int = -1
+
+
+func set_forced_bullet_variant(variant: int) -> void:
+	_forced_bullet_variant = variant
+
+
+func get_forced_bullet_variant() -> int:
+	return _forced_bullet_variant
+
+
+## Configures physical ballistic properties and plasma variant for spawned bullets.
+func _configure_bullet(bullet: Node2D) -> void:
+	if not ("plasma_variant" in bullet):
+		return
+
+	var variant: int = _forced_bullet_variant
+	if variant < 0:
+		var roll: float = randf()
+		if _is_enraged:
+			# Enraged enemies favor complex ballistic artillery
+			if roll < 0.35:
+				variant = 2 # CLUSTER
+			elif roll < 0.80:
+				variant = 1 # PARABOLIC
+			else:
+				variant = 0 # DIRECT
+		else:
+			# Standard formation enemies
+			if roll < 0.15:
+				variant = 2 # CLUSTER
+			elif roll < 0.50:
+				variant = 1 # PARABOLIC
+			else:
+				variant = 0 # DIRECT
+
+	bullet.set("plasma_variant", variant)
+
+	match variant:
+		0: # DIRECT
+			bullet.set("ballistic_gravity", 0.0)
+			bullet.set("gravity", 0.0)
+			bullet.set("velocity", Vector2(0.0, bullet.get("speed") if "speed" in bullet else 350.0))
+		1: # PARABOLIC
+			bullet.set("ballistic_gravity", 380.0)
+			bullet.set("gravity", 380.0)
+			var target_pos: Vector2 = Vector2.ZERO
+			var has_target: bool = false
+			if is_inside_tree():
+				var player: Node2D = get_tree().get_first_node_in_group(&"player") as Node2D
+				if player != null and is_instance_valid(player):
+					target_pos = player.global_position
+					has_target = true
+			if has_target:
+				var spawn_pos: Vector2 = global_position + Vector2(0, 20)
+				var flight_time: float = randf_range(1.1, 1.5)
+				var launch_vel: Vector2 = VectorMath.calculate_ballistic_launch_velocity(
+					spawn_pos, target_pos, 380.0, flight_time
+				)
+				launch_vel.x = clampf(launch_vel.x, -220.0, 220.0)
+				bullet.set("velocity", launch_vel)
+				bullet.set("initial_velocity", launch_vel)
+			else:
+				var lateral_vx: float = randf_range(-140.0, 140.0)
+				var launch_vel: Vector2 = Vector2(lateral_vx, randf_range(40.0, 100.0))
+				bullet.set("velocity", launch_vel)
+				bullet.set("initial_velocity", launch_vel)
+		2: # CLUSTER
+			bullet.set("ballistic_gravity", 320.0)
+			bullet.set("gravity", 320.0)
+			var lateral_vx: float = randf_range(-90.0, 90.0)
+			var launch_vel: Vector2 = Vector2(lateral_vx, randf_range(80.0, 140.0))
+			bullet.set("velocity", launch_vel)
+			bullet.set("initial_velocity", launch_vel)
+			bullet.set("cluster_fuse_time", randf_range(0.5, 0.65))
+
+
+
 func _on_shoot_cooldown_timeout() -> void:
 	if _destroyed:
 		return
 	if enemy_bullet_scene != null:
 		var enemy_bullet: Node2D = enemy_bullet_scene.instantiate() as Node2D
 		if enemy_bullet != null:
+			_configure_bullet(enemy_bullet)
 			get_tree().current_scene.add_child(enemy_bullet)
 			enemy_bullet.global_position = global_position + Vector2(0, 20)
 	_schedule_next_shot()
+
 
 
 func _schedule_next_shot() -> void:
