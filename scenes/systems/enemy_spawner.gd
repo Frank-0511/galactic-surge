@@ -1,6 +1,6 @@
 # enemy_spawner.gd
 # Creates and moves the enemy formation as one synchronized group.
-# Owns the progressive wave system: five waves with increasing speed, patterns, and Bézier fly-in.
+# Owns the progressive wave system: ten waves with increasing speed, patterns, and Bézier fly-in.
 # Manages dynamic offensive dives (1-on-1 and pairs) and the wave enrage countdown timer.
 
 extends Node2D
@@ -17,7 +17,7 @@ signal enemy_destroyed(enemy: Area2D)
 ## wave_index is 0-based.
 signal wave_cleared(wave_index: int)
 
-## Emitted after the final wave (index 4) is cleared.
+## Emitted after the final wave (index 9) is cleared.
 signal all_waves_cleared
 
 ## Emitted when all flying-in enemies of the current wave have settled into formation.
@@ -75,13 +75,18 @@ signal formation_rejoined(enemy: Area2D)
 const ENEMY_HALF_WIDTH: float = 18.0
 
 ## Progressive wave configurations.
-## Indices are 0-based: wave 0 is the first wave, wave 4 is the last.
+## Indices are 0-based: wave 0 is the first wave, wave 9 is the last.
 const _WAVE_CONFIGS: Array = [
-	{"rows": 3, "columns": 6, "formation_speed": 80.0, "formation_type": "grid", "fly_in_trajectory": "swoop_left"},
-	{"rows": 3, "columns": 6, "formation_speed": 95.0, "formation_type": "v_shape", "fly_in_trajectory": "pincer"},
-	{"rows": 3, "columns": 7, "formation_speed": 110.0, "formation_type": "arc", "fly_in_trajectory": "swoop_right"},
-	{"rows": 4, "columns": 7, "formation_speed": 125.0, "formation_type": "diagonal", "fly_in_trajectory": "cross_dive"},
-	{"rows": 4, "columns": 8, "formation_speed": 140.0, "formation_type": "grid", "fly_in_trajectory": "center_loop"},
+	{"rows": 3, "columns": 6, "formation_speed": 80.0,  "formation_type": "grid",     "fly_in_trajectory": "swoop_left"},
+	{"rows": 3, "columns": 6, "formation_speed": 90.0,  "formation_type": "v_shape",  "fly_in_trajectory": "pincer"},
+	{"rows": 3, "columns": 7, "formation_speed": 100.0, "formation_type": "arc",      "fly_in_trajectory": "swoop_right"},
+	{"rows": 4, "columns": 7, "formation_speed": 110.0, "formation_type": "diagonal", "fly_in_trajectory": "cross_dive"},
+	{"rows": 4, "columns": 7, "formation_speed": 120.0, "formation_type": "grid",     "fly_in_trajectory": "center_loop"},
+	{"rows": 4, "columns": 8, "formation_speed": 128.0, "formation_type": "v_shape",  "fly_in_trajectory": "swoop_left"},
+	{"rows": 4, "columns": 8, "formation_speed": 136.0, "formation_type": "arc",      "fly_in_trajectory": "pincer"},
+	{"rows": 5, "columns": 7, "formation_speed": 144.0, "formation_type": "diagonal", "fly_in_trajectory": "swoop_right"},
+	{"rows": 5, "columns": 8, "formation_speed": 152.0, "formation_type": "grid",     "fly_in_trajectory": "cross_dive"},
+	{"rows": 5, "columns": 8, "formation_speed": 160.0, "formation_type": "arc",      "fly_in_trajectory": "center_loop"},
 ]
 
 var _direction: float = 1.0
