@@ -9,7 +9,7 @@ const GAME_OVER_SCENE_PATH := "res://scenes/ui/game_over.tscn"
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const STARTING_LIVES: int = 3
-const TOTAL_WAVES: int = 5
+const TOTAL_WAVES: int = 10
 
 
 func _init() -> void:

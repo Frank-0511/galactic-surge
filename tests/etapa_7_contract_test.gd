@@ -1,5 +1,5 @@
 # Contract harness for Etapa 7: Weapons Arsenal, Overheat System, and Combo System.
-# Verifies Input Actions, SpreadBullet, Missile, LaserBeam, Player arsenal & thermal mechanics,
+# Verifies Input Actions, IonBullet / SpreadBullet, Missile, LaserBeam, Player arsenal & thermal mechanics,
 # Boss variable damage support, ComboSystem progression, HUD arsenal/heat/combo display,
 # Main combo scoring integration, and AudioFeedback weapon sounds.
 extends SceneTree
@@ -75,7 +75,7 @@ func _assert_input_actions_contract() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# 2. Spread Bullet Contract
+# 2. IonBullet / SpreadBullet Contract
 # ---------------------------------------------------------------------------
 
 func _assert_spread_bullet_contract() -> bool:
@@ -314,19 +314,14 @@ func _assert_player_arsenal_and_overheat_contract() -> bool:
 	var changed_weapons: Array[int] = []
 	player.connect(&"weapon_changed", func(w: int) -> void: changed_weapons.append(w))
 
-	player.call("set_weapon", 1) # SPREAD
+	player.call("set_weapon", 1) # MISSILE (1)
 	if int(player.call("get_weapon")) != 1:
 		push_error("set_weapon(1) failed to update current_weapon")
 		passed = false
 
-	player.call("cycle_weapon", true) # MISSILE (2)
+	player.call("cycle_weapon", true) # LASER (2)
 	if int(player.call("get_weapon")) != 2:
 		push_error("cycle_weapon(true) failed to cycle to 2")
-		passed = false
-
-	player.call("cycle_weapon", true) # LASER (3)
-	if int(player.call("get_weapon")) != 3:
-		push_error("cycle_weapon(true) failed to cycle to 3")
 		passed = false
 
 	player.call("cycle_weapon", true) # Wrap around to BLASTER (0)
@@ -334,9 +329,9 @@ func _assert_player_arsenal_and_overheat_contract() -> bool:
 		push_error("cycle_weapon(true) failed to wrap to 0")
 		passed = false
 
-	player.call("cycle_weapon", false) # Wrap back to LASER (3)
-	if int(player.call("get_weapon")) != 3:
-		push_error("cycle_weapon(false) failed to wrap to 3")
+	player.call("cycle_weapon", false) # Wrap back to LASER (2)
+	if int(player.call("get_weapon")) != 2:
+		push_error("cycle_weapon(false) failed to wrap to 2")
 		passed = false
 
 	player.call("set_weapon", 0) # Back to BLASTER
@@ -772,7 +767,7 @@ func _assert_audio_feedback_contract() -> bool:
 		passed = false
 
 	# Test calling methods without runtime errors
-	for w: int in range(4):
+	for w: int in range(3):
 		audio.call("play_weapon_shot", w)
 	audio.call("play_overheat_warning")
 

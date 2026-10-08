@@ -1,9 +1,9 @@
 # etapa_10_contract_test.gd
-# Contract test harness for Etapa 10: Medallones Neón, Niveles 1-5 y Riesgo/Recompensa.
+# Contract test harness for Etapa 10: Medallones Neón, Niveles 1-10 y Riesgo/Recompensa.
 # Verifies:
 # 1. LootDrop enum types (Medallions, Power Atom, Recovery Capsule) and lifetime countdown.
 # 2. Player weapon level scaling, tactical dilemma (upgrade vs switch/reset), power atom, and death penalty.
-# 3. Scaled firing patterns for Blaster, Spread, Missile, and Laser width across levels 1 to 5.
+# 3. Scaled firing patterns for Ion Blaster, Missile, and Laser width across levels 1 to 10.
 # 4. Extra life milestone rewards per 1,000,000 points in Main.
 # 5. HUD weapon level text and glowing neon pips synchronization.
 # 6. Main integration: medallion collection, death capsule spawn, and session reset.
@@ -65,8 +65,8 @@ func _assert_loot_contract() -> bool:
 	if not ("MEDALLION_BLASTER" in LootDrop.Type):
 		push_error("LootDrop.Type missing MEDALLION_BLASTER")
 		passed = false
-	if not ("MEDALLION_SPREAD" in LootDrop.Type):
-		push_error("LootDrop.Type missing MEDALLION_SPREAD")
+	if ("MEDALLION_SPREAD" in LootDrop.Type):
+		push_error("LootDrop.Type should not contain MEDALLION_SPREAD")
 		passed = false
 	if not ("MEDALLION_MISSILE" in LootDrop.Type):
 		push_error("LootDrop.Type missing MEDALLION_MISSILE")
@@ -101,11 +101,6 @@ func _assert_loot_contract() -> bool:
 	loot.configure(LootDrop.Type.MEDALLION_BLASTER, Vector2.ZERO)
 	if loot.call(&"_get_type_glow_color") != Color(0.2, 0.6, 1.0):
 		push_error("MEDALLION_BLASTER glow color mismatch")
-		passed = false
-
-	loot.configure(LootDrop.Type.MEDALLION_SPREAD, Vector2.ZERO)
-	if loot.call(&"_get_type_glow_color") != Color(0.1, 1.0, 0.4):
-		push_error("MEDALLION_SPREAD glow color mismatch")
 		passed = false
 
 	loot.configure(LootDrop.Type.MEDALLION_MISSILE, Vector2.ZERO)
@@ -158,10 +153,15 @@ func _assert_player_dilemma_contract() -> bool:
 		push_error("set_weapon_level failed to set or emit level 3")
 		passed = false
 
-	# Clamping between 1 and 5
+	# Clamping between 1 and 10
 	player.set_weapon_level(10)
-	if player.get_weapon_level() != 5:
-		push_error("set_weapon_level(10) must clamp to 5, got %d" % player.get_weapon_level())
+	if player.get_weapon_level() != 10:
+		push_error("set_weapon_level(10) must return 10, got %d" % player.get_weapon_level())
+		passed = false
+
+	player.set_weapon_level(15)
+	if player.get_weapon_level() != 10:
+		push_error("set_weapon_level(15) must clamp to 10, got %d" % player.get_weapon_level())
 		passed = false
 
 	player.set_weapon_level(-2)
@@ -169,7 +169,7 @@ func _assert_player_dilemma_contract() -> bool:
 		push_error("set_weapon_level(-2) must clamp to 1, got %d" % player.get_weapon_level())
 		passed = false
 
-	# Same medallion -> level upgrade (+1) up to 5
+	# Same medallion -> level upgrade (+1) up to 10
 	player.set_weapon(0) # BLASTER
 	player.set_weapon_level(1)
 	player.apply_medallion(0)
@@ -177,18 +177,16 @@ func _assert_player_dilemma_contract() -> bool:
 		push_error("apply_medallion with same weapon must upgrade level to 2, got %d" % player.get_weapon_level())
 		passed = false
 
-	player.apply_medallion(0) # -> 3
-	player.apply_medallion(0) # -> 4
-	player.apply_medallion(0) # -> 5
-	player.apply_medallion(0) # capped at 5
-	if player.get_weapon_level() != 5:
-		push_error("apply_medallion must cap at level 5, got %d" % player.get_weapon_level())
+	for i in range(12):
+		player.apply_medallion(0)
+	if player.get_weapon_level() != 10:
+		push_error("apply_medallion must cap at level 10, got %d" % player.get_weapon_level())
 		passed = false
 
 	# Different medallion -> Chicken Invaders model: switches weapon and preserves weapon level
-	player.apply_medallion(1) # SPREAD
-	if player.get_weapon() != 1 or player.get_weapon_level() != 5:
-		push_error("apply_medallion with different weapon must switch to SPREAD and preserve level 5 (got weapon %d, level %d)" % [player.get_weapon(), player.get_weapon_level()])
+	player.apply_medallion(1) # MISSILE
+	if player.get_weapon() != 1 or player.get_weapon_level() != 10:
+		push_error("apply_medallion with different weapon must switch to MISSILE and preserve level 10 (got weapon %d, level %d)" % [player.get_weapon(), player.get_weapon_level()])
 		passed = false
 
 	# Power atom -> upgrades level (+1) without changing current weapon
@@ -228,36 +226,40 @@ func _assert_firing_patterns_contract() -> bool:
 
 	var passed: bool = true
 
-	# Test Blaster bullet counts: Level 1..5
+	# Test Blaster bullet counts: Level 1..10 -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 	player.set_weapon(0) # BLASTER
-	var expected_blaster_counts: Array[int] = [1, 2, 3, 4, 5]
-	for lvl: int in range(1, 6):
+	var expected_blaster_counts: Array[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+	for lvl: int in range(1, 11):
 		player.set_weapon_level(lvl)
-		var pre_count: int = root.get_child_count()
+		var pre_children: Array[Node] = root.get_children()
 		player.simulate_shot()
-		var spawned: int = root.get_child_count() - pre_count
-		if spawned != expected_blaster_counts[lvl - 1]:
-			push_error("Blaster level %d expected %d bullets, spawned %d" % [lvl, expected_blaster_counts[lvl - 1], spawned])
+		var spawned_bullets: Array[Node] = []
+		for child: Node in root.get_children():
+			if not (child in pre_children):
+				spawned_bullets.append(child)
+		if spawned_bullets.size() != expected_blaster_counts[lvl - 1]:
+			push_error("Blaster level %d expected %d bullets, spawned %d" % [lvl, expected_blaster_counts[lvl - 1], spawned_bullets.size()])
+			passed = false
+
+		# Direction checks: levels 1-3 all straight (direction.x == 0), level 4+ has diagonals (direction.x != 0)
+		var has_diagonal: bool = false
+		for b: Node in spawned_bullets:
+			if "direction" in b:
+				var dir: Vector2 = b.get("direction") as Vector2
+				if absf(dir.x) > 0.001:
+					has_diagonal = true
+		if lvl < 4 and has_diagonal:
+			push_error("Blaster level %d should only fire straight bullets, but diagonal was detected" % lvl)
+			passed = false
+		elif lvl >= 4 and not has_diagonal:
+			push_error("Blaster level %d must have at least one diagonal projectile" % lvl)
 			passed = false
 		_cleanup_bullets()
 
-	# Test Spread bullet counts: Level 1..5 -> [3, 5, 7, 9, 11]
-	player.set_weapon(1) # SPREAD
-	var expected_spread_counts: Array[int] = [3, 5, 7, 9, 11]
-	for lvl: int in range(1, 6):
-		player.set_weapon_level(lvl)
-		var pre_count: int = root.get_child_count()
-		player.simulate_shot()
-		var spawned: int = root.get_child_count() - pre_count
-		if spawned != expected_spread_counts[lvl - 1]:
-			push_error("Spread level %d expected %d bullets, spawned %d" % [lvl, expected_spread_counts[lvl - 1], spawned])
-			passed = false
-		_cleanup_bullets()
-
-	# Test Missile counts: Level 1..5 -> [1, 2, 3, 4, 5]
-	player.set_weapon(2) # MISSILE
-	var expected_missile_counts: Array[int] = [1, 2, 3, 4, 5]
-	for lvl: int in range(1, 6):
+	# Test Missile counts: Level 1..10 -> [1, 2, 2, 3, 3, 4, 4, 5, 5, 6]
+	player.set_weapon(1) # MISSILE
+	var expected_missile_counts: Array[int] = [1, 2, 2, 3, 3, 4, 4, 5, 5, 6]
+	for lvl: int in range(1, 11):
 		player.set_weapon_level(lvl)
 		var pre_count: int = root.get_child_count()
 		player.simulate_shot()
@@ -268,7 +270,7 @@ func _assert_firing_patterns_contract() -> bool:
 		_cleanup_bullets()
 
 	# Test Laser scaling
-	player.set_weapon(3) # LASER
+	player.set_weapon(2) # LASER
 	player.set_weapon_level(1)
 	var beam: Area2D = player.call(&"_ensure_laser_beam")
 	if beam == null:
@@ -276,10 +278,10 @@ func _assert_firing_patterns_contract() -> bool:
 		passed = false
 	else:
 		var width_lvl1: float = float(beam.get("beam_width"))
-		player.set_weapon_level(5)
-		var width_lvl5: float = float(beam.get("beam_width"))
-		if width_lvl5 <= width_lvl1:
-			push_error("Laser beam_width must scale with level (lvl1: %f, lvl5: %f)" % [width_lvl1, width_lvl5])
+		player.set_weapon_level(10)
+		var width_lvl10: float = float(beam.get("beam_width"))
+		if width_lvl10 <= width_lvl1:
+			push_error("Laser beam_width must scale with level (lvl1: %f, lvl10: %f)" % [width_lvl1, width_lvl10])
 			passed = false
 
 	player.queue_free()
@@ -289,7 +291,7 @@ func _assert_firing_patterns_contract() -> bool:
 
 func _cleanup_bullets() -> void:
 	for child: Node in root.get_children():
-		if child.is_in_group(&"player_bullets") or child.name.begins_with("Bullet") or child.name.begins_with("Spread") or child.name.begins_with("Missile"):
+		if child.is_in_group(&"player_bullets") or child.is_in_group(&"combat_transients") or child.name.begins_with("Bullet") or child.name.begins_with("Spread") or child.name.begins_with("Missile"):
 			child.queue_free()
 
 

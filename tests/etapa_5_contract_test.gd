@@ -12,7 +12,7 @@ const BOSS_MUSIC_PATH := "res://assets/audio/music/boss_battle_8bit.mp3"
 
 const BOSS_MAX_HEALTH: int = 30
 const BOSS_DEFEAT_SCORE: int = 3000
-const TOTAL_WAVES: int = 5
+const TOTAL_WAVES: int = 10
 
 
 func _init() -> void:
