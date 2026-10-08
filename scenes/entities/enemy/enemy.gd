@@ -1,7 +1,8 @@
 # enemy.gd
 # Enemy ship that shoots downward, executes formation movement, fly-in entrances,
 # dynamic dive swoops toward the player, and returns to its formation slot.
-# Features visual enrage escalation with crimson/amber styling and reactive banking tilt.
+# Features health system, hit flash, visual health bar, visual enrage escalation,
+# and configurable ballistic bullet mix per wave.
 
 extends Area2D
 
@@ -12,6 +13,9 @@ enum State { FORMATION, FLY_IN, DIVING, RETURNING }
 
 ## Emitted once when the enemy has been destroyed.
 signal destroyed(enemy: Area2D)
+
+## Emitted whenever the enemy receives damage (current and max health).
+signal damaged(current_health: float, max_health: float)
 
 ## Emitted when this enemy makes direct contact with the player.
 signal player_contacted(player: Node2D)
@@ -25,6 +29,9 @@ signal dive_started
 ## Emitted when this enemy finishes its return journey and locks into formation.
 signal returned_to_formation
 
+## Maximum hit points. Basic formation enemies die to one projectile hit.
+@export var max_health: float = 1.0
+
 ## Minimum delay in seconds before a shot.
 @export var min_shoot_cooldown: float = 1.25
 
@@ -35,6 +42,10 @@ signal returned_to_formation
 @export var enemy_bullet_scene: PackedScene
 
 @onready var _shoot_cooldown: Timer = $ShootCooldown
+
+var health: float = 1.0
+var _hit_flash_timer: float = 0.0
+const HIT_FLASH_DURATION: float = 0.08
 
 var _destroyed: bool = false
 
@@ -73,6 +84,7 @@ var _return_elapsed: float = 0.0
 
 
 func _ready() -> void:
+	health = max_health
 	_pulse_offset = randf_range(0.0, TAU)
 	if _state == State.FORMATION:
 		_schedule_next_shot()
@@ -88,6 +100,9 @@ func _process(delta: float) -> void:
 			_process_returning(delta)
 		State.FORMATION:
 			pass
+
+	if _hit_flash_timer > 0.0:
+		_hit_flash_timer = maxf(0.0, _hit_flash_timer - delta)
 
 	_time += delta
 	queue_redraw()
@@ -272,11 +287,35 @@ func destroy() -> void:
 	queue_free()
 
 
+## Applies damage (fractional values allowed, used by the continuous laser).
+func take_damage(amount: float = 1.0) -> void:
+	if _destroyed or amount <= 0.0:
+		return
+	health = maxf(0.0, health - amount)
+	_hit_flash_timer = HIT_FLASH_DURATION
+	damaged.emit(health, max_health)
+	queue_redraw()
+	if health <= 0.0:
+		destroy()
+
+
+## Signals to damage dealers that this target accepts fractional damage.
+func supports_fractional_damage() -> bool:
+	return true
+
+
 func _on_area_entered(area: Area2D) -> void:
 	# Player bullets occupy collision layer 2, which is part of this Area2D mask.
 	if _destroyed or (area.collision_layer & 2) == 0:
 		return
-	destroy()
+	# Continuous beams apply their own damage over time.
+	if area.has_method(&"is_beam"):
+		return
+	# Projectiles that apply their own damage (ion bullet, missile) handle it themselves.
+	if "damage_applied" in area or "damage" in area:
+		return
+	# Legacy linear bullet: one hit.
+	take_damage(1.0)
 
 
 func _on_body_entered(body: Node2D) -> void:
@@ -447,3 +486,14 @@ func _draw() -> void:
 		var leg_x: float = (i - 1) * 4.0
 		var wag: float = sin(_time * 6.0 + _pulse_offset + i) * 1.5
 		draw_line(Vector2(leg_x, 9), Vector2(leg_x + wag, 15), leg_color, 1.1)
+
+	# Impact hit flash overlay
+	if _hit_flash_timer > 0.0:
+		draw_circle(Vector2.ZERO, 22.0, Color(1.0, 0.9, 0.7, 0.45))
+
+	# Mini health bar when damaged
+	if health < max_health and health > 0.0:
+		draw_rect(Rect2(-15.0, -22.0, 30.0, 3.0), Color(0.1, 0.1, 0.15, 0.8))
+		var hp_ratio: float = clampf(health / max_health, 0.0, 1.0)
+		var bar_color: Color = Color.RED.lerp(Color.GREEN, hp_ratio)
+		draw_rect(Rect2(-15.0, -22.0, 30.0 * hp_ratio, 3.0), bar_color)
