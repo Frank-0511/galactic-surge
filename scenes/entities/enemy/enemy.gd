@@ -295,7 +295,8 @@ func take_damage(amount: float = 1.0) -> void:
 	_hit_flash_timer = HIT_FLASH_DURATION
 	damaged.emit(health, max_health)
 	queue_redraw()
-	if health <= 0.0:
+	if is_zero_approx(health) or health <= 0.0:
+		health = 0.0
 		destroy()
 
 

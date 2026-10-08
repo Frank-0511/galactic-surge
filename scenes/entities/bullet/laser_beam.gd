@@ -58,7 +58,7 @@ func _process(delta: float) -> void:
 	_update_beam_geometry()
 
 	if _tick_timer >= damage_tick_rate:
-		_tick_timer = 0.0
+		_tick_timer -= damage_tick_rate
 		_apply_damage_tick()
 
 	queue_redraw()
