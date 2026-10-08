@@ -12,7 +12,6 @@ enum Type {
 	EXTRA_LIFE,
 	BOMB,
 	MEDALLION_BLASTER,
-	MEDALLION_SPREAD,
 	MEDALLION_MISSILE,
 	MEDALLION_LASER,
 	POWER_ATOM,
@@ -136,8 +135,6 @@ func _draw() -> void:
 			_draw_bomb()
 		Type.MEDALLION_BLASTER:
 			_draw_medallion_blaster()
-		Type.MEDALLION_SPREAD:
-			_draw_medallion_spread()
 		Type.MEDALLION_MISSILE:
 			_draw_medallion_missile()
 		Type.MEDALLION_LASER:
@@ -162,8 +159,6 @@ func _get_type_glow_color() -> Color:
 			return Color(1.0, 0.57, 0.0) # Orange / Amber
 		Type.MEDALLION_BLASTER:
 			return Color(0.2, 0.6, 1.0) # Neon Blue
-		Type.MEDALLION_SPREAD:
-			return Color(0.1, 1.0, 0.4) # Neon Emerald
 		Type.MEDALLION_MISSILE:
 			return Color(1.0, 0.55, 0.1) # Neon Orange
 		Type.MEDALLION_LASER:
@@ -250,16 +245,6 @@ func _draw_medallion_blaster() -> void:
 	draw_colored_polygon(chevron, blue)
 	draw_line(Vector2(0, -8), Vector2(0, 0), Color.WHITE, 1.8, true)
 	draw_circle(Vector2(0, -6), 1.5, Color.WHITE)
-
-
-func _draw_medallion_spread() -> void:
-	var green: Color = Color(0.1, 1.0, 0.4)
-	draw_line(Vector2(0, 4), Vector2(0, -8), green, 2.0, true)
-	draw_line(Vector2(0, 4), Vector2(-7, -5), green, 1.8, true)
-	draw_line(Vector2(0, 4), Vector2(7, -5), green, 1.8, true)
-	draw_circle(Vector2(0, -8), 1.5, Color.WHITE)
-	draw_circle(Vector2(-7, -5), 1.5, Color.WHITE)
-	draw_circle(Vector2(7, -5), 1.5, Color.WHITE)
 
 
 func _draw_medallion_missile() -> void:

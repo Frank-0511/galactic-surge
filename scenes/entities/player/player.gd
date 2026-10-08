@@ -1,6 +1,6 @@
 # player.gd
 # Player ship controller. Handles horizontal movement, modular arsenal switching
-# (Blaster, Spread, Missile, Laser), thermal overheat regulation, power-ups, and respawns.
+# (Blaster, Missile, Laser), thermal overheat regulation, power-ups, and respawns.
 
 extends CharacterBody2D
 
@@ -16,7 +16,7 @@ signal shot_fired(is_double_shot: bool)
 ## Emitted when active weapon changes (WeaponType enum value).
 signal weapon_changed(new_weapon: int)
 
-## Emitted when active weapon power level changes (1 to 5).
+## Emitted when active weapon power level changes (1 to 10).
 signal weapon_level_changed(new_level: int)
 
 ## Emitted when barrel heat changes.
@@ -28,13 +28,15 @@ signal overheat_state_changed(is_overheated: bool)
 ## Available weapon systems in the modular arsenal.
 enum WeaponType {
 	BLASTER = 0,
-	SPREAD = 1,
-	MISSILE = 2,
-	LASER = 3,
+	MISSILE = 1,
+	LASER = 2,
 }
 
-## Power level of the current weapon system (1 to 5).
-@export_range(1, 5) var weapon_level: int = 1
+const WEAPON_COUNT: int = 3
+const MAX_WEAPON_LEVEL: int = 10
+
+## Power level of the current weapon system (1 to 10).
+@export_range(1, 10) var weapon_level: int = 1
 
 ## Horizontal movement speed in pixels per second.
 @export var speed: float = 400.0
@@ -42,8 +44,15 @@ enum WeaponType {
 ## Default blaster projectile scene.
 @export var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tscn")
 
-## Fan-spread projectile scene.
-@export var spread_bullet_scene: PackedScene = preload("res://scenes/entities/bullet/spread_bullet.tscn")
+## Directional projectile used by the Ion Blaster.
+@export var ion_bullet_scene: PackedScene = preload("res://scenes/entities/bullet/spread_bullet.tscn")
+
+## Backward compatibility property alias for tests expecting spread_bullet_scene.
+var spread_bullet_scene: PackedScene:
+	get:
+		return ion_bullet_scene
+	set(value):
+		ion_bullet_scene = value
 
 ## Homing missile projectile scene.
 @export var missile_scene: PackedScene = preload("res://scenes/entities/bullet/missile.tscn")
@@ -106,8 +115,8 @@ var _time: float = 0.0
 func _ready() -> void:
 	if bullet_scene == null:
 		bullet_scene = load("res://scenes/entities/bullet/bullet.tscn") as PackedScene
-	if spread_bullet_scene == null:
-		spread_bullet_scene = load("res://scenes/entities/bullet/spread_bullet.tscn") as PackedScene
+	if ion_bullet_scene == null:
+		ion_bullet_scene = load("res://scenes/entities/bullet/spread_bullet.tscn") as PackedScene
 	if missile_scene == null:
 		missile_scene = load("res://scenes/entities/bullet/missile.tscn") as PackedScene
 	if laser_beam_scene == null:
@@ -167,7 +176,7 @@ func _process(delta: float) -> void:
 
 ## Selects an active weapon from WeaponType.
 func set_weapon(type: int) -> void:
-	if type < 0 or type > 3:
+	if type < 0 or type >= WEAPON_COUNT:
 		return
 	if current_weapon == type:
 		return
@@ -182,7 +191,6 @@ func set_weapon(type: int) -> void:
 func _get_weapon_color() -> Color:
 	match current_weapon:
 		WeaponType.BLASTER: return Color(0.2, 0.6, 1.0)
-		WeaponType.SPREAD: return Color(0.1, 1.0, 0.4)
 		WeaponType.MISSILE: return Color(1.0, 0.55, 0.1)
 		WeaponType.LASER: return Color(1.0, 0.2, 0.25)
 		_: return Color(0.28, 0.85, 1.0)
@@ -196,20 +204,20 @@ func get_weapon() -> int:
 ## Cycles through weapons forward or backward.
 func cycle_weapon(forward: bool = true) -> void:
 	var delta_dir: int = 1 if forward else -1
-	var next_type: int = (current_weapon + delta_dir) % 4
+	var next_type: int = (current_weapon + delta_dir) % WEAPON_COUNT
 	if next_type < 0:
-		next_type += 4
+		next_type += WEAPON_COUNT
 	set_weapon(next_type)
 
 
-## Returns current weapon level (1 to 5).
+## Returns current weapon level (1 to 10).
 func get_weapon_level() -> int:
 	return weapon_level
 
 
-## Sets weapon power level clamped between 1 and 5, emitting weapon_level_changed.
+## Sets weapon power level clamped between 1 and 10, emitting weapon_level_changed.
 func set_weapon_level(level: int) -> void:
-	var clamped: int = clampi(level, 1, 5)
+	var clamped: int = clampi(level, 1, MAX_WEAPON_LEVEL)
 	weapon_level = clamped
 	if _laser_beam != null and _laser_beam.has_method(&"set_power_level"):
 		_laser_beam.call(&"set_power_level", weapon_level)
@@ -340,96 +348,79 @@ func _shoot() -> void:
 	match current_weapon:
 		WeaponType.BLASTER:
 			_shoot_blaster()
-		WeaponType.SPREAD:
-			_shoot_spread()
 		WeaponType.MISSILE:
 			_shoot_missile()
 		WeaponType.LASER:
 			_shoot_laser_pulse()
 
 
+## Ion Blaster pattern per level (index 0 = level 1). Each shot is [offset_x, angle_deg].
+const ION_PATTERNS: Array = [
+	[[0.0, 0.0]],                                                                  # L1: 1 recto
+	[[-8.0, 0.0], [8.0, 0.0]],                                                     # L2: 2 rectos
+	[[-12.0, 0.0], [0.0, 0.0], [12.0, 0.0]],                                       # L3: 3 rectos
+	[[-8.0, 0.0], [8.0, 0.0], [-14.0, -8.0], [14.0, 8.0]],                         # L4: 2 rectos + 2 diagonales
+	[[-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [-16.0, -10.0], [16.0, 10.0]],         # L5: 3 rectos + 2 diagonales
+	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-20.0, -12.0], [20.0, 12.0]],  # L6: 4 rectos + 2 diag
+	[[-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [-16.0, -9.0], [16.0, 9.0], [-20.0, -18.0], [20.0, 18.0]],  # L7: 3 rectos + 4 diag
+	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0]],  # L8: 4 rectos + 4 diag
+	[[-24.0, 0.0], [-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [24.0, 0.0], [-20.0, -11.0], [20.0, 11.0], [-24.0, -22.0], [24.0, 22.0]],  # L9: 5 rectos + 4 diag
+	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0]],  # L10: 4 rectos + 6 diag
+]
+
 func _shoot_blaster() -> void:
-	if bullet_scene == null:
+	var scene: PackedScene = ion_bullet_scene if ion_bullet_scene != null else bullet_scene
+	if scene == null:
 		return
-	if weapon_level == 1:
-		if _double_shot_enabled:
-			_spawn_bullet(-DOUBLE_SHOT_SPREAD)
-			_spawn_bullet(DOUBLE_SHOT_SPREAD)
-		else:
-			_spawn_bullet(0.0)
-	elif weapon_level == 2:
-		_spawn_bullet(-DOUBLE_SHOT_SPREAD)
-		_spawn_bullet(DOUBLE_SHOT_SPREAD)
-	elif weapon_level == 3:
-		_spawn_bullet(-DOUBLE_SHOT_SPREAD)
-		_spawn_bullet(0.0)
-		_spawn_bullet(DOUBLE_SHOT_SPREAD)
-	elif weapon_level == 4:
-		var offsets: Array[float] = [-18.0, -6.0, 6.0, 18.0]
-		for ox: float in offsets:
-			_spawn_bullet(ox)
-	else: # weapon_level >= 5
-		var offsets: Array[float] = [-24.0, -12.0, 0.0, 12.0, 24.0]
-		for ox: float in offsets:
-			_spawn_bullet(ox)
+	var level_index: int = clampi(weapon_level, 1, MAX_WEAPON_LEVEL) - 1
+	var pattern: Array = ION_PATTERNS[level_index]
+	# Double-shot power-up only affects level 1 (keeps legacy behaviour).
+	if weapon_level == 1 and _double_shot_enabled:
+		pattern = ION_PATTERNS[1]
+	for shot: Variant in pattern:
+		var shot_arr: Array = shot as Array
+		var offset_x: float = float(shot_arr[0])
+		var rad: float = deg_to_rad(float(shot_arr[1]))
+		var dir: Vector2 = Vector2(sin(rad), -cos(rad))
+		var bullet: Area2D = scene.instantiate() as Area2D
+		if bullet != null:
+			bullet.global_position = global_position + Vector2(offset_x, -20.0)
+			if "direction" in bullet:
+				bullet.set("direction", dir)
+			_add_combat_transient(bullet)
 	add_heat(8.0)
 	_shoot_cooldown.start(0.25)
 	shot_fired.emit(_double_shot_enabled or weapon_level >= 2)
 
 
-func _shoot_spread() -> void:
-	var scene: PackedScene = spread_bullet_scene if spread_bullet_scene != null else bullet_scene
-	if scene == null:
-		return
-	var angles: Array[float]
-	match weapon_level:
-		1:
-			angles = [-15.0, 0.0, 15.0]
-		2:
-			angles = [-24.0, -12.0, 0.0, 12.0, 24.0]
-		3:
-			angles = [-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0]
-		4:
-			angles = [-36.0, -27.0, -18.0, -9.0, 0.0, 9.0, 18.0, 27.0, 36.0]
-		_:
-			angles = [-40.0, -32.0, -24.0, -16.0, -8.0, 0.0, 8.0, 16.0, 24.0, 32.0, 40.0]
-	for angle_deg: float in angles:
-		var rad: float = deg_to_rad(angle_deg)
-		var dir: Vector2 = Vector2(sin(rad), -cos(rad))
-		var bullet: Area2D = scene.instantiate() as Area2D
-		if bullet != null:
-			bullet.global_position = global_position + Vector2(0.0, -20.0)
-			if "direction" in bullet:
-				bullet.set("direction", dir)
-			_add_combat_transient(bullet)
-	add_heat(15.0)
-	_shoot_cooldown.start(0.35)
-	shot_fired.emit(false)
-
+const MISSILE_OFFSETS: Array = [
+	[0.0],                                    # L1
+	[-14.0, 14.0],                            # L2
+	[-14.0, 14.0],                            # L3 (misma cantidad, menor cooldown)
+	[-16.0, 0.0, 16.0],                       # L4
+	[-16.0, 0.0, 16.0],                       # L5
+	[-20.0, -8.0, 8.0, 20.0],                 # L6
+	[-20.0, -8.0, 8.0, 20.0],                 # L7
+	[-24.0, -12.0, 0.0, 12.0, 24.0],          # L8
+	[-24.0, -12.0, 0.0, 12.0, 24.0],          # L9
+	[-30.0, -18.0, -6.0, 6.0, 18.0, 30.0],    # L10
+]
 
 func _shoot_missile() -> void:
 	var scene: PackedScene = missile_scene if missile_scene != null else bullet_scene
 	if scene == null:
 		return
-	var offsets: Array[float]
-	match weapon_level:
-		1:
-			offsets = [0.0]
-		2:
-			offsets = [-14.0, 14.0]
-		3:
-			offsets = [-16.0, 0.0, 16.0]
-		4:
-			offsets = [-20.0, -8.0, 8.0, 20.0]
-		_:
-			offsets = [-24.0, -12.0, 0.0, 12.0, 24.0]
-	for ox: float in offsets:
+	var level_index: int = clampi(weapon_level, 1, MAX_WEAPON_LEVEL) - 1
+	var offsets: Array = MISSILE_OFFSETS[level_index]
+	for ox_val: Variant in offsets:
+		var ox: float = float(ox_val)
 		var missile: Area2D = scene.instantiate() as Area2D
 		if missile != null:
 			missile.global_position = global_position + Vector2(ox, -20.0)
 			_add_combat_transient(missile)
 	add_heat(25.0)
-	_shoot_cooldown.start(0.55)
+	var cooldown: float = lerpf(0.55, 0.40, float(weapon_level - 1) / 9.0)
+	_shoot_cooldown.start(cooldown)
 	shot_fired.emit(false)
 
 

@@ -73,14 +73,13 @@ func _init_styles() -> void:
 func set_active_weapon(weapon_index: int) -> void:
 	_current_weapon_type = weapon_index
 	if _active_weapon_label != null:
-		var weapon_names: Array[String] = ["BLASTER", "SPREAD", "MISIL", "LÁSER"]
+		var weapon_names: Array[String] = ["BLASTER", "MISIL", "LÁSER"]
 		var weapon_colors: Array[Color] = [
 			Color(0.2, 0.6, 1.0),
-			Color(0.1, 1.0, 0.4),
 			Color(1.0, 0.55, 0.1),
 			Color(1.0, 0.2, 0.25)
 		]
-		var idx: int = clampi(weapon_index, 0, 3)
+		var idx: int = clampi(weapon_index, 0, 2)
 		_active_weapon_label.text = "ARMA: %s" % weapon_names[idx]
 		_active_weapon_label.modulate = weapon_colors[idx]
 
@@ -89,7 +88,7 @@ func set_active_weapon(weapon_index: int) -> void:
 func set_weapon_level(level: int, weapon_type: int = -1) -> void:
 	if weapon_type >= 0:
 		_current_weapon_type = weapon_type
-	_current_weapon_level = clampi(level, 1, 5)
+	_current_weapon_level = clampi(level, 1, 10)
 
 
 

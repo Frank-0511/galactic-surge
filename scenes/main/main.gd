@@ -7,7 +7,7 @@ extends Node2D
 const STARTING_LIVES: int = 3
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
-const TOTAL_WAVES: int = 5
+const TOTAL_WAVES: int = 10
 const BOSS_POINTS: int = 3000
 const LOOT_DROP_SCENE: PackedScene = preload("res://scenes/loot/loot_drop.tscn")
 const SCORE_LOOT_POINTS: int = 250
@@ -23,6 +23,12 @@ const _RADAR_PHRASES: Array[String] = [
 	"FORMACIÓN ENTRANTE",
 	"CONTACTO EN EL RADAR",
 	"ENEMIGOS APROXIMÁNDOSE",
+	"DISTORSIÓN HIPERESPACIAL",
+	"VANGUARDIA ALIENÍGENA",
+	"ENJAMBRE EN APROXIMACIÓN",
+	"FIRMA DE ENERGÍA CRÍTICA",
+	"PATRÓN DE ASALTO CIBERNÉTICO",
+	"INCURSIÓN ESTELAR INMINENTE",
 ]
 
 enum SessionState { MAIN_MENU, PLAYING, PAUSED, WAVE_TRANSITION, BOSS_BATTLE, GAME_OVER, MISSION_COMPLETE }
@@ -59,11 +65,10 @@ var _last_extra_life_threshold: int = 0
 @export_range(0.0, 1.0, 0.01) var shield_loot_weight: float = 0.12
 @export_range(0.0, 1.0, 0.01) var extra_life_loot_weight: float = 0.08
 @export_range(0.0, 1.0, 0.01) var bomb_loot_weight: float = 0.08
-@export_range(0.0, 1.0, 0.01) var medallion_blaster_weight: float = 0.07
-@export_range(0.0, 1.0, 0.01) var medallion_spread_weight: float = 0.07
-@export_range(0.0, 1.0, 0.01) var medallion_missile_weight: float = 0.07
-@export_range(0.0, 1.0, 0.01) var medallion_laser_weight: float = 0.07
-@export_range(0.0, 1.0, 0.01) var power_atom_weight: float = 0.09
+@export_range(0.0, 1.0, 0.01) var medallion_blaster_weight: float = 0.08
+@export_range(0.0, 1.0, 0.01) var medallion_missile_weight: float = 0.08
+@export_range(0.0, 1.0, 0.01) var medallion_laser_weight: float = 0.08
+@export_range(0.0, 1.0, 0.01) var power_atom_weight: float = 0.11
 
 var _session_state: SessionState = SessionState.MAIN_MENU
 var _state_before_pause: SessionState = SessionState.PLAYING
@@ -206,6 +211,8 @@ func _enter_main_menu() -> void:
 			_player.reset_heat()
 		if _player.has_method(&"set_weapon"):
 			_player.set_weapon(0)
+		if _player.has_method(&"set_weapon_level"):
+			_player.set_weapon_level(1)
 	if _hud != null:
 		if _hud.has_method(&"set_active_weapon"):
 			_hud.set_active_weapon(0)
@@ -347,7 +354,6 @@ func _pick_loot_type() -> int:
 	var w_life: float = maxf(extra_life_loot_weight, 0.0)
 	var w_bomb: float = maxf(bomb_loot_weight, 0.0)
 	var w_m_blaster: float = maxf(medallion_blaster_weight, 0.0)
-	var w_m_spread: float = maxf(medallion_spread_weight, 0.0)
 	var w_m_missile: float = maxf(medallion_missile_weight, 0.0)
 	var w_m_laser: float = maxf(medallion_laser_weight, 0.0)
 	var w_atom: float = maxf(power_atom_weight, 0.0)
@@ -369,7 +375,7 @@ func _pick_loot_type() -> int:
 
 	var all_weights: Array[float] = [
 		w_score, w_double, w_shield, w_life, w_bomb,
-		w_m_blaster, w_m_spread, w_m_missile, w_m_laser, w_atom
+		w_m_blaster, w_m_missile, w_m_laser, w_atom
 	]
 	var total_zeros: int = 0
 	var total_single_index: int = -1
@@ -382,7 +388,7 @@ func _pick_loot_type() -> int:
 		return total_single_index
 
 	var total_basic_weight: float = w_score + w_double + w_shield + w_life + w_bomb
-	var total_weapon_weight: float = w_m_blaster + w_m_spread + w_m_missile + w_m_laser + w_atom
+	var total_weapon_weight: float = w_m_blaster + w_m_missile + w_m_laser + w_atom
 	var total_weight: float = total_basic_weight + total_weapon_weight
 	if total_weight <= 0.0:
 		return LootDrop.Type.SCORE
@@ -406,7 +412,7 @@ func _pick_loot_type() -> int:
 
 	# Weapon / Power drop: Chicken Invaders model:
 	# ~55% chance of Power Atom or active weapon's medallion (+1 level)
-	# ~45% chance of dropping a different weapon's medallion (distributed among the other 3)
+	# ~45% chance of dropping a different weapon's medallion (distributed among the other 2)
 	var active_w: int = _player.get_weapon() if (_player != null and _player.has_method(&"get_weapon")) else 0
 	var weapon_roll: float = randf()
 	if weapon_roll < 0.55:
@@ -416,7 +422,7 @@ func _pick_loot_type() -> int:
 			return LootDrop.Type.POWER_ATOM
 	else:
 		var alt_weapons: Array[int] = []
-		for w_idx: int in range(4):
+		for w_idx: int in range(3):
 			if w_idx != active_w:
 				alt_weapons.append(w_idx)
 		var chosen_alt: int = alt_weapons[randi() % alt_weapons.size()]
@@ -436,7 +442,6 @@ func _try_spawn_enemy_loot(spawn_position: Vector2) -> void:
 		+ maxf(extra_life_loot_weight, 0.0)
 		+ maxf(bomb_loot_weight, 0.0)
 		+ maxf(medallion_blaster_weight, 0.0)
-		+ maxf(medallion_spread_weight, 0.0)
 		+ maxf(medallion_missile_weight, 0.0)
 		+ maxf(medallion_laser_weight, 0.0)
 		+ maxf(power_atom_weight, 0.0)
@@ -478,16 +483,15 @@ func _on_loot_collected(loot_type: int) -> void:
 			_hud.set_lives(lives)
 		LootDrop.Type.BOMB:
 			_clear_enemy_bullets()
-		LootDrop.Type.MEDALLION_BLASTER, LootDrop.Type.MEDALLION_SPREAD, LootDrop.Type.MEDALLION_MISSILE, LootDrop.Type.MEDALLION_LASER:
+		LootDrop.Type.MEDALLION_BLASTER, LootDrop.Type.MEDALLION_MISSILE, LootDrop.Type.MEDALLION_LASER:
 			var target_w: int = loot_type - LootDrop.Type.MEDALLION_BLASTER
 			var prev_w: int = _player.get_weapon() if _player.has_method(&"get_weapon") else -1
 			if _player.has_method(&"apply_medallion"):
 				_player.apply_medallion(target_w)
 			if target_w != prev_w:
-				var weapon_names: Array[String] = ["BLASTER", "SPREAD", "MISIL", "LÁSER"]
+				var weapon_names: Array[String] = ["BLASTER", "MISIL", "LÁSER"]
 				var weapon_colors: Array[Color] = [
 					Color(0.2, 0.6, 1.0),
-					Color(0.1, 1.0, 0.4),
 					Color(1.0, 0.55, 0.1),
 					Color(1.0, 0.2, 0.25)
 				]
@@ -528,7 +532,7 @@ func _on_wave_cleared(_wave_index: int) -> void:
 		_enemy_spawner.stop()
 		_pending_wave_index = TOTAL_WAVES
 		_audio_feedback.stop_combat_music()
-		_wave_announcement.show_announcement(6, "¡AMENAZA COLOSAL DETECTADA!")
+		_wave_announcement.show_announcement(TOTAL_WAVES + 1, "¡AMENAZA COLOSAL DETECTADA!")
 		return
 	# Enter wave transition instead of starting the next wave immediately.
 	_session_state = SessionState.WAVE_TRANSITION

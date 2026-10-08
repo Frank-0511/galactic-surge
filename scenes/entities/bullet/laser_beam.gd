@@ -59,9 +59,9 @@ func _process(delta: float) -> void:
 
 
 func set_power_level(level: int) -> void:
-	_power_level = clampi(level, 1, 5)
-	beam_width = 10.0 + float(_power_level) * 3.0
-	damage_per_tick = 1 + int(_power_level >= 4)
+	_power_level = clampi(level, 1, 10)
+	beam_width = 10.0 + float(_power_level) * 1.8
+	damage_per_tick = 1 + int(_power_level >= 5) + int(_power_level >= 9)
 	if _collision_shape == null:
 		_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if _collision_shape != null and _collision_shape.shape is RectangleShape2D:

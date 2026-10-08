@@ -66,22 +66,18 @@ func play_player_shot(is_double_shot: bool) -> void:
 			_player_shot.play()
 
 
-## Plays distinct audio for the specified weapon type (0: Blaster, 1: Spread, 2: Missile, 3: Laser).
+## Plays distinct audio for the specified weapon type (0: Blaster, 1: Missile, 2: Laser).
 func play_weapon_shot(weapon_type: int) -> void:
 	match weapon_type:
 		0: # BLASTER
 			if _player_shot != null:
 				_player_shot.pitch_scale = 1.0
 				_player_shot.play()
-		1: # SPREAD
-			if _player_double_shot != null:
-				_player_double_shot.pitch_scale = 1.25
-				_player_double_shot.play()
-		2: # MISSILE
+		1: # MISSILE
 			if _player_shot != null:
 				_player_shot.pitch_scale = 0.55
 				_player_shot.play()
-		3: # LASER
+		2: # LASER
 			if _player_shot != null:
 				_player_shot.pitch_scale = 1.85
 				_player_shot.play()
@@ -135,8 +131,8 @@ func play_power_up_collected(power_up_type: int) -> void:
 
 func play_medallion_collected(weapon_type: int = 0) -> void:
 	if _pickup_double_shot != null:
-		var pitches: Array[float] = [1.1, 1.3, 0.85, 1.5]
-		var idx: int = clampi(weapon_type, 0, 3)
+		var pitches: Array[float] = [1.1, 0.85, 1.5]
+		var idx: int = clampi(weapon_type, 0, 2)
 		_pickup_double_shot.pitch_scale = pitches[idx]
 		_pickup_double_shot.play()
 	elif _pickup_shield != null:
@@ -145,8 +141,8 @@ func play_medallion_collected(weapon_type: int = 0) -> void:
 
 func play_weapon_switched(weapon_type: int = 0) -> void:
 	if _pickup_double_shot != null:
-		var pitches: Array[float] = [1.25, 1.45, 0.75, 1.7]
-		var idx: int = clampi(weapon_type, 0, 3)
+		var pitches: Array[float] = [1.25, 0.75, 1.7]
+		var idx: int = clampi(weapon_type, 0, 2)
 		_pickup_double_shot.pitch_scale = pitches[idx]
 		_pickup_double_shot.play()
 	elif _pickup_shield != null:
