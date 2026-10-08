@@ -323,6 +323,27 @@ func _process_overheat_and_cooling(delta: float) -> void:
 				heat_changed.emit(heat, max_heat)
 
 
+## Seconds of sustained fire before overheating, per weapon, at level 1 and level 10.
+const OVERHEAT_SECONDS: Dictionary = {
+	WeaponType.BLASTER: Vector2(10.0, 8.0),
+	WeaponType.MISSILE: Vector2(9.0, 7.5),
+	WeaponType.LASER: Vector2(8.0, 10.0),
+}
+
+
+## Heat per second needed so sustained fire overheats in the target time for the current level.
+func _get_heat_per_second(weapon: int) -> float:
+	var range_s: Vector2 = OVERHEAT_SECONDS.get(weapon, Vector2(8.0, 8.0))
+	var t: float = float(clampi(weapon_level, 1, MAX_WEAPON_LEVEL) - 1) / float(MAX_WEAPON_LEVEL - 1)
+	var seconds: float = lerpf(range_s.x, range_s.y, t)
+	return max_heat / maxf(seconds, 0.1)
+
+
+## Public accessor for heat per second calculation.
+func get_heat_per_second(weapon: int) -> float:
+	return _get_heat_per_second(weapon)
+
+
 # ---------------------------------------------------------------------------
 # Shooting mechanics
 # ---------------------------------------------------------------------------
@@ -333,7 +354,7 @@ func _handle_shooting(delta: float) -> void:
 			if Input.is_action_just_pressed("shoot"):
 				shot_fired.emit(false)
 			_set_laser_active(true)
-			add_heat(30.0 * delta)
+			add_heat(_get_heat_per_second(WeaponType.LASER) * delta)
 		else:
 			_set_laser_active(false)
 	else:
@@ -388,7 +409,7 @@ func _shoot_blaster() -> void:
 			if "direction" in bullet:
 				bullet.set("direction", dir)
 			_add_combat_transient(bullet)
-	add_heat(8.0)
+	add_heat(_get_heat_per_second(WeaponType.BLASTER) * 0.25)
 	_shoot_cooldown.start(0.25)
 	shot_fired.emit(_double_shot_enabled or weapon_level >= 2)
 
@@ -418,15 +439,15 @@ func _shoot_missile() -> void:
 		if missile != null:
 			missile.global_position = global_position + Vector2(ox, -20.0)
 			_add_combat_transient(missile)
-	add_heat(25.0)
 	var cooldown: float = lerpf(0.55, 0.40, float(weapon_level - 1) / 9.0)
+	add_heat(_get_heat_per_second(WeaponType.MISSILE) * cooldown)
 	_shoot_cooldown.start(cooldown)
 	shot_fired.emit(false)
 
 
 func _shoot_laser_pulse() -> void:
 	_set_laser_active(true)
-	add_heat(10.0)
+	add_heat(_get_heat_per_second(WeaponType.LASER) * 0.25)
 	_shoot_cooldown.start(0.25)
 	shot_fired.emit(false)
 
