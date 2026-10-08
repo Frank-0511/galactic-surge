@@ -77,16 +77,46 @@ const ENEMY_HALF_WIDTH: float = 18.0
 ## Progressive wave configurations.
 ## Indices are 0-based: wave 0 is the first wave, wave 9 is the last.
 const _WAVE_CONFIGS: Array = [
-	{"rows": 3, "columns": 6, "formation_speed": 80.0,  "formation_type": "grid",     "fly_in_trajectory": "swoop_left"},
-	{"rows": 3, "columns": 6, "formation_speed": 90.0,  "formation_type": "v_shape",  "fly_in_trajectory": "pincer"},
-	{"rows": 3, "columns": 7, "formation_speed": 100.0, "formation_type": "arc",      "fly_in_trajectory": "swoop_right"},
-	{"rows": 4, "columns": 7, "formation_speed": 110.0, "formation_type": "diagonal", "fly_in_trajectory": "cross_dive"},
-	{"rows": 4, "columns": 7, "formation_speed": 120.0, "formation_type": "grid",     "fly_in_trajectory": "center_loop"},
-	{"rows": 4, "columns": 8, "formation_speed": 128.0, "formation_type": "v_shape",  "fly_in_trajectory": "swoop_left"},
-	{"rows": 4, "columns": 8, "formation_speed": 136.0, "formation_type": "arc",      "fly_in_trajectory": "pincer"},
-	{"rows": 5, "columns": 7, "formation_speed": 144.0, "formation_type": "diagonal", "fly_in_trajectory": "swoop_right"},
-	{"rows": 5, "columns": 8, "formation_speed": 152.0, "formation_type": "grid",     "fly_in_trajectory": "cross_dive"},
-	{"rows": 5, "columns": 8, "formation_speed": 160.0, "formation_type": "arc",      "fly_in_trajectory": "center_loop"},
+	{
+		"rows": 3, "columns": 6, "formation_speed": 80.0,  "formation_type": "grid",     "fly_in_trajectory": "swoop_left",
+		"bullet_mix": [1.00, 0.00, 0.00], "enraged_bullet_mix": [0.80, 0.20, 0.00], "fire_rate_scale": 1.60
+	},
+	{
+		"rows": 3, "columns": 6, "formation_speed": 90.0,  "formation_type": "v_shape",  "fly_in_trajectory": "pincer",
+		"bullet_mix": [0.90, 0.10, 0.00], "enraged_bullet_mix": [0.70, 0.30, 0.00], "fire_rate_scale": 1.50
+	},
+	{
+		"rows": 3, "columns": 7, "formation_speed": 100.0, "formation_type": "arc",      "fly_in_trajectory": "swoop_right",
+		"bullet_mix": [0.80, 0.20, 0.00], "enraged_bullet_mix": [0.60, 0.40, 0.00], "fire_rate_scale": 1.40
+	},
+	{
+		"rows": 4, "columns": 7, "formation_speed": 110.0, "formation_type": "diagonal", "fly_in_trajectory": "cross_dive",
+		"bullet_mix": [0.75, 0.25, 0.00], "enraged_bullet_mix": [0.50, 0.45, 0.05], "fire_rate_scale": 1.30
+	},
+	{
+		"rows": 4, "columns": 7, "formation_speed": 120.0, "formation_type": "grid",     "fly_in_trajectory": "center_loop",
+		"bullet_mix": [0.70, 0.25, 0.05], "enraged_bullet_mix": [0.45, 0.45, 0.10], "fire_rate_scale": 1.20
+	},
+	{
+		"rows": 4, "columns": 8, "formation_speed": 128.0, "formation_type": "v_shape",  "fly_in_trajectory": "swoop_left",
+		"bullet_mix": [0.65, 0.27, 0.08], "enraged_bullet_mix": [0.40, 0.45, 0.15], "fire_rate_scale": 1.15
+	},
+	{
+		"rows": 4, "columns": 8, "formation_speed": 136.0, "formation_type": "arc",      "fly_in_trajectory": "pincer",
+		"bullet_mix": [0.60, 0.30, 0.10], "enraged_bullet_mix": [0.35, 0.45, 0.20], "fire_rate_scale": 1.10
+	},
+	{
+		"rows": 5, "columns": 7, "formation_speed": 144.0, "formation_type": "diagonal", "fly_in_trajectory": "swoop_right",
+		"bullet_mix": [0.55, 0.32, 0.13], "enraged_bullet_mix": [0.30, 0.45, 0.25], "fire_rate_scale": 1.05
+	},
+	{
+		"rows": 5, "columns": 8, "formation_speed": 152.0, "formation_type": "grid",     "fly_in_trajectory": "cross_dive",
+		"bullet_mix": [0.52, 0.33, 0.15], "enraged_bullet_mix": [0.25, 0.45, 0.30], "fire_rate_scale": 1.00
+	},
+	{
+		"rows": 5, "columns": 8, "formation_speed": 160.0, "formation_type": "arc",      "fly_in_trajectory": "center_loop",
+		"bullet_mix": [0.50, 0.35, 0.15], "enraged_bullet_mix": [0.20, 0.45, 0.35], "fire_rate_scale": 1.00
+	},
 ]
 
 var _direction: float = 1.0
@@ -225,11 +255,16 @@ func spawn_formation() -> void:
 	_is_enraged = false
 	_dive_cooldown_timer = 3.5
 
+	var wave_config: Dictionary = get_wave_config(_current_wave)
 	for i: int in range(slots.size()):
 		var slot_pos: Vector2 = slots[i]
 		var enemy: Area2D = enemy_scene.instantiate() as Area2D
 		if enemy == null:
 			continue
+		if enemy.has_method(&"set_bullet_mix"):
+			enemy.call(&"set_bullet_mix", wave_config.get("bullet_mix", []), wave_config.get("enraged_bullet_mix", []))
+		if enemy.has_method(&"set_fire_rate_scale"):
+			enemy.call(&"set_fire_rate_scale", float(wave_config.get("fire_rate_scale", 1.0)))
 		add_child(enemy)
 		enemy.player_contacted.connect(_on_enemy_player_contacted)
 		enemy.destroyed.connect(_on_enemy_destroyed)

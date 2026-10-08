@@ -328,6 +328,23 @@ func _on_body_entered(body: Node2D) -> void:
 ## Optional forced bullet variant for testing/scripting (-1 for standard probability).
 var _forced_bullet_variant: int = -1
 
+## Probabilities [direct, parabolic, cluster] for normal state. Empty = legacy defaults.
+var _bullet_mix: Array = []
+
+## Probabilities [direct, parabolic, cluster] when enraged. Empty = legacy defaults.
+var _enraged_bullet_mix: Array = []
+
+
+func set_bullet_mix(normal_mix: Array, enraged_mix: Array) -> void:
+	_bullet_mix = normal_mix.duplicate()
+	_enraged_bullet_mix = enraged_mix.duplicate()
+
+
+## Multiplies the shoot cooldown range (>1.0 = slower fire).
+func set_fire_rate_scale(scale: float) -> void:
+	min_shoot_cooldown *= scale
+	max_shoot_cooldown *= scale
+
 
 func set_forced_bullet_variant(variant: int) -> void:
 	_forced_bullet_variant = variant
@@ -345,22 +362,33 @@ func _configure_bullet(bullet: Node2D) -> void:
 	var variant: int = _forced_bullet_variant
 	if variant < 0:
 		var roll: float = randf()
-		if _is_enraged:
-			# Enraged enemies favor complex ballistic artillery
-			if roll < 0.35:
+		var mix: Array = _enraged_bullet_mix if _is_enraged else _bullet_mix
+		if mix.size() >= 3:
+			var cluster_p: float = float(mix[2])
+			var parabolic_p: float = float(mix[1])
+			if roll < cluster_p:
 				variant = 2 # CLUSTER
-			elif roll < 0.80:
+			elif roll < (cluster_p + parabolic_p):
 				variant = 1 # PARABOLIC
 			else:
 				variant = 0 # DIRECT
 		else:
-			# Standard formation enemies
-			if roll < 0.15:
-				variant = 2 # CLUSTER
-			elif roll < 0.50:
-				variant = 1 # PARABOLIC
+			if _is_enraged:
+				# Enraged enemies favor complex ballistic artillery
+				if roll < 0.35:
+					variant = 2 # CLUSTER
+				elif roll < 0.80:
+					variant = 1 # PARABOLIC
+				else:
+					variant = 0 # DIRECT
 			else:
-				variant = 0 # DIRECT
+				# Standard formation enemies
+				if roll < 0.15:
+					variant = 2 # CLUSTER
+				elif roll < 0.50:
+					variant = 1 # PARABOLIC
+				else:
+					variant = 0 # DIRECT
 
 	bullet.set("plasma_variant", variant)
 
