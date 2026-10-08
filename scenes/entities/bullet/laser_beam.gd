@@ -1,7 +1,6 @@
 # laser_beam.gd
-# Continuous high-energy focused laser beam attached to the player ship.
-# Dynamically extends to reach target enemies in its fire corridor or across
-# the screen, applying tick-based damage and displaying thermal impact feedback.
+# Continuous Chicken Invaders-style beam: stops at the first enemy, drains its
+# health over time, and grows thicker and deadlier per power level.
 
 extends Area2D
 
@@ -11,8 +10,14 @@ signal enemy_hit(enemy: Area2D)
 ## Time interval in seconds between consecutive damage ticks.
 @export var damage_tick_rate: float = 0.12
 
-## Damage dealt per tick to each overlapping enemy.
+## Legacy/informative tick damage value (maintained for contract backwards-compatibility).
 @export var damage_per_tick: int = 1
+
+## Continuous damage per second applied to the first enemy in the path.
+@export var damage_per_second: float = 1.2
+
+## Minimum horizontal corridor used to detect targets (keeps thin beams aimable).
+@export var min_hit_corridor: float = 14.0
 
 ## Whether the beam is active and applying damage.
 @export var is_firing: bool = false
@@ -21,10 +26,11 @@ signal enemy_hit(enemy: Area2D)
 @export var beam_length: float = 420.0
 
 ## Effective width of the beam corridor in pixels.
-@export var beam_width: float = 12.0
+@export var beam_width: float = 4.0
 
 var _power_level: int = 1
 var _tick_timer: float = 0.0
+var _fractional_damage_buffer: float = 0.0
 var _time: float = 0.0
 var _active_length: float = 420.0
 var _current_target_enemy: Area2D = null
@@ -60,7 +66,8 @@ func _process(delta: float) -> void:
 
 func set_power_level(level: int) -> void:
 	_power_level = clampi(level, 1, 10)
-	beam_width = 10.0 + float(_power_level) * 1.8
+	beam_width = 4.0 + 2.2 * float(_power_level - 1)
+	damage_per_second = 1.2 + 0.7 * float(_power_level - 1)
 	damage_per_tick = 1 + int(_power_level >= 5) + int(_power_level >= 9)
 	if _collision_shape == null:
 		_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
@@ -76,10 +83,10 @@ func set_firing(firing: bool) -> void:
 	is_firing = firing
 	_update_firing_state()
 	_tick_timer = 0.0
+	_fractional_damage_buffer = 0.0
 
 	if is_firing:
 		_update_beam_geometry()
-		_apply_damage_tick()
 	else:
 		_reset_to_default_beam()
 
@@ -99,6 +106,8 @@ func _update_firing_state() -> void:
 func _reset_to_default_beam() -> void:
 	_active_length = beam_length
 	_current_target_enemy = null
+	_tick_timer = 0.0
+	_fractional_damage_buffer = 0.0
 	if _collision_shape == null:
 		_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if _collision_shape != null and _collision_shape.shape is RectangleShape2D:
@@ -130,7 +139,7 @@ func _find_closest_enemy_in_path() -> Area2D:
 			continue
 
 		var enemy_half_w: float = _get_enemy_half_width(enemy)
-		var half_beam: float = beam_width * 0.5
+		var half_beam: float = maxf(beam_width, min_hit_corridor) * 0.5
 		if absf(enemy.global_position.x - global_position.x) > (half_beam + enemy_half_w):
 			continue
 
@@ -169,11 +178,15 @@ func _update_beam_geometry() -> void:
 	var prev_target: Area2D = _current_target_enemy
 
 	if target != null:
+		if prev_target != target:
+			_tick_timer = 0.0
+			_fractional_damage_buffer = 0.0
 		_current_target_enemy = target
 		_active_length = maxf(20.0, global_position.y - target.global_position.y)
-		if prev_target != target and is_firing:
-			_tick_timer = damage_tick_rate
 	else:
+		if prev_target != null:
+			_tick_timer = 0.0
+			_fractional_damage_buffer = 0.0
 		_current_target_enemy = null
 		var default_top: float = 0.0
 		if get_viewport() != null:
@@ -189,51 +202,34 @@ func _update_collision_shape() -> void:
 	if _collision_shape != null and _collision_shape.shape is RectangleShape2D:
 		var rect_shape: RectangleShape2D = _collision_shape.shape as RectangleShape2D
 		rect_shape.size.x = beam_width
-		rect_shape.size.y = _active_length + 20.0
+		rect_shape.size.y = _active_length
 		_collision_shape.position = Vector2(0.0, -_active_length * 0.5)
 
 
 func _apply_damage_tick() -> void:
-	if not is_firing or not is_inside_tree() or not monitoring:
+	if not is_firing or not is_inside_tree():
 		return
-
-	var targets: Array[Area2D] = get_overlapping_areas()
-	var damaged_targets: Dictionary = {}
-
-	for target: Area2D in targets:
-		if not is_instance_valid(target) or not target.is_inside_tree():
-			continue
-		if target.is_in_group(&"enemies"):
-			damaged_targets[target] = true
-			enemy_hit.emit(target)
-			if target.has_method(&"take_damage"):
-				target.call(&"take_damage", damage_per_tick)
-			elif target.has_method(&"destroy"):
-				target.call(&"destroy")
-
-	# Ensure _current_target_enemy receives damage even if physics overlap query hasn't refreshed this frame
-	if is_instance_valid(_current_target_enemy) and _current_target_enemy.is_inside_tree():
-		if not damaged_targets.has(_current_target_enemy):
-			if not bool(_current_target_enemy.get("_destroyed")):
-				damaged_targets[_current_target_enemy] = true
-				enemy_hit.emit(_current_target_enemy)
-				if _current_target_enemy.has_method(&"take_damage"):
-					_current_target_enemy.call(&"take_damage", damage_per_tick)
-				elif _current_target_enemy.has_method(&"destroy"):
-					_current_target_enemy.call(&"destroy")
-
-
-func _on_area_entered(area: Area2D) -> void:
-	if not is_firing or not area.is_in_group(&"enemies"):
+	var target: Area2D = _current_target_enemy
+	if not is_instance_valid(target) or not target.is_inside_tree() or bool(target.get("_destroyed")):
 		return
-	if bool(area.get("_destroyed")):
-		return
-	# Instant tick when enemy enters beam path
-	enemy_hit.emit(area)
-	if area.has_method(&"take_damage"):
-		area.call(&"take_damage", damage_per_tick)
-	elif area.has_method(&"destroy"):
-		area.call(&"destroy")
+	var amount: float = damage_per_second * damage_tick_rate
+	enemy_hit.emit(target)
+	if target.has_method(&"supports_fractional_damage"):
+		target.call(&"take_damage", amount)
+	elif target.has_method(&"take_damage"):
+		# Integer-health targets (Boss): accumulate until a whole point is reached.
+		_fractional_damage_buffer += amount
+		var whole: int = int(floor(_fractional_damage_buffer))
+		if whole > 0:
+			_fractional_damage_buffer -= float(whole)
+			target.call(&"take_damage", whole)
+	elif target.has_method(&"destroy"):
+		target.call(&"destroy")
+
+
+func _on_area_entered(_area: Area2D) -> void:
+	# Continuous beam applies sustained DPS exclusively in _apply_damage_tick().
+	pass
 
 
 func _draw() -> void:
@@ -244,6 +240,10 @@ func _draw() -> void:
 	var beam_start: Vector2 = Vector2.ZERO
 	var beam_end: Vector2 = Vector2(0.0, -_active_length)
 
+	# 0. Outer harmonic aura for high power levels
+	if _power_level >= 7:
+		draw_line(beam_start, beam_end, Color(0.3, 0.9, 1.0, 0.15 * pulse), beam_width * 2.4)
+
 	# 1. Outer broad atmospheric glow (magenta/purple)
 	draw_line(beam_start, beam_end, Color(0.75, 0.15, 1.0, 0.22 * pulse), beam_width * 1.8)
 
@@ -251,7 +251,7 @@ func _draw() -> void:
 	draw_line(beam_start, beam_end, Color(0.15, 0.85, 1.0, 0.65 * pulse), beam_width * 0.9)
 
 	# 3. Blinding white-hot core
-	draw_line(beam_start, beam_end, Color(0.95, 1.0, 1.0, 0.95), beam_width * 0.35)
+	draw_line(beam_start, beam_end, Color(0.95, 1.0, 1.0, 0.95), maxf(beam_width * 0.35, 1.5))
 
 	# 4. Emitter muzzle flare
 	draw_circle(beam_start, 6.0 * pulse, Color(0.2, 0.9, 1.0, 0.8))
