@@ -6,6 +6,7 @@
 extends Node2D
 
 const FormationPatterns: Script = preload("res://scripts/systems/formation_patterns.gd")
+const EnemyVariants: Script = preload("res://scripts/systems/enemy_variants.gd")
 
 ## Emitted when an enemy directly collides with the player.
 signal enemy_contacted_player(player: Node2D)
@@ -75,47 +76,59 @@ signal formation_rejoined(enemy: Area2D)
 const ENEMY_HALF_WIDTH: float = 18.0
 
 ## Progressive wave configurations.
+## The optional "variants" dictionary maps a tactical variant id (enemy_variants.gd)
+## to the number of formation slots that use it; remaining slots are standard enemies.
 ## Indices are 0-based: wave 0 is the first wave, wave 9 is the last.
 const _WAVE_CONFIGS: Array = [
 	{
 		"rows": 3, "columns": 6, "formation_speed": 80.0,  "formation_type": "grid",     "fly_in_trajectory": "swoop_left",
-		"bullet_mix": [1.00, 0.00, 0.00], "enraged_bullet_mix": [0.80, 0.20, 0.00], "fire_rate_scale": 1.60
+		"bullet_mix": [1.00, 0.00, 0.00], "enraged_bullet_mix": [0.80, 0.20, 0.00], "fire_rate_scale": 1.60,
+		"variants": {}
 	},
 	{
 		"rows": 3, "columns": 6, "formation_speed": 90.0,  "formation_type": "v_shape",  "fly_in_trajectory": "pincer",
-		"bullet_mix": [0.90, 0.10, 0.00], "enraged_bullet_mix": [0.70, 0.30, 0.00], "fire_rate_scale": 1.50
+		"bullet_mix": [0.90, 0.10, 0.00], "enraged_bullet_mix": [0.70, 0.30, 0.00], "fire_rate_scale": 1.50,
+		"variants": {"scout_drone": 3}
 	},
 	{
 		"rows": 3, "columns": 7, "formation_speed": 100.0, "formation_type": "arc",      "fly_in_trajectory": "swoop_right",
-		"bullet_mix": [0.80, 0.20, 0.00], "enraged_bullet_mix": [0.60, 0.40, 0.00], "fire_rate_scale": 1.40
+		"bullet_mix": [0.80, 0.20, 0.00], "enraged_bullet_mix": [0.60, 0.40, 0.00], "fire_rate_scale": 1.40,
+		"variants": {"scout_drone": 4, "armored_fighter": 1}
 	},
 	{
 		"rows": 4, "columns": 7, "formation_speed": 110.0, "formation_type": "diagonal", "fly_in_trajectory": "cross_dive",
-		"bullet_mix": [0.75, 0.25, 0.00], "enraged_bullet_mix": [0.50, 0.45, 0.05], "fire_rate_scale": 1.30
+		"bullet_mix": [0.75, 0.25, 0.00], "enraged_bullet_mix": [0.50, 0.45, 0.05], "fire_rate_scale": 1.30,
+		"variants": {"armored_fighter": 2, "suicide_interceptor": 1, "scout_drone": 3}
 	},
 	{
 		"rows": 4, "columns": 7, "formation_speed": 120.0, "formation_type": "grid",     "fly_in_trajectory": "center_loop",
-		"bullet_mix": [0.70, 0.25, 0.05], "enraged_bullet_mix": [0.45, 0.45, 0.10], "fire_rate_scale": 1.20
+		"bullet_mix": [0.70, 0.25, 0.05], "enraged_bullet_mix": [0.45, 0.45, 0.10], "fire_rate_scale": 1.20,
+		"variants": {"assault_frigate": 1, "armored_fighter": 2, "scout_drone": 4}
 	},
 	{
 		"rows": 4, "columns": 8, "formation_speed": 128.0, "formation_type": "v_shape",  "fly_in_trajectory": "swoop_left",
-		"bullet_mix": [0.65, 0.27, 0.08], "enraged_bullet_mix": [0.40, 0.45, 0.15], "fire_rate_scale": 1.15
+		"bullet_mix": [0.65, 0.27, 0.08], "enraged_bullet_mix": [0.40, 0.45, 0.15], "fire_rate_scale": 1.15,
+		"variants": {"assault_frigate": 1, "armored_fighter": 3, "suicide_interceptor": 2}
 	},
 	{
 		"rows": 4, "columns": 8, "formation_speed": 136.0, "formation_type": "arc",      "fly_in_trajectory": "pincer",
-		"bullet_mix": [0.60, 0.30, 0.10], "enraged_bullet_mix": [0.35, 0.45, 0.20], "fire_rate_scale": 1.10
+		"bullet_mix": [0.60, 0.30, 0.10], "enraged_bullet_mix": [0.35, 0.45, 0.20], "fire_rate_scale": 1.10,
+		"variants": {"assault_frigate": 2, "armored_fighter": 3, "suicide_interceptor": 2, "scout_drone": 5}
 	},
 	{
 		"rows": 5, "columns": 7, "formation_speed": 144.0, "formation_type": "diagonal", "fly_in_trajectory": "swoop_right",
-		"bullet_mix": [0.55, 0.32, 0.13], "enraged_bullet_mix": [0.30, 0.45, 0.25], "fire_rate_scale": 1.05
+		"bullet_mix": [0.55, 0.32, 0.13], "enraged_bullet_mix": [0.30, 0.45, 0.25], "fire_rate_scale": 1.05,
+		"variants": {"assault_frigate": 2, "armored_fighter": 4, "suicide_interceptor": 3, "scout_drone": 4}
 	},
 	{
 		"rows": 5, "columns": 8, "formation_speed": 152.0, "formation_type": "grid",     "fly_in_trajectory": "cross_dive",
-		"bullet_mix": [0.52, 0.33, 0.15], "enraged_bullet_mix": [0.25, 0.45, 0.30], "fire_rate_scale": 1.00
+		"bullet_mix": [0.52, 0.33, 0.15], "enraged_bullet_mix": [0.25, 0.45, 0.30], "fire_rate_scale": 1.00,
+		"variants": {"assault_frigate": 3, "armored_fighter": 4, "suicide_interceptor": 3, "scout_drone": 5}
 	},
 	{
 		"rows": 5, "columns": 8, "formation_speed": 160.0, "formation_type": "arc",      "fly_in_trajectory": "center_loop",
-		"bullet_mix": [0.50, 0.35, 0.15], "enraged_bullet_mix": [0.20, 0.45, 0.35], "fire_rate_scale": 1.00
+		"bullet_mix": [0.50, 0.35, 0.15], "enraged_bullet_mix": [0.20, 0.45, 0.35], "fire_rate_scale": 1.00,
+		"variants": {"assault_frigate": 3, "armored_fighter": 5, "suicide_interceptor": 4, "scout_drone": 6}
 	},
 ]
 
@@ -256,11 +269,14 @@ func spawn_formation() -> void:
 	_dive_cooldown_timer = 3.5
 
 	var wave_config: Dictionary = get_wave_config(_current_wave)
+	var variant_slots: Dictionary = assign_variant_slots(wave_config.get("variants", {}), slots.size())
 	for i: int in range(slots.size()):
 		var slot_pos: Vector2 = slots[i]
 		var enemy: Area2D = enemy_scene.instantiate() as Area2D
 		if enemy == null:
 			continue
+		if variant_slots.has(i) and enemy.has_method(&"apply_variant"):
+			enemy.call(&"apply_variant", variant_slots[i])
 		if enemy.has_method(&"set_bullet_mix"):
 			enemy.call(&"set_bullet_mix", wave_config.get("bullet_mix", []), wave_config.get("enraged_bullet_mix", []))
 		if enemy.has_method(&"set_fire_rate_scale"):
@@ -270,6 +286,10 @@ func spawn_formation() -> void:
 		enemy.destroyed.connect(_on_enemy_destroyed)
 		_alive_count += 1
 		_enemy_base_slots[enemy] = slot_pos
+		if variant_slots.has(i) and enemy.has_method(&"set_slot_getter"):
+			var variant_enemy: Area2D = enemy
+			enemy.call(&"set_slot_getter", func() -> Vector2:
+				return get_enemy_slot_position(variant_enemy))
 
 		if should_fly_in:
 			_flying_in_count += 1
@@ -349,6 +369,31 @@ func start_wave(wave_index: int) -> void:
 	_current_pattern_type = String(config.get("formation_type", "grid"))
 	_current_trajectory = String(config.get("fly_in_trajectory", "swoop_left"))
 	spawn_formation()
+
+
+## Deterministically maps slot indices to variant ids. Each variant is spread
+## across the formation with a fixed stride so wave layouts are reproducible.
+func assign_variant_slots(variants: Dictionary, slot_count: int) -> Dictionary:
+	var assigned: Dictionary = {}
+	if slot_count <= 0:
+		return assigned
+	var order: int = 0
+	for key: Variant in variants.keys():
+		var id: StringName = StringName(String(key))
+		if not EnemyVariants.has_variant(id) or id == EnemyVariants.STANDARD:
+			continue
+		var count: int = mini(int(variants[key]), slot_count - assigned.size())
+		var stride: int = maxi(1, slot_count / maxi(count, 1))
+		var cursor: int = (order * 5 + 2) % slot_count
+		for _n: int in range(count):
+			var guard: int = 0
+			while assigned.has(cursor) and guard < slot_count:
+				cursor = (cursor + 1) % slot_count
+				guard += 1
+			assigned[cursor] = id
+			cursor = (cursor + stride) % slot_count
+		order += 1
+	return assigned
 
 
 func get_enemy_slot_position(enemy: Area2D) -> Vector2:

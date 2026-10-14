@@ -50,7 +50,9 @@ func _on_area_entered(area: Area2D) -> void:
 
 	if not damage_applied:
 		damage_applied = true
-		if area.has_method(&"take_damage"):
+		if area.has_method(&"take_damage_from"):
+			area.call(&"take_damage_from", float(damage), direction)
+		elif area.has_method(&"take_damage"):
 			area.call(&"take_damage", damage)
 		elif area.has_method(&"destroy"):
 			area.call(&"destroy")

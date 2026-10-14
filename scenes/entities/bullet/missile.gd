@@ -39,6 +39,11 @@ func get_target() -> Node2D:
 	return null
 
 
+## Current velocity vector (used by enemy AI to dodge slow projectiles).
+func get_projectile_velocity() -> Vector2:
+	return Vector2.UP.rotated(rotation) * _current_speed
+
+
 func _is_target_valid(t: Variant) -> bool:
 	if not is_instance_valid(t) or not (t is Node2D):
 		return false
@@ -111,7 +116,9 @@ func _on_area_entered(area: Area2D) -> void:
 
 	if not damage_applied:
 		damage_applied = true
-		if area.has_method(&"take_damage"):
+		if area.has_method(&"take_damage_from"):
+			area.call(&"take_damage_from", float(damage), Vector2.UP.rotated(rotation))
+		elif area.has_method(&"take_damage"):
 			area.call(&"take_damage", damage)
 		elif area.has_method(&"destroy"):
 			area.call(&"destroy")
