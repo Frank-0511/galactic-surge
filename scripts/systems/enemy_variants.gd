@@ -40,11 +40,11 @@ const _DEFINITIONS: Dictionary = {
 		"score_weight": 1.0,
 	},
 	&"armored_fighter": {
-		"max_health": 4.0,
+		"max_health": 3.0,
 		"visual_scale": 1.15,
 		"deflector": true,
 		"deflector_cone_deg": 70.0,
-		"deflector_multiplier": 0.25,
+		"deflector_multiplier": 0.35,
 		"burst_count": 1,
 		"burst_interval": 0.0,
 		"fire_rate_scale": 1.0,
@@ -56,7 +56,7 @@ const _DEFINITIONS: Dictionary = {
 		"score_weight": 3.0,
 	},
 	&"assault_frigate": {
-		"max_health": 10.0,
+		"max_health": 8.0,
 		"visual_scale": 1.4,
 		"deflector": false,
 		"burst_count": 3,
@@ -94,7 +94,7 @@ const _DEFINITIONS: Dictionary = {
 		"evasion_speed": 90.0,
 		"swarm": false,
 		"suicide": true,
-		"charge_speed": 520.0,
+		"charge_speed": 420.0,
 		"score_weight": 2.0,
 	},
 }

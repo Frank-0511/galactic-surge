@@ -88,47 +88,47 @@ const _WAVE_CONFIGS: Array = [
 	{
 		"rows": 3, "columns": 6, "formation_speed": 90.0,  "formation_type": "v_shape",  "fly_in_trajectory": "pincer",
 		"bullet_mix": [0.90, 0.10, 0.00], "enraged_bullet_mix": [0.70, 0.30, 0.00], "fire_rate_scale": 1.50,
-		"variants": {"scout_drone": 3}
+		"variants": {"scout_drone": 2}
 	},
 	{
 		"rows": 3, "columns": 7, "formation_speed": 100.0, "formation_type": "arc",      "fly_in_trajectory": "swoop_right",
 		"bullet_mix": [0.80, 0.20, 0.00], "enraged_bullet_mix": [0.60, 0.40, 0.00], "fire_rate_scale": 1.40,
-		"variants": {"scout_drone": 4, "armored_fighter": 1}
+		"variants": {"scout_drone": 3}
 	},
 	{
 		"rows": 4, "columns": 7, "formation_speed": 110.0, "formation_type": "diagonal", "fly_in_trajectory": "cross_dive",
 		"bullet_mix": [0.75, 0.25, 0.00], "enraged_bullet_mix": [0.50, 0.45, 0.05], "fire_rate_scale": 1.30,
-		"variants": {"armored_fighter": 2, "suicide_interceptor": 1, "scout_drone": 3}
+		"variants": {"armored_fighter": 1, "suicide_interceptor": 1, "scout_drone": 2}
 	},
 	{
 		"rows": 4, "columns": 7, "formation_speed": 120.0, "formation_type": "grid",     "fly_in_trajectory": "center_loop",
 		"bullet_mix": [0.70, 0.25, 0.05], "enraged_bullet_mix": [0.45, 0.45, 0.10], "fire_rate_scale": 1.20,
-		"variants": {"assault_frigate": 1, "armored_fighter": 2, "scout_drone": 4}
+		"variants": {"assault_frigate": 1, "armored_fighter": 1, "scout_drone": 3}
 	},
 	{
 		"rows": 4, "columns": 8, "formation_speed": 128.0, "formation_type": "v_shape",  "fly_in_trajectory": "swoop_left",
 		"bullet_mix": [0.65, 0.27, 0.08], "enraged_bullet_mix": [0.40, 0.45, 0.15], "fire_rate_scale": 1.15,
-		"variants": {"assault_frigate": 1, "armored_fighter": 3, "suicide_interceptor": 2}
+		"variants": {"assault_frigate": 1, "armored_fighter": 2, "suicide_interceptor": 1}
 	},
 	{
 		"rows": 4, "columns": 8, "formation_speed": 136.0, "formation_type": "arc",      "fly_in_trajectory": "pincer",
 		"bullet_mix": [0.60, 0.30, 0.10], "enraged_bullet_mix": [0.35, 0.45, 0.20], "fire_rate_scale": 1.10,
-		"variants": {"assault_frigate": 2, "armored_fighter": 3, "suicide_interceptor": 2, "scout_drone": 5}
+		"variants": {"assault_frigate": 1, "armored_fighter": 2, "suicide_interceptor": 1, "scout_drone": 3}
 	},
 	{
 		"rows": 5, "columns": 7, "formation_speed": 144.0, "formation_type": "diagonal", "fly_in_trajectory": "swoop_right",
 		"bullet_mix": [0.55, 0.32, 0.13], "enraged_bullet_mix": [0.30, 0.45, 0.25], "fire_rate_scale": 1.05,
-		"variants": {"assault_frigate": 2, "armored_fighter": 4, "suicide_interceptor": 3, "scout_drone": 4}
+		"variants": {"assault_frigate": 1, "armored_fighter": 2, "suicide_interceptor": 2, "scout_drone": 3}
 	},
 	{
 		"rows": 5, "columns": 8, "formation_speed": 152.0, "formation_type": "grid",     "fly_in_trajectory": "cross_dive",
 		"bullet_mix": [0.52, 0.33, 0.15], "enraged_bullet_mix": [0.25, 0.45, 0.30], "fire_rate_scale": 1.00,
-		"variants": {"assault_frigate": 3, "armored_fighter": 4, "suicide_interceptor": 3, "scout_drone": 5}
+		"variants": {"assault_frigate": 2, "armored_fighter": 3, "suicide_interceptor": 2, "scout_drone": 3}
 	},
 	{
 		"rows": 5, "columns": 8, "formation_speed": 160.0, "formation_type": "arc",      "fly_in_trajectory": "center_loop",
 		"bullet_mix": [0.50, 0.35, 0.15], "enraged_bullet_mix": [0.20, 0.45, 0.35], "fire_rate_scale": 1.00,
-		"variants": {"assault_frigate": 3, "armored_fighter": 5, "suicide_interceptor": 4, "scout_drone": 6}
+		"variants": {"assault_frigate": 2, "armored_fighter": 3, "suicide_interceptor": 2, "scout_drone": 4}
 	},
 ]
 
