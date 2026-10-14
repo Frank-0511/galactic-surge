@@ -137,7 +137,7 @@ func _assert_laser_dps_contract() -> bool:
 	laser.call(&"set_firing", true)
 
 	# Simulate 0.30 seconds (6 steps of 0.05s).
-	# At 1.2 DPS, total damage in 0.3s is ~0.36 HP. Enemy must be damaged but still alive.
+	# At 2.5 DPS, total damage in 0.3s is 2 ticks of 0.30 = 0.60 HP. Enemy must be damaged (~0.40 HP) but still alive.
 	for _i in range(6):
 		laser._process(0.05)
 
@@ -149,7 +149,7 @@ func _assert_laser_dps_contract() -> bool:
 		push_error("Enemy was destroyed too fast by Level 1 laser (instant kill regression)")
 		passed = false
 
-	# Simulate 1.0 additional second (20 steps of 0.05s) -> total 1.3s, enough to deplete 1.0 HP at 1.2 DPS (~0.83s needed)
+	# Simulate 1.0 additional second (20 steps of 0.05s) -> total 1.3s, enough to deplete 1.0 HP at 2.5 DPS (~0.40s needed)
 	for _i in range(20):
 		laser._process(0.05)
 
@@ -192,10 +192,10 @@ func _assert_laser_column_contract() -> bool:
 	laser.call(&"set_power_level", 1)
 	laser.call(&"set_firing", true)
 
-	# Fire for 0.90 seconds in 0.05s steps.
-	# Enemy 1 (1.0 HP) dies around 0.84s (7 ticks of 0.144).
-	# At that exact point, beam switches to Enemy 2, resetting tick timer.
-	for _i in range(18):
+	# Fire for 0.50 seconds in 0.05s steps (10 steps).
+	# At 2.5 DPS and 0.12s tick rate, Enemy 1 (1.0 HP) receives 4 ticks of 0.30 HP and dies at step 10.
+	# Enemy 2 and Enemy 3 must remain untouched behind Enemy 1 without penetration damage.
+	for _i in range(10):
 		laser._process(0.05)
 
 	var destroyed_count: int = 0

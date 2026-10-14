@@ -14,7 +14,7 @@ signal enemy_hit(enemy: Area2D)
 @export var damage_per_tick: int = 1
 
 ## Continuous damage per second applied to the first enemy in the path.
-@export var damage_per_second: float = 1.2
+@export var damage_per_second: float = 2.5
 
 ## Minimum horizontal corridor used to detect targets (keeps thin beams aimable).
 @export var min_hit_corridor: float = 14.0
@@ -67,7 +67,7 @@ func _process(delta: float) -> void:
 func set_power_level(level: int) -> void:
 	_power_level = clampi(level, 1, 10)
 	beam_width = 4.0 + 2.2 * float(_power_level - 1)
-	damage_per_second = 1.2 + 0.7 * float(_power_level - 1)
+	damage_per_second = 2.5 + 1.5 * float(_power_level - 1)
 	damage_per_tick = 1 + int(_power_level >= 5) + int(_power_level >= 9)
 	if _collision_shape == null:
 		_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D

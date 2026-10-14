@@ -26,6 +26,18 @@ var _time: float = 0.0
 var _target: Node2D = null
 
 
+func set_target(new_target: Node2D) -> void:
+	_target = new_target
+
+
+func get_target() -> Node2D:
+	return _target
+
+
+func _is_target_valid(t: Node2D) -> bool:
+	return is_instance_valid(t) and t.is_inside_tree() and not t.is_queued_for_deletion() and not bool(t.get("_destroyed"))
+
+
 func _ready() -> void:
 	_current_speed = speed
 
@@ -36,11 +48,11 @@ func _process(delta: float) -> void:
 	# Smoothly accelerate from initial speed toward max_speed.
 	_current_speed = move_toward(_current_speed, max_speed, 350.0 * delta)
 
-	# Target acquisition: track nearest alive enemy in tree.
-	if _target == null or not is_instance_valid(_target) or not _target.is_inside_tree():
+	# Target acquisition: track nearest alive enemy in tree, retarget dynamically if current dies.
+	if not _is_target_valid(_target):
 		_target = _find_nearest_target()
 
-	if _target != null and is_instance_valid(_target) and _target.is_inside_tree():
+	if _is_target_valid(_target):
 		var to_target: Vector2 = _target.global_position - global_position
 		if to_target.length_squared() > 1.0:
 			var desired_angle: float = Vector2.UP.angle_to(to_target)
@@ -61,11 +73,12 @@ func _process(delta: float) -> void:
 	if global_position.y < -100.0 or global_position.y > max_y or global_position.x < -100.0 or global_position.x > max_x:
 		queue_free()
 
-
 	queue_redraw()
 
 
 func _find_nearest_target() -> Node2D:
+	if not is_inside_tree() or get_tree() == null:
+		return null
 	var enemies: Array[Node] = get_tree().get_nodes_in_group(&"enemies")
 	var nearest: Node2D = null
 	var min_dist_sq: float = INF
@@ -73,7 +86,7 @@ func _find_nearest_target() -> Node2D:
 		if not is_instance_valid(node):
 			continue
 		var enemy: Node2D = node as Node2D
-		if enemy == null or not enemy.is_inside_tree():
+		if enemy == null or not _is_target_valid(enemy):
 			continue
 		var d_sq: float = global_position.distance_squared_to(enemy.global_position)
 		if d_sq < min_dist_sq:
@@ -84,6 +97,8 @@ func _find_nearest_target() -> Node2D:
 
 func _on_area_entered(area: Area2D) -> void:
 	if _has_hit or not area.is_in_group(&"enemies"):
+		return
+	if bool(area.get("_destroyed")) or area.is_queued_for_deletion():
 		return
 	_has_hit = true
 	enemy_hit.emit(area)
