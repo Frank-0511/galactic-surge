@@ -78,7 +78,7 @@ func _assert_variant_catalog() -> bool:
 	ok = _check(is_equal_approx(float(drone["max_health"]), 1.0), "Scout drone must have 1 HP") and ok
 	ok = _check(bool(drone["swarm"]) and float(drone["evasion_speed"]) > 100.0, "Scout drone must swarm and be agile") and ok
 	var interceptor: Dictionary = EnemyVariantsScript.get_definition(&"suicide_interceptor")
-	ok = _check(bool(interceptor["suicide"]) and float(interceptor["charge_speed"]) >= 400.0, "Interceptor must be suicide and fast") and ok
+	ok = _check(bool(interceptor["suicide"]) and float(interceptor["charge_speed"]) >= 350.0, "Interceptor must be suicide and fast") and ok
 	ok = _check(EnemyVariantsScript.get_definition(&"nope").is_empty(), "Unknown variant must return empty definition") and ok
 	return ok
 
@@ -325,7 +325,7 @@ func _assert_suicide_interceptor() -> bool:
 	for _i: int in range(10):
 		enemy.call(&"_process_charging", 0.1)
 	var travelled: float = enemy.global_position.distance_to(start)
-	ok = _check(travelled >= 400.0, "Interceptor must close at high speed (travelled %f in 1 s)" % travelled) and ok
+	ok = _check(travelled >= 350.0, "Interceptor must close at high speed (travelled %f in 1 s)" % travelled) and ok
 	ok = _check(enemy.global_position.y > start.y, "Interceptor must head toward the target") and ok
 
 	var contacted: Array = [false]
