@@ -26,16 +26,24 @@ var _time: float = 0.0
 var _target: Node2D = null
 
 
-func set_target(new_target: Node2D) -> void:
-	_target = new_target
+func set_target(new_target: Variant) -> void:
+	if is_instance_valid(new_target) and new_target is Node2D:
+		_target = new_target as Node2D
+	else:
+		_target = null
 
 
 func get_target() -> Node2D:
-	return _target
+	if _is_target_valid(_target):
+		return _target
+	return null
 
 
-func _is_target_valid(t: Node2D) -> bool:
-	return is_instance_valid(t) and t.is_inside_tree() and not t.is_queued_for_deletion() and not bool(t.get("_destroyed"))
+func _is_target_valid(t: Variant) -> bool:
+	if not is_instance_valid(t) or not (t is Node2D):
+		return false
+	var node: Node2D = t as Node2D
+	return node.is_inside_tree() and not node.is_queued_for_deletion() and node.get("_destroyed") != true
 
 
 func _ready() -> void:
@@ -83,11 +91,9 @@ func _find_nearest_target() -> Node2D:
 	var nearest: Node2D = null
 	var min_dist_sq: float = INF
 	for node: Node in enemies:
-		if not is_instance_valid(node):
+		if not _is_target_valid(node):
 			continue
 		var enemy: Node2D = node as Node2D
-		if enemy == null or not _is_target_valid(enemy):
-			continue
 		var d_sq: float = global_position.distance_squared_to(enemy.global_position)
 		if d_sq < min_dist_sq:
 			min_dist_sq = d_sq
@@ -96,9 +102,9 @@ func _find_nearest_target() -> Node2D:
 
 
 func _on_area_entered(area: Area2D) -> void:
-	if _has_hit or not area.is_in_group(&"enemies"):
+	if _has_hit or not is_instance_valid(area) or not area.is_in_group(&"enemies"):
 		return
-	if bool(area.get("_destroyed")) or area.is_queued_for_deletion():
+	if area.get("_destroyed") == true or area.is_queued_for_deletion():
 		return
 	_has_hit = true
 	enemy_hit.emit(area)
@@ -114,38 +120,40 @@ func _on_area_entered(area: Area2D) -> void:
 
 
 func _draw() -> void:
-	# Stylized rocket missile silhouette with warhead, fins, and pulsating exhaust flame.
-	var flicker: float = 0.75 + 0.25 * sin(_time * 28.0)
-	var flame_outer: PackedVector2Array = PackedVector2Array([
-		Vector2(-2.5, 9), Vector2(0, 9 + 8.0 * flicker), Vector2(2.5, 9)
-	])
-	draw_colored_polygon(flame_outer, Color(1.0, 0.45, 0.1, 0.9))
+	# Lead-gray ("plomo") missile with a few accents: orange tip, one stripe, small flame.
+	var flicker: float = 0.8 + 0.2 * sin(_time * 20.0)
+	var gray: Color = Color(0.55, 0.60, 0.68)
+	var gray_dark: Color = Color(0.32, 0.36, 0.44)
+	var accent: Color = Color(1.0, 0.55, 0.1)
 
-	var flame_inner: PackedVector2Array = PackedVector2Array([
-		Vector2(-1.2, 9), Vector2(0, 9 + 4.5 * flicker), Vector2(1.2, 9)
-	])
-	draw_colored_polygon(flame_inner, Color(1.0, 0.95, 0.35, 1.0))
+	# Exhaust flame.
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-3, 11), Vector2(0, 11 + 8.0 * flicker), Vector2(3, 11),
+	]), Color(1.0, 0.65, 0.2, 0.85))
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-1.4, 11), Vector2(0, 11 + 4.0 * flicker), Vector2(1.4, 11),
+	]), Color(1.0, 0.95, 0.6, 0.95))
 
-	# Stabilizing delta fins at tail
-	var fin_left: PackedVector2Array = PackedVector2Array([
-		Vector2(-3, 3), Vector2(-7, 8), Vector2(-3, 7)
-	])
-	var fin_right: PackedVector2Array = PackedVector2Array([
-		Vector2(3, 3), Vector2(7, 8), Vector2(3, 7)
-	])
-	draw_colored_polygon(fin_left, Color(0.3, 0.35, 0.45))
-	draw_colored_polygon(fin_right, Color(0.3, 0.35, 0.45))
-	draw_polyline(fin_left, Color(0.9, 0.4, 0.1), 1.0)
-	draw_polyline(fin_right, Color(0.9, 0.4, 0.1), 1.0)
+	# Fins (darker gray).
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-4, 3), Vector2(-8, 11), Vector2(-4, 9),
+	]), gray_dark)
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(4, 3), Vector2(8, 11), Vector2(4, 9),
+	]), gray_dark)
 
-	# Main fuselage body
-	draw_rect(Rect2(-3, -5, 6, 13), Color(0.9, 0.92, 0.96))
-	# Accent hazard stripe
-	draw_rect(Rect2(-3, -1, 6, 3), Color(1.0, 0.3, 0.15))
+	# Main body.
+	draw_rect(Rect2(-4, -6, 8, 17), gray)
+	# Slight shading on one side for volume.
+	draw_rect(Rect2(1.5, -6, 2.5, 17), gray_dark)
 
-	# Conical aerodynamic warhead
-	var warhead: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -12), Vector2(-3, -5), Vector2(3, -5)
-	])
-	draw_colored_polygon(warhead, Color(1.0, 0.25, 0.15))
-	draw_circle(Vector2(0, -11), 1.2, Color(1.0, 0.8, 0.3))
+	# Nose cone with orange tip.
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(0, -13), Vector2(-4, -6), Vector2(4, -6),
+	]), gray_dark)
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(0, -13), Vector2(-1.8, -9.5), Vector2(1.8, -9.5),
+	]), accent)
+
+	# Single accent stripe.
+	draw_rect(Rect2(-4, 1, 8, 2), accent)

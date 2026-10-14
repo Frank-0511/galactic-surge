@@ -208,6 +208,52 @@ func _assert_missile_contract() -> bool:
 	if is_instance_valid(right_missile):
 		right_missile.queue_free()
 
+	# Regression test: target freed before _process (previously freed object validation)
+	var homing_missile: Area2D = packed.instantiate() as Area2D
+	root.add_child(homing_missile)
+	var target_enemy1: Area2D = Area2D.new()
+	target_enemy1.add_to_group(&"enemies")
+	target_enemy1.position = Vector2(100.0, 100.0)
+	root.add_child(target_enemy1)
+
+	var target_enemy2: Area2D = Area2D.new()
+	target_enemy2.add_to_group(&"enemies")
+	target_enemy2.position = Vector2(200.0, 200.0)
+	root.add_child(target_enemy2)
+
+	homing_missile.call("set_target", target_enemy1)
+	if homing_missile.call("get_target") != target_enemy1:
+		push_error("Missile set_target failed to set target")
+		passed = false
+
+	# Free target_enemy1 and advance frame so it becomes a freed object in ObjectDB
+	target_enemy1.queue_free()
+	await root.get_tree().process_frame
+
+	# _process must handle previously freed target without raising type error and acquire target_enemy2
+	homing_missile.call("_process", 0.016)
+	if homing_missile.call("get_target") != target_enemy2:
+		push_error("Missile failed to retarget to target_enemy2 after target_enemy1 was freed")
+		passed = false
+
+	# Immediate free scenario: free target_enemy2 directly and call _process again (no alive enemies)
+	target_enemy2.free()
+	homing_missile.call("_process", 0.016)
+	if homing_missile.call("get_target") != null:
+		push_error("Missile get_target must return null when no alive targets exist")
+		passed = false
+
+	# Passing previously freed object into set_target should not crash
+	var temp_enemy: Area2D = Area2D.new()
+	temp_enemy.free()
+	homing_missile.call("set_target", temp_enemy)
+	if homing_missile.call("get_target") != null:
+		push_error("Missile set_target with freed object must reset target to null")
+		passed = false
+
+	if is_instance_valid(homing_missile):
+		homing_missile.queue_free()
+
 	return passed
 
 

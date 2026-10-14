@@ -433,13 +433,32 @@ func _shoot_missile() -> void:
 		return
 	var level_index: int = clampi(weapon_level, 1, MAX_WEAPON_LEVEL) - 1
 	var offsets: Array = MISSILE_OFFSETS[level_index]
-	for ox_val: Variant in offsets:
-		var ox: float = float(ox_val)
+
+	var candidate_enemies: Array[Node2D] = []
+	if get_tree() != null:
+		var enemies: Array[Node] = get_tree().get_nodes_in_group(&"enemies")
+		for node: Node in enemies:
+			if is_instance_valid(node) and (node is Node2D):
+				var enemy_node: Node2D = node as Node2D
+				if enemy_node.is_inside_tree() and not enemy_node.is_queued_for_deletion() and enemy_node.get("_destroyed") != true:
+					candidate_enemies.append(enemy_node)
+
+		candidate_enemies.sort_custom(func(a: Node2D, b: Node2D) -> bool:
+			return global_position.distance_squared_to(a.global_position) < global_position.distance_squared_to(b.global_position)
+		)
+
+	for i in range(offsets.size()):
+		var ox: float = float(offsets[i])
 		var missile: Area2D = scene.instantiate() as Area2D
 		if missile != null:
 			missile.global_position = global_position + Vector2(ox, -20.0)
+			if candidate_enemies.size() > 0:
+				var target_assigned: Node2D = candidate_enemies[i % candidate_enemies.size()]
+				if missile.has_method(&"set_target"):
+					missile.call(&"set_target", target_assigned)
 			_add_combat_transient(missile)
-	var cooldown: float = lerpf(0.55, 0.40, float(weapon_level - 1) / 9.0)
+
+	var cooldown: float = lerpf(0.55, 0.35, float(weapon_level - 1) / 9.0)
 	add_heat(_get_heat_per_second(WeaponType.MISSILE) * cooldown)
 	_shoot_cooldown.start(cooldown)
 	shot_fired.emit(false)
