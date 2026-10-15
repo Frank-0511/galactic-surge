@@ -568,7 +568,7 @@ func _start_boss_battle() -> void:
 	boss.boss_defeated.connect(_on_boss_defeated)
 	boss.boss_contacted_player.connect(_on_boss_contacted_player)
 	add_child(boss)
-	var max_hp: int = int(boss.get("max_health")) if "max_health" in boss else 30
+	var max_hp: int = int(boss.get("max_health")) if "max_health" in boss else 150
 	_hud.show_boss_health_bar("NAVE NODRIZA NEXUS", max_hp)
 	_audio_feedback.stop_combat_music()
 	_audio_feedback.start_boss_music()

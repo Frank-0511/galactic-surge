@@ -24,7 +24,7 @@ enum MovementState {
 }
 
 ## Maximum health points.
-@export var max_health: int = 30
+@export var max_health: int = 150
 
 ## Projectile scene used for boss attacks.
 @export var boss_bullet_scene: PackedScene = preload("res://scenes/entities/boss/boss_bullet.tscn")
@@ -33,8 +33,8 @@ enum MovementState {
 @export var base_y: float = 140.0
 
 ## Current health points.
-var health: int = 30
-var current_health: int = 30
+var health: int = 150
+var current_health: int = 150
 
 ## Whether the boss has entered Phase 2 (enraged).
 var is_enraged: bool = false
@@ -52,9 +52,11 @@ var _move_direction: float = 1.0
 var _left_margin: float = 110.0
 var _right_margin: float = 610.0
 
-var _dive_cooldown: float = 7.5
+var _dive_cooldown: float = 5.0
 var _telegraph_timer: float = 0.0
 var _dive_target: Vector2 = Vector2.ZERO
+var _shoot_cycle_phase1: int = 0
+var _shoot_cycle_phase2: int = 0
 
 
 func _ready() -> void:
@@ -67,7 +69,7 @@ func _ready() -> void:
 		_right_margin = vp_width - _left_margin
 	if _shoot_timer != null:
 		_shoot_timer.timeout.connect(_on_shoot_timer_timeout)
-	_dive_cooldown = 4.5 if is_enraged else 7.5
+	_dive_cooldown = 3.0 if is_enraged else 5.0
 
 
 func _process(delta: float) -> void:
@@ -89,13 +91,13 @@ func _update_movement(delta: float) -> void:
 				global_position.y = _base_y
 				_is_entering = false
 				_state = MovementState.CRUISE
-				_dive_cooldown = 4.5 if is_enraged else 7.5
-				_schedule_shoot(1.1)
+				_dive_cooldown = 3.0 if is_enraged else 5.0
+				_schedule_shoot(0.5 if is_enraged else 0.75)
 
 		MovementState.CRUISE:
 			_is_entering = false
 			# 1. Horizontal movement with boundary bounce
-			var speed: float = 160.0 if is_enraged else 110.0
+			var speed: float = 190.0 if is_enraged else 140.0
 			global_position.x += _move_direction * speed * delta
 			if global_position.x <= _left_margin:
 				global_position.x = _left_margin
@@ -127,7 +129,7 @@ func _update_movement(delta: float) -> void:
 
 		MovementState.DIVE_DESCENT:
 			_is_entering = false
-			var descent_speed: float = 480.0 if is_enraged else 380.0
+			var descent_speed: float = 540.0 if is_enraged else 420.0
 			global_position.y += descent_speed * delta
 
 			var diff_x: float = _dive_target.x - global_position.x
@@ -161,7 +163,7 @@ func _update_movement(delta: float) -> void:
 			if global_position.y <= _base_y:
 				global_position.y = _base_y
 				_state = MovementState.CRUISE
-				_dive_cooldown = 4.5 if is_enraged else 7.5
+				_dive_cooldown = 3.0 if is_enraged else 5.0
 
 
 ## Triggers a dive maneuver telegraph towards player position or current X.
@@ -169,7 +171,7 @@ func trigger_dive() -> void:
 	if _state != MovementState.CRUISE and _state != MovementState.ENTERING:
 		return
 	_state = MovementState.DIVE_TELEGRAPH
-	_telegraph_timer = 0.5
+	_telegraph_timer = 0.4 if is_enraged else 0.5
 	var target_x: float = global_position.x
 	if is_inside_tree():
 		var player: Node2D = get_tree().get_first_node_in_group(&"player") as Node2D
@@ -190,11 +192,11 @@ func take_damage(amount: int = 1) -> void:
 	current_health = health
 	_hit_flash_time = 0.12
 
-	if health <= 15 and not is_enraged:
+	if health <= (max_health / 2) and not is_enraged:
 		is_enraged = true
 		if _shoot_timer != null:
-			_shoot_timer.wait_time = 0.85
-		_dive_cooldown = minf(_dive_cooldown, 4.5)
+			_shoot_timer.wait_time = 0.5
+		_dive_cooldown = minf(_dive_cooldown, 3.0)
 
 	health_changed.emit(health, max_health)
 	queue_redraw()
@@ -212,28 +214,60 @@ func _on_shoot_timer_timeout() -> void:
 		return
 
 	if not is_enraged:
-		# Phase 1: dual straight cannons
-		_spawn_bullet(Vector2(-36, 32), Vector2.DOWN, 340.0)
-		_spawn_bullet(Vector2(36, 32), Vector2.DOWN, 340.0)
-		_schedule_shoot(1.1)
+		# Phase 1: Alternate between dual heavy cannons and aimed shot
+		if (_shoot_cycle_phase1 % 2) == 0:
+			# Pattern A: Dual heavy shot
+			_spawn_bullet(Vector2(-36, 32), Vector2.DOWN, 360.0)
+			_spawn_bullet(Vector2(36, 32), Vector2.DOWN, 360.0)
+		else:
+			# Pattern B: Aimed shot from central cannon
+			var player: Node2D = _get_player_node()
+			var aim_dir: Vector2 = Vector2.DOWN
+			if player != null:
+				var to_player: Vector2 = global_position.direction_to(player.global_position)
+				if to_player.length_squared() > 0.0001:
+					aim_dir = to_player.normalized()
+			_spawn_bullet(Vector2(0, 36), aim_dir, 370.0, true)
+		_shoot_cycle_phase1 += 1
+		_schedule_shoot(0.75)
 	else:
-		# Phase 2: triple spread (center, -20 deg, +20 deg)
-		var angle_rad: float = deg_to_rad(20.0)
-		var left_dir: Vector2 = Vector2(-sin(angle_rad), cos(angle_rad))
-		var right_dir: Vector2 = Vector2(sin(angle_rad), cos(angle_rad))
-		_spawn_bullet(Vector2(0, 36), Vector2.DOWN, 380.0)
-		_spawn_bullet(Vector2(-36, 32), left_dir, 380.0)
-		_spawn_bullet(Vector2(36, 32), right_dir, 380.0)
-		_schedule_shoot(0.85)
+		# Phase 2: Alternate between 5-bullet fan spread and dual fast aimed shots
+		if (_shoot_cycle_phase2 % 2) == 0:
+			# Pattern A: 5-bullet fan spread (-30°, -15°, 0°, +15°, +30°)
+			var angles: Array[float] = [-30.0, -15.0, 0.0, 15.0, 30.0]
+			for angle_deg: float in angles:
+				var spread_dir: Vector2 = Vector2.DOWN.rotated(deg_to_rad(angle_deg))
+				_spawn_bullet(Vector2(0, 36), spread_dir, 400.0)
+		else:
+			# Pattern B: Fast dual aimed shots from lateral turrets
+			var player: Node2D = _get_player_node()
+			var aim_dir: Vector2 = Vector2.DOWN
+			if player != null:
+				var to_player: Vector2 = global_position.direction_to(player.global_position)
+				if to_player.length_squared() > 0.0001:
+					aim_dir = to_player.normalized()
+			_spawn_bullet(Vector2(-36, 32), aim_dir, 420.0, true)
+			_spawn_bullet(Vector2(36, 32), aim_dir, 420.0, true)
+		_shoot_cycle_phase2 += 1
+		_schedule_shoot(0.5)
 
 
-func _spawn_bullet(offset: Vector2, dir: Vector2, bullet_speed: float) -> void:
+func _get_player_node() -> Node2D:
+	if is_inside_tree():
+		var player: Node2D = get_tree().get_first_node_in_group(&"player") as Node2D
+		if player != null and is_instance_valid(player) and player.visible:
+			return player
+	return null
+
+
+func _spawn_bullet(offset: Vector2, dir: Vector2, bullet_speed: float, is_world_dir: bool = false) -> void:
 	var bullet: Area2D = boss_bullet_scene.instantiate() as Area2D
 	if bullet == null:
 		return
 	bullet.global_position = global_position + offset.rotated(rotation)
+	var final_dir: Vector2 = dir if is_world_dir else dir.rotated(rotation)
 	if "direction" in bullet:
-		bullet.set("direction", dir.rotated(rotation))
+		bullet.set("direction", final_dir)
 	if "speed" in bullet:
 		bullet.set("speed", bullet_speed)
 	var parent_node: Node = get_parent()

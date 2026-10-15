@@ -10,7 +10,7 @@ const BOSS_SCENE_PATH := "res://scenes/entities/boss/boss.tscn"
 const BOSS_BULLET_SCENE_PATH := "res://scenes/entities/boss/boss_bullet.tscn"
 const BOSS_MUSIC_PATH := "res://assets/audio/music/boss_battle_8bit.mp3"
 
-const BOSS_MAX_HEALTH: int = 30
+const BOSS_MAX_HEALTH: int = 150
 const BOSS_DEFEAT_SCORE: int = 3000
 const TOTAL_WAVES: int = 10
 
@@ -212,29 +212,29 @@ func _assert_boss_entity_contract() -> bool:
 		boss.connect(&"health_changed", func(cur: int, m_hp: int) -> void:
 			hp_signals.append({"current": cur, "max": m_hp})
 		)
-		boss.call("take_damage", 5)
+		boss.call("take_damage", 20)
 		if hp_signals.is_empty():
 			push_error("Boss take_damage() must emit health_changed")
 			passed = false
-		elif hp_signals[-1]["current"] != 25 or hp_signals[-1]["max"] != 30:
-			push_error("health_changed arguments incorrect: expected (25, 30), got %s" % str(hp_signals[-1]))
+		elif hp_signals[-1]["current"] != 130 or hp_signals[-1]["max"] != 150:
+			push_error("health_changed arguments incorrect: expected (130, 150), got %s" % str(hp_signals[-1]))
 			passed = false
 
 		# Phase 1 vs Phase 2 (enraged).
-		# At 25 HP (> 15), is_enraged should be false.
+		# At 130 HP (> 75), is_enraged should be false.
 		if "is_enraged" in boss and bool(boss.get("is_enraged")):
-			push_error("Boss must not be enraged at 25 HP (> 15)")
+			push_error("Boss must not be enraged at 130 HP (> 75)")
 			passed = false
-		# Deal 10 more damage -> 15 HP (<= 15): enraged phase.
-		boss.call("take_damage", 10)
+		# Deal 55 more damage -> 75 HP (<= 75): enraged phase.
+		boss.call("take_damage", 55)
 		if "is_enraged" in boss and not bool(boss.get("is_enraged")):
-			push_error("Boss must become enraged at 15 HP (<= 15)")
+			push_error("Boss must become enraged at 75 HP (<= 75)")
 			passed = false
 
 		# Defeat when HP reaches 0.
 		var defeated_count: Array[int] = [0]
 		boss.connect(&"boss_defeated", func(_b: Area2D) -> void: defeated_count[0] += 1)
-		boss.call("take_damage", 15)
+		boss.call("take_damage", 75)
 		if defeated_count[0] != 1:
 			push_error("Boss take_damage reaching 0 HP must emit boss_defeated exactly once")
 			passed = false

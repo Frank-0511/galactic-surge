@@ -350,7 +350,8 @@ func _assert_mission_complete_contract() -> bool:
 			# In Etapa 5+, defeat the boss if present to reach mission complete.
 			for child: Node in main.get_children():
 				if child is Area2D and child.has_method("take_damage"):
-					child.call("take_damage", 30)
+					var boss_hp: int = int(child.get("health")) if "health" in child else 150
+					child.call("take_damage", boss_hp)
 					await process_frame
 					await process_frame
 					break
