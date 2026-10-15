@@ -131,7 +131,7 @@ func _find_closest_enemy_in_path() -> Area2D:
 		var enemy: Area2D = node as Area2D
 		if not enemy.is_inside_tree() or enemy.is_queued_for_deletion():
 			continue
-		if bool(enemy.get("_destroyed")):
+		if (enemy.get("_destroyed") == true):
 			continue
 
 		# Must be ahead of or at the laser emitter (with a slight 10px margin)
@@ -210,7 +210,7 @@ func _apply_damage_tick() -> void:
 	if not is_firing or not is_inside_tree():
 		return
 	var target: Area2D = _current_target_enemy
-	if not is_instance_valid(target) or not target.is_inside_tree() or bool(target.get("_destroyed")):
+	if not is_instance_valid(target) or not target.is_inside_tree() or (target.get("_destroyed") == true):
 		return
 	var amount: float = damage_per_second * damage_tick_rate
 	enemy_hit.emit(target)
@@ -258,7 +258,7 @@ func _draw() -> void:
 	draw_circle(beam_start, 3.5, Color(1.0, 1.0, 1.0, 0.95))
 
 	# 5. Contact point: Thermal impact on enemy hull vs tip dissipation in deep space
-	if is_instance_valid(_current_target_enemy) and _current_target_enemy.is_inside_tree() and not bool(_current_target_enemy.get("_destroyed")):
+	if is_instance_valid(_current_target_enemy) and _current_target_enemy.is_inside_tree() and not (_current_target_enemy.get("_destroyed") == true):
 		var impact_radius: float = beam_width * 1.1 * pulse + 3.0
 
 		# Broad crimson-amber plasma bloom
