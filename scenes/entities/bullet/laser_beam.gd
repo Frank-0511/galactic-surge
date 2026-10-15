@@ -67,7 +67,7 @@ func _process(delta: float) -> void:
 func set_power_level(level: int) -> void:
 	_power_level = clampi(level, 1, 10)
 	beam_width = 4.0 + 2.2 * float(_power_level - 1)
-	damage_per_second = 2.5 + 1.5 * float(_power_level - 1)
+	damage_per_second = 2.5 + 2.0 * float(_power_level - 1)
 	damage_per_tick = 1 + int(_power_level >= 5) + int(_power_level >= 9)
 	if _collision_shape == null:
 		_collision_shape = get_node_or_null("CollisionShape2D") as CollisionShape2D

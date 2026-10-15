@@ -389,6 +389,15 @@ const ION_PATTERNS: Array = [
 	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0]],  # L10: 4 rectos + 6 diag
 ]
 
+## Damage per Ion Blaster projectile by level (index 0 = level 1): 1 up to L4, 2 up to L8, 3 at L9-L10.
+const BLASTER_DAMAGE: Array[int] = [1, 1, 1, 1, 2, 2, 2, 2, 3, 3]
+
+
+## Returns the damage of one Ion Blaster projectile at the given level.
+static func get_blaster_damage(level: int) -> int:
+	return BLASTER_DAMAGE[clampi(level, 1, MAX_WEAPON_LEVEL) - 1]
+
+
 func _shoot_blaster() -> void:
 	var scene: PackedScene = ion_bullet_scene if ion_bullet_scene != null else bullet_scene
 	if scene == null:
@@ -408,6 +417,8 @@ func _shoot_blaster() -> void:
 			bullet.global_position = global_position + Vector2(offset_x, -20.0)
 			if "direction" in bullet:
 				bullet.set("direction", dir)
+			if "damage" in bullet:
+				bullet.set("damage", get_blaster_damage(weapon_level))
 			_add_combat_transient(bullet)
 	add_heat(_get_heat_per_second(WeaponType.BLASTER) * 0.25)
 	_shoot_cooldown.start(0.25)
@@ -452,6 +463,8 @@ func _shoot_missile() -> void:
 		var missile: Area2D = scene.instantiate() as Area2D
 		if missile != null:
 			missile.global_position = global_position + Vector2(ox, -20.0)
+			if missile.has_method(&"set_power_level"):
+				missile.call(&"set_power_level", weapon_level)
 			if candidate_enemies.size() > 0:
 				var target_assigned: Node2D = candidate_enemies[i % candidate_enemies.size()]
 				if missile.has_method(&"set_target"):

@@ -1,6 +1,7 @@
 # missile.gd
 # Guided homing missile fired by the player. Accelerates toward high speed,
-# seeks the nearest enemy or boss, and delivers high explosive impact damage.
+# seeks the nearest enemy or boss, and delivers high explosive impact damage plus a
+# small area splash whose radius grows with the weapon level (Stage 12.5, ADR 010).
 
 extends Area2D
 
@@ -19,11 +20,24 @@ signal enemy_hit(enemy: Area2D)
 ## Damage dealt on impact.
 @export var damage: int = 3
 
+## Radius in pixels of the splash applied to neighbours of the impacted enemy.
+@export var explosion_radius: float = 36.0
+
+## Fraction of the direct damage applied to neighbours inside the explosion radius.
+@export_range(0.0, 1.0, 0.05) var splash_ratio: float = 0.5
+
 var _current_speed: float = 280.0
 var _has_hit: bool = false
 var damage_applied: bool = false
 var _time: float = 0.0
 var _target: Node2D = null
+
+
+## Scales damage (3 + level / 2) and splash radius (36 px at L1 to 90 px at L10) by weapon level.
+func set_power_level(level: int) -> void:
+	var clamped: int = clampi(level, 1, 10)
+	damage = 3 + clamped / 2
+	explosion_radius = 36.0 + 6.0 * float(clamped - 1)
 
 
 func set_target(new_target: Variant) -> void:
@@ -122,8 +136,29 @@ func _on_area_entered(area: Area2D) -> void:
 			area.call(&"take_damage", damage)
 		elif area.has_method(&"destroy"):
 			area.call(&"destroy")
+		_apply_splash(area)
 
 	queue_free()
+
+
+## Damages other living enemies within explosion_radius at splash_ratio of the direct damage.
+## Frontal deflectors still apply because the hit goes through take_damage_from().
+func _apply_splash(direct_target: Area2D) -> void:
+	if not is_inside_tree() or get_tree() == null or explosion_radius <= 0.0:
+		return
+	var splash_damage: float = float(damage) * splash_ratio
+	if splash_damage <= 0.0:
+		return
+	var radius_sq: float = explosion_radius * explosion_radius
+	var travel: Vector2 = Vector2.UP.rotated(rotation)
+	for node: Node in get_tree().get_nodes_in_group(&"enemies"):
+		if node == direct_target or not _is_target_valid(node):
+			continue
+		var neighbour: Node2D = node as Node2D
+		if global_position.distance_squared_to(neighbour.global_position) > radius_sq:
+			continue
+		if neighbour.has_method(&"take_damage_from"):
+			neighbour.call(&"take_damage_from", splash_damage, travel)
 
 
 func _draw() -> void:
