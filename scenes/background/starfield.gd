@@ -41,7 +41,7 @@ func reset_scroll() -> void:
 
 
 ## Triggers a warp speed surge effect using a Tween, accelerating scroll and easing back.
-func trigger_warp_boost(duration: float = 1.5, max_multiplier: float = 4.0) -> void:
+func trigger_warp_boost(duration: float = 3.0, max_multiplier: float = 10.0) -> void:
 	if _warp_tween != null and _warp_tween.is_valid():
 		_warp_tween.kill()
 	var d: float = maxf(duration, 0.1)

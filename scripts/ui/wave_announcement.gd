@@ -8,7 +8,7 @@ extends CanvasLayer
 signal announcement_finished
 
 ## Duration in seconds the announcement stays visible before finishing.
-@export var display_duration: float = 1.5
+@export var display_duration: float = 3.0
 
 ## Generation counter to invalidate stale timer callbacks.
 var _generation: int = 0
