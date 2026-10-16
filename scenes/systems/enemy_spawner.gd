@@ -8,6 +8,12 @@ extends Node2D
 const FormationPatterns: Script = preload("res://scripts/systems/formation_patterns.gd")
 const EnemyVariants: Script = preload("res://scripts/systems/enemy_variants.gd")
 
+## Master switch for the tactical enemy AI (Stage 12, ADR 009). When false, the
+## "variants" key of every wave config is ignored at spawn time and all enemies
+## spawn as standard. The variant catalog and enemy_ai.gd stay intact; set to
+## true to re-enable the tactical variants.
+const ENEMY_AI_ENABLED: bool = false
+
 ## Emitted when an enemy directly collides with the player.
 signal enemy_contacted_player(player: Node2D)
 
@@ -269,7 +275,8 @@ func spawn_formation() -> void:
 	_dive_cooldown_timer = 3.5
 
 	var wave_config: Dictionary = get_wave_config(_current_wave)
-	var variant_slots: Dictionary = assign_variant_slots(wave_config.get("variants", {}), slots.size())
+	var wave_variants: Dictionary = wave_config.get("variants", {}) if ENEMY_AI_ENABLED else {}
+	var variant_slots: Dictionary = assign_variant_slots(wave_variants, slots.size())
 	for i: int in range(slots.size()):
 		var slot_pos: Vector2 = slots[i]
 		var enemy: Area2D = enemy_scene.instantiate() as Area2D

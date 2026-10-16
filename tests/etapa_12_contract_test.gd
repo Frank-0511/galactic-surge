@@ -361,9 +361,13 @@ func _assert_spawner_integration() -> bool:
 			ok = _check(false, "Wave 0 must contain no tactical variants")
 			break
 
+	# The spawner gates variants behind ENEMY_AI_ENABLED; expectations follow the flag.
+	var ai_enabled: bool = bool(spawner.get_script().get_script_constant_map().get("ENEMY_AI_ENABLED", true))
 	for wave: int in range(1, 10):
 		var cfg: Dictionary = spawner.call(&"get_wave_config", wave)
 		var wanted: Dictionary = cfg.get("variants", {})
+		if not ai_enabled:
+			wanted = {}
 		spawner.call(&"start_wave", wave)
 		var members: Array = spawner.get_children().filter(func(n: Node) -> bool: return n.is_in_group(&"enemies"))
 		ok = _check(members.size() == int(cfg["rows"]) * int(cfg["columns"]), "Wave %d formation size must be preserved" % wave) and ok
@@ -371,6 +375,8 @@ func _assert_spawner_integration() -> bool:
 		for enemy: Node in members:
 			var id: String = String(enemy.call(&"get_variant_id"))
 			counts[id] = int(counts.get(id, 0)) + 1
+		if not ai_enabled:
+			ok = _check(counts.size() == 1 and counts.has("standard"), "Wave %d must spawn only standard enemies while ENEMY_AI_ENABLED is false, got %s" % [wave, str(counts)]) and ok
 		for key: Variant in wanted.keys():
 			ok = _check(int(counts.get(String(key), 0)) == int(wanted[key]), "Wave %d expected %d x %s, got %d" % [wave, int(wanted[key]), String(key), int(counts.get(String(key), 0))]) and ok
 		ok = _check(counts.get("standard", 0) > 0, "Wave %d must still contain standard enemies" % wave) and ok
