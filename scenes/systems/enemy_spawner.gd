@@ -12,7 +12,7 @@ const EnemyVariants: Script = preload("res://scripts/systems/enemy_variants.gd")
 ## "variants" key of every wave config is ignored at spawn time and all enemies
 ## spawn as standard. The variant catalog and enemy_ai.gd stay intact; set to
 ## true to re-enable the tactical variants.
-const ENEMY_AI_ENABLED: bool = false
+const ENEMY_AI_ENABLED: bool = true
 
 ## Emitted when an enemy directly collides with the player.
 signal enemy_contacted_player(player: Node2D)
