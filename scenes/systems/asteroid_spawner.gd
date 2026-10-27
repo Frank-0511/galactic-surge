@@ -87,13 +87,15 @@ func spawn_asteroid(size: int = 0, pos: Vector2 = Vector2.ZERO, vel: Vector2 = V
 
 	if asteroid.has_method(&"set_size"):
 		asteroid.call(&"set_size", size)
-	if pos != Vector2.ZERO:
-		asteroid.global_position = pos
 	if vel != Vector2.ZERO:
 		asteroid.linear_velocity = vel
 
 	_register_asteroid(asteroid)
 	add_child(asteroid)
+	# Set after add_child: global_position outside the tree is treated as local,
+	# which would offset the asteroid by the spawner's own position.
+	if pos != Vector2.ZERO:
+		asteroid.global_position = pos
 	asteroid_spawned.emit(asteroid)
 	return asteroid
 
