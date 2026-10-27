@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/entities/player/player.tscn" id="2"]
@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/wave_announcement.tscn" id="11"]
 [ext_resource type="Script" path="res://scenes/main/camera_shake.gd" id="12_camera_shake"]
 [ext_resource type="Script" path="res://scripts/systems/combo_system.gd" id="13_combo_system"]
+[ext_resource type="PackedScene" path="res://scenes/systems/asteroid_spawner.tscn" id="14_asteroid_spawner"]
 
 [node name="Main" type="Node2D"]
 process_mode = 3
@@ -39,6 +40,9 @@ script = ExtResource("12_camera_shake")
 position = Vector2(540, 700)
 
 [node name="EnemySpawner" parent="." instance=ExtResource("3")]
+position = Vector2(540, 0)
+
+[node name="AsteroidSpawner" parent="." instance=ExtResource("14_asteroid_spawner")]
 position = Vector2(540, 0)
 
 [node name="ComboSystem" type="Node" parent="."]

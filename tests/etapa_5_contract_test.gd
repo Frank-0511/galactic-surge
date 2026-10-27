@@ -407,7 +407,7 @@ func _assert_main_boss_integration_contract() -> bool:
 
 	# Fast-forward clearing waves 1 to 5.
 	for wave_index: int in TOTAL_WAVES:
-		_clear_current_wave(main)
+		await _clear_current_wave(main)
 		await _finish_wave_transition(main)
 
 	# After wave 5, mission must NOT be complete immediately.
@@ -481,6 +481,10 @@ func _assert_main_boss_integration_contract() -> bool:
 # ---------------------------------------------------------------------------
 
 func _clear_current_wave(main: Node2D) -> void:
+	# Wave 9 is the ADR 011 asteroid belt, which has no fighters to destroy.
+	if main.has_method("is_asteroid_wave_active") and main.call("is_asteroid_wave_active"):
+		await _clear_asteroid_wave(main)
+		return
 	var spawner: Node2D = main.get_node_or_null("EnemySpawner")
 	if spawner == null:
 		return
@@ -490,6 +494,23 @@ func _clear_current_wave(main: Node2D) -> void:
 			if enemy.has_method("destroy"):
 				enemy.destroy()
 	await create_timer(0.0).timeout
+
+
+# Destroys every asteroid and fragment of the belt wave until the spawner reports
+# completion. Spawn timing uses wall-clock delta, so the timer is forced to 0 on
+# each frame to spawn pending asteroids without waiting.
+func _clear_asteroid_wave(main: Node2D) -> void:
+	var asteroid_spawner: Node2D = main.call("get_asteroid_spawner") as Node2D
+	if asteroid_spawner == null:
+		return
+	for _attempt: int in range(500):
+		if not asteroid_spawner.call("is_wave_active"):
+			return
+		asteroid_spawner.set("_spawn_timer", 0.0)
+		for child: Node in asteroid_spawner.get_children():
+			if is_instance_valid(child) and child is Area2D and child.has_method("destroy"):
+				child.call("destroy")
+		await process_frame
 
 
 func _finish_wave_transition(main: Node2D) -> void:

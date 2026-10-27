@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/entities/asteroid/asteroid.gd" id="1_asteroid"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_asteroid"]
+radius = 48.0
+
+[node name="Asteroid" type="Area2D" groups=["asteroids", "combat_transients", "enemies"]]
+process_mode = 1
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_asteroid")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_asteroid")
+
+[connection signal="area_entered" from="." to="." method="_on_area_entered"]
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

@@ -9,6 +9,10 @@ const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 10
 const BOSS_POINTS: int = 3000
+const ASTEROID_WAVE_INDEX: int = 8
+const ASTEROID_LARGE_POINTS: int = 150
+const ASTEROID_MEDIUM_POINTS: int = 75
+const ASTEROID_SMALL_POINTS: int = 30
 const LOOT_DROP_SCENE: PackedScene = preload("res://scenes/loot/loot_drop.tscn")
 const SCORE_LOOT_POINTS: int = 250
 const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
@@ -38,6 +42,7 @@ var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tsc
 
 @onready var _player: CharacterBody2D = $Player
 @onready var _enemy_spawner: Node2D = $EnemySpawner
+@onready var _asteroid_spawner: Node2D = get_node_or_null("AsteroidSpawner") as Node2D
 @onready var _game_over: CanvasLayer = $GameOver
 @onready var _hud: CanvasLayer = $HUD
 @onready var _main_menu: CanvasLayer = $MainMenu
@@ -134,6 +139,14 @@ func _ready() -> void:
 	_enemy_spawner.wave_cleared.connect(_on_wave_cleared)
 	if _enemy_spawner.has_signal(&"enrage_triggered"):
 		_enemy_spawner.enrage_triggered.connect(_on_enrage_triggered)
+
+	if _asteroid_spawner == null:
+		_asteroid_spawner = get_node_or_null("AsteroidSpawner") as Node2D
+	if _asteroid_spawner != null:
+		if _asteroid_spawner.has_signal(&"asteroid_spawned"):
+			_asteroid_spawner.asteroid_spawned.connect(_on_asteroid_spawned)
+		if _asteroid_spawner.has_signal(&"asteroid_wave_completed"):
+			_asteroid_spawner.asteroid_wave_completed.connect(_on_asteroid_wave_completed)
 	_game_over.retry_requested.connect(_on_game_over_retry_requested)
 	_game_over.main_menu_requested.connect(return_to_main_menu)
 	_hud.retry_mission_requested.connect(_on_hud_retry_mission_requested)
@@ -264,6 +277,8 @@ func _on_player_damage_requested() -> void:
 		_combo_system.reset_combo()
 	_visual_feedback.play_damage_flash()
 	_camera.shake(6.0, 0.2)
+	if _camera != null and _camera.has_method(&"add_trauma"):
+		_camera.add_trauma(0.55)
 	_audio_feedback.play_player_damage()
 	_wave_is_clean = false
 	var death_pos: Vector2 = _player.global_position
@@ -328,6 +343,63 @@ func _on_enemy_destroyed(enemy: Area2D) -> void:
 	if explosion_position.distance_to(_player.global_position) < NEARBY_SHAKE_RADIUS:
 		_camera.shake(3.0, 0.12)
 	_try_spawn_enemy_loot(explosion_position)
+
+
+func _on_asteroid_spawned(asteroid: Area2D) -> void:
+	if asteroid == null:
+		return
+	if not asteroid.destroyed.is_connected(_on_asteroid_destroyed):
+		asteroid.destroyed.connect(_on_asteroid_destroyed)
+	if not asteroid.player_contacted.is_connected(_on_asteroid_player_contacted):
+		asteroid.player_contacted.connect(_on_asteroid_player_contacted)
+
+
+func _on_asteroid_destroyed(asteroid: Area2D, size_idx: int, pos: Vector2, _vel: Vector2) -> void:
+	if not _session_active:
+		return
+	var base_pts: int = ASTEROID_LARGE_POINTS
+	var trauma_add: float = 0.35
+	match size_idx:
+		0: # LARGE
+			base_pts = ASTEROID_LARGE_POINTS
+			trauma_add = 0.35
+		1: # MEDIUM
+			base_pts = ASTEROID_MEDIUM_POINTS
+			trauma_add = 0.20
+		2: # SMALL
+			base_pts = ASTEROID_SMALL_POINTS
+			trauma_add = 0.10
+
+	var mult: int = _combo_system.register_kill() if (_combo_system != null and _combo_system.has_method(&"register_kill")) else 1
+	var points_earned: int = base_pts * mult
+	score += points_earned
+	_check_score_milestones()
+	_hud.set_score(score)
+	_visual_feedback.play_score_popup(pos, points_earned, mult > 1)
+	_visual_feedback.play_enemy_explosion(pos)
+	_audio_feedback.play_enemy_explosion()
+	if _camera != null and _camera.has_method(&"add_trauma"):
+		_camera.add_trauma(trauma_add)
+	elif _camera != null:
+		_camera.shake(4.0, 0.15)
+
+	# High-HP large asteroids drop resources or power-ups
+	if size_idx == 0:
+		var has_loot: bool = (asteroid != null and asteroid.get("contains_loot") == true)
+		if has_loot or randf() < 0.60:
+			_spawn_loot(_pick_loot_type(), pos)
+
+
+func _on_asteroid_player_contacted(player: Node2D) -> void:
+	_request_player_damage(player)
+	if _camera != null and _camera.has_method(&"add_trauma"):
+		_camera.add_trauma(0.50)
+
+
+func _on_asteroid_wave_completed() -> void:
+	if not _session_active:
+		return
+	_on_wave_cleared(ASTEROID_WAVE_INDEX)
 
 
 func _on_enrage_triggered() -> void:
@@ -539,6 +611,14 @@ func _on_wave_cleared(_wave_index: int) -> void:
 	_enemy_spawner.stop()
 	_pending_wave_index = wave
 	var phrase: String = _pick_radar_phrase()
+	if _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
+		phrase = "¡ALERTA: CINTURÓN DE ASTEROIDES INMINENTE!"
+		if _audio_feedback != null and _audio_feedback.has_method(&"play_asteroid_warning"):
+			_audio_feedback.play_asteroid_warning()
+		if _visual_feedback != null and _visual_feedback.has_method(&"play_asteroid_warning"):
+			_visual_feedback.play_asteroid_warning()
+		if _camera != null and _camera.has_method(&"add_trauma"):
+			_camera.add_trauma(0.20)
 	_wave_announcement.show_announcement(wave + 1, phrase)
 
 
@@ -552,8 +632,13 @@ func _on_wave_announcement_finished() -> void:
 	_wave_is_clean = true
 	_hud.set_wave(wave)
 	_update_hud()
-	_enemy_spawner.start_wave(_pending_wave_index)
 	_session_state = SessionState.PLAYING
+	if _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
+		_enemy_spawner.stop()
+		_enemy_spawner.clear_formation()
+		_asteroid_spawner.start_asteroid_wave(8)
+	else:
+		_enemy_spawner.start_wave(_pending_wave_index)
 
 
 func _start_boss_battle() -> void:
@@ -644,6 +729,8 @@ func _end_session() -> void:
 	_session_state = SessionState.GAME_OVER
 	_player.set_gameplay_enabled(false)
 	_enemy_spawner.stop()
+	if _asteroid_spawner != null:
+		_asteroid_spawner.stop()
 	_clear_boss()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
@@ -659,6 +746,8 @@ func _complete_mission() -> void:
 	_session_state = SessionState.MISSION_COMPLETE
 	_player.set_gameplay_enabled(false)
 	_enemy_spawner.stop()
+	if _asteroid_spawner != null:
+		_asteroid_spawner.stop()
 	_clear_boss()
 	_wave_announcement.cancel_announcement()
 	_audio_feedback.stop_combat_music()
@@ -680,6 +769,11 @@ func reset_session() -> void:
 	get_tree().paused = false
 	_enemy_spawner.stop()
 	_enemy_spawner.clear_formation()
+	if _asteroid_spawner != null:
+		_asteroid_spawner.stop()
+		_asteroid_spawner.clear_asteroids()
+	if _camera != null and _camera.has_method(&"reset_shake"):
+		_camera.reset_shake()
 	_clear_boss()
 	_clear_combat_transients()
 	_visual_feedback.clear_effects()
@@ -798,3 +892,19 @@ func _on_hud_retry_mission_requested() -> void:
 func _on_main_menu_quit_requested() -> void:
 	return_to_main_menu()
 	get_tree().quit()
+
+
+func get_asteroid_spawner() -> Node2D:
+	return _asteroid_spawner
+
+
+func is_asteroid_wave_active() -> bool:
+	return _asteroid_spawner != null and _asteroid_spawner.has_method(&"is_wave_active") and _asteroid_spawner.is_wave_active()
+
+
+func start_asteroid_wave_direct(count: int = 4) -> void:
+	_session_state = SessionState.PLAYING
+	_enemy_spawner.stop()
+	_enemy_spawner.clear_formation()
+	if _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
+		_asteroid_spawner.start_asteroid_wave(count)

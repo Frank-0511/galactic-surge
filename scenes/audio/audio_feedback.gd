@@ -106,6 +106,16 @@ func play_enrage_warning() -> void:
 		_player_damage.play()
 
 
+## Plays acoustic alert before the asteroid belt wave (ADR 011).
+func play_asteroid_warning() -> void:
+	if _overheat_warning != null:
+		_overheat_warning.pitch_scale = 0.9
+		_overheat_warning.play()
+	elif _player_damage != null:
+		_player_damage.pitch_scale = 0.9
+		_player_damage.play()
+
+
 func play_enemy_explosion() -> void:
 	if _enemy_explosion != null:
 		_enemy_explosion.play()

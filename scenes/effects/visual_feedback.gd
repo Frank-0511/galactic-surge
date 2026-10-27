@@ -75,6 +75,20 @@ func play_enrage_alert() -> void:
 		)
 
 
+func play_asteroid_warning() -> void:
+	if is_instance_valid(_flash_tween):
+		_flash_tween.kill()
+	if _flash != null:
+		_flash.color = Color(1.0, 0.6, 0.1)
+		_flash.modulate.a = 0.55
+		_flash_tween = create_tween()
+		_flash_tween.tween_property(_flash, "modulate:a", 0.0, 0.45)
+		_flash_tween.tween_callback(func() -> void:
+			if _flash != null:
+				_flash.color = Color.WHITE
+		)
+
+
 func clear_effects() -> void:
 	if is_instance_valid(_flash_tween):
 		_flash_tween.kill()
