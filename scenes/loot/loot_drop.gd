@@ -1,6 +1,6 @@
 # loot_drop.gd
 # Collectible loot item with autonomous fall, sine wave drift, player magnetism,
-# and procedural vector rendering for 5 distinct powerup/score types.
+# and procedural vector rendering for each powerup, score, and plasma cell type.
 
 class_name LootDrop
 extends Area2D
@@ -16,7 +16,11 @@ enum Type {
 	MEDALLION_LASER,
 	POWER_ATOM,
 	RECOVERY_CAPSULE,
+	PLASMA_CELL,
 }
+
+## Number of visual shapes a plasma cell can take: sphere, crystal, prism.
+const PLASMA_CELL_VARIANT_COUNT: int = 3
 
 signal collected(loot_type: Type)
 
@@ -32,6 +36,7 @@ var _target: Node2D = null
 var _velocity: Vector2 = Vector2.ZERO
 var _elapsed: float = 0.0
 var _collected: bool = false
+var _variant: int = 0
 
 
 func _ready() -> void:
@@ -85,6 +90,7 @@ func configure(loot_type: int, spawn_position: Vector2, target: Node2D = null, c
 	_velocity = Vector2.ZERO
 	_elapsed = 0.0
 	_collected = false
+	_variant = randi() % PLASMA_CELL_VARIANT_COUNT
 	if custom_lifetime > 0.0:
 		lifetime = custom_lifetime
 	elif _type == Type.RECOVERY_CAPSULE:
@@ -143,6 +149,8 @@ func _draw() -> void:
 			_draw_power_atom()
 		Type.RECOVERY_CAPSULE:
 			_draw_recovery_capsule()
+		Type.PLASMA_CELL:
+			_draw_plasma_cell()
 
 
 func _get_type_glow_color() -> Color:
@@ -167,6 +175,8 @@ func _get_type_glow_color() -> Color:
 			return Color(1.0, 0.85, 0.2) # Neon Golden
 		Type.RECOVERY_CAPSULE:
 			return Color(0.1, 0.95, 1.0) # Radiant Cyan
+		Type.PLASMA_CELL:
+			return Color(0.4, 1.0, 0.6) # Plasma Mint
 		_:
 			return Color.WHITE
 
@@ -303,4 +313,29 @@ func _draw_recovery_capsule() -> void:
 	draw_line(Vector2(-3.5, 2), Vector2(0, -4), Color.WHITE, 1.8, true)
 	draw_line(Vector2(0, -4), Vector2(3.5, 2), Color.WHITE, 1.8, true)
 	draw_circle(Vector2(0, -4), 1.5, Color.WHITE)
+
+
+func _draw_plasma_cell() -> void:
+	# Three variants chosen in configure(): sphere, crystal and energy prism
+	var mint: Color = Color(0.4, 1.0, 0.6)
+	match _variant:
+		0:
+			# Sphere with a bright specular highlight
+			draw_circle(Vector2.ZERO, 6.0, mint)
+			draw_circle(Vector2(-2.0, -2.0), 2.0, Color.WHITE)
+		1:
+			# Small crystal: elongated diamond
+			var crystal: PackedVector2Array = PackedVector2Array([
+				Vector2(0, -8), Vector2(4, 0), Vector2(0, 8), Vector2(-4, 0)
+			])
+			draw_colored_polygon(crystal, mint)
+			draw_line(Vector2(0, -8), Vector2(0, 8), Color.WHITE, 1.0, true)
+		_:
+			# Energy prism: triangle with a pulsing core
+			var prism: PackedVector2Array = PackedVector2Array([
+				Vector2(0, -7), Vector2(6, 5), Vector2(-6, 5)
+			])
+			draw_colored_polygon(prism, mint)
+			var core: float = 1.5 + 0.8 * sin(_elapsed * 6.0)
+			draw_circle(Vector2(0, 1), core, Color.WHITE)
 

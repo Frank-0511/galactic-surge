@@ -1,6 +1,6 @@
 # main.gd
 # Coordinates the combat session, navigation states, visual and audio feedback,
-# loot drops, and wave-transition announcements.
+# loot drops, plasma cell meter, antimatter detonations, and wave-transition announcements.
 
 extends Node2D
 
@@ -21,6 +21,11 @@ const HighScore: Script = preload("res://scripts/systems/high_score.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
 const EXTRA_LIFE_SCORE_THRESHOLD: int = 1_000_000
+const PLASMA_CELLS_PER_CHARGE: int = 50
+const PLASMA_CELLS_PER_EXTRA_LIFE: int = 100
+const MAX_ANTIMATTER_CHARGES: int = 3
+const ANTIMATTER_ENEMY_DAMAGE: int = 999
+const ANTIMATTER_BOSS_DAMAGE: int = 15
 
 const _RADAR_PHRASES: Array[String] = [
 	"SEÑAL HOSTIL DETECTADA",
@@ -74,6 +79,8 @@ var _last_extra_life_threshold: int = 0
 @export_range(0.0, 1.0, 0.01) var medallion_missile_weight: float = 0.08
 @export_range(0.0, 1.0, 0.01) var medallion_laser_weight: float = 0.08
 @export_range(0.0, 1.0, 0.01) var power_atom_weight: float = 0.11
+## Chance that a destroyed enemy ship also drops a plasma cell.
+@export_range(0.0, 1.0, 0.01) var plasma_cell_drop_chance: float = 0.25
 
 var _session_state: SessionState = SessionState.MAIN_MENU
 var _state_before_pause: SessionState = SessionState.PLAYING
@@ -83,6 +90,15 @@ var _wave_is_clean: bool = true
 var _pending_wave_index: int = 0
 var _last_phrase_index: int = -1
 var _active_boss: Area2D = null
+
+## Plasma cell meter (0 to PLASMA_CELLS_PER_CHARGE - 1), lifetime cell count,
+## and stored antimatter charges for the current session.
+var plasma_cells: int = 0
+var plasma_cells_total: int = 0
+var antimatter_charges: int = 0
+## True only while an antimatter blast is destroying targets, so the kills
+## award score without spawning drops.
+var _antimatter_blasting: bool = false
 
 var _game_layout: GameLayout = GameLayout.new()
 
@@ -164,7 +180,13 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_echo() or not event.is_action_pressed(&"pause"):
+	if event.is_echo():
+		return
+	if event.is_action_pressed(&"antimatter"):
+		if activate_antimatter():
+			get_viewport().set_input_as_handled()
+		return
+	if not event.is_action_pressed(&"pause"):
 		return
 	if _session_state == SessionState.PLAYING or _session_state == SessionState.BOSS_BATTLE:
 		pause_session()
@@ -342,7 +364,11 @@ func _on_enemy_destroyed(enemy: Area2D) -> void:
 	_audio_feedback.play_enemy_explosion()
 	if explosion_position.distance_to(_player.global_position) < NEARBY_SHAKE_RADIUS:
 		_camera.shake(3.0, 0.12)
+	if _antimatter_blasting:
+		return
 	_try_spawn_enemy_loot(explosion_position)
+	if randf() < plasma_cell_drop_chance:
+		_spawn_loot(LootDrop.Type.PLASMA_CELL, explosion_position)
 
 
 func _on_asteroid_spawned(asteroid: Area2D) -> void:
@@ -384,7 +410,7 @@ func _on_asteroid_destroyed(asteroid: Area2D, size_idx: int, pos: Vector2, _vel:
 		_camera.shake(4.0, 0.15)
 
 	# High-HP large asteroids drop resources or power-ups
-	if size_idx == 0:
+	if size_idx == 0 and not _antimatter_blasting:
 		var has_loot: bool = (asteroid != null and asteroid.get("contains_loot") == true)
 		if has_loot or randf() < 0.60:
 			_spawn_loot(_pick_loot_type(), pos)
@@ -578,6 +604,8 @@ func _on_loot_collected(loot_type: int) -> void:
 					_visual_feedback.play_level_up(_player.global_position, _player.get_weapon_level() if _player.has_method(&"get_weapon_level") else 1)
 				if _audio_feedback != null and _audio_feedback.has_method(&"play_medallion_collected"):
 					_audio_feedback.play_medallion_collected(target_w)
+		LootDrop.Type.PLASMA_CELL:
+			_collect_plasma_cell()
 		LootDrop.Type.POWER_ATOM, LootDrop.Type.RECOVERY_CAPSULE:
 			if _player.has_method(&"apply_power_atom"):
 				_player.apply_power_atom()
@@ -586,6 +614,57 @@ func _on_loot_collected(loot_type: int) -> void:
 			if _visual_feedback != null and _visual_feedback.has_method(&"play_level_up"):
 				_visual_feedback.play_level_up(_player.global_position, _player.get_weapon_level() if _player.has_method(&"get_weapon_level") else 1)
 
+
+
+## Adds one plasma cell to the meter. Every PLASMA_CELLS_PER_CHARGE cells stores
+## one antimatter charge, up to MAX_ANTIMATTER_CHARGES; while the stock is full
+## the meter stays just below full. Every PLASMA_CELLS_PER_EXTRA_LIFE cells in
+## total grants an extra life.
+func _collect_plasma_cell() -> void:
+	plasma_cells_total += 1
+	if plasma_cells_total % PLASMA_CELLS_PER_EXTRA_LIFE == 0:
+		lives = mini(lives + 1, STARTING_LIVES)
+
+	plasma_cells += 1
+	if plasma_cells >= PLASMA_CELLS_PER_CHARGE:
+		if antimatter_charges < MAX_ANTIMATTER_CHARGES:
+			antimatter_charges += 1
+			plasma_cells = 0
+		else:
+			plasma_cells = PLASMA_CELLS_PER_CHARGE - 1
+
+	if _audio_feedback != null and _audio_feedback.has_method(&"play_power_atom_collected"):
+		_audio_feedback.play_power_atom_collected()
+	_update_hud()
+
+
+## Detonates one stored antimatter charge: destroys every enemy and asteroid on
+## screen (without drops) and clears enemy bullets. The boss takes a fixed hit
+## instead. Returns true when a charge was spent.
+func activate_antimatter() -> bool:
+	if antimatter_charges <= 0 or _antimatter_blasting:
+		return false
+	if _session_state != SessionState.PLAYING and _session_state != SessionState.BOSS_BATTLE:
+		return false
+
+	antimatter_charges -= 1
+	_clear_enemy_bullets()
+	_antimatter_blasting = true
+	for target: Node in get_tree().get_nodes_in_group(&"enemies"):
+		if is_instance_valid(target) and target != _active_boss and target.has_method(&"take_damage"):
+			target.take_damage(ANTIMATTER_ENEMY_DAMAGE)
+	_antimatter_blasting = false
+
+	if is_instance_valid(_active_boss):
+		_active_boss.take_damage(ANTIMATTER_BOSS_DAMAGE)
+
+	if _visual_feedback != null and _visual_feedback.has_method(&"play_antimatter_blast"):
+		_visual_feedback.play_antimatter_blast()
+	if _camera != null and _camera.has_method(&"add_trauma"):
+		_camera.add_trauma(0.8)
+	_audio_feedback.play_enemy_explosion()
+	_update_hud()
+	return true
 
 
 func _on_wave_cleared(_wave_index: int) -> void:
@@ -801,6 +880,10 @@ func reset_session() -> void:
 	score = 0
 	wave = 1
 	_last_extra_life_threshold = 0
+	plasma_cells = 0
+	plasma_cells_total = 0
+	antimatter_charges = 0
+	_antimatter_blasting = false
 	if _player != null and _player.has_method(&"set_weapon_level"):
 		_player.set_weapon_level(1)
 	_session_active = true
@@ -851,6 +934,7 @@ func _update_hud() -> void:
 	_hud.set_lives(lives)
 	_hud.set_score(score)
 	_hud.set_wave(wave)
+	_hud.set_plasma(plasma_cells, PLASMA_CELLS_PER_CHARGE, antimatter_charges)
 	if _hud != null:
 		if _hud.has_method(&"set_active_weapon"):
 			_hud.set_active_weapon(_player.get_weapon() if (_player != null and _player.has_method(&"get_weapon")) else 0)
