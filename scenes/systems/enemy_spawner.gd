@@ -365,14 +365,21 @@ func get_wave_config(wave_index: int) -> Dictionary:
 	return config.duplicate()
 
 
+## Campaign chapter (1-based). Later chapters speed up formations and add one column per level above 1.
+var difficulty_level: int = 1
+const DIFFICULTY_SPEED_STEP: float = 0.15
+const MAX_FORMATION_COLUMNS: int = 8
+
+
 func start_wave(wave_index: int) -> void:
 	var config: Dictionary = get_wave_config(wave_index)
 	if config.is_empty():
 		return
 	_current_wave = wave_index
+	var level_offset: int = maxi(difficulty_level - 1, 0)
 	rows = int(config["rows"])
-	columns = int(config["columns"])
-	formation_speed = float(config["formation_speed"])
+	columns = mini(int(config["columns"]) + level_offset, MAX_FORMATION_COLUMNS)
+	formation_speed = float(config["formation_speed"]) * (1.0 + DIFFICULTY_SPEED_STEP * level_offset)
 	_current_pattern_type = String(config.get("formation_type", "grid"))
 	_current_trajectory = String(config.get("fly_in_trajectory", "swoop_left"))
 	spawn_formation()

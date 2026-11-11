@@ -53,11 +53,16 @@ func _assert_chapter_structure_contract() -> bool:
 		push_error("A new session must start at chapter 1")
 		passed = false
 
+	var chapter_speeds: Array[float] = []
+	var chapter_boss_hp: Array[int] = []
 	for chapter_index: int in range(1, TOTAL_CHAPTERS + 1):
 		if int(main.call("get_chapter")) != chapter_index:
 			push_error("Expected chapter %d before its boss, got %d" % [chapter_index, int(main.call("get_chapter"))])
 			passed = false
 			break
+		var spawner: Node2D = main.get_node_or_null("EnemySpawner") as Node2D
+		if spawner != null:
+			chapter_speeds.append(float(spawner.get("formation_speed")))
 		for wave_index: int in TOTAL_WAVES:
 			await _clear_current_wave(main)
 			await _finish_wave_transition(main)
@@ -66,6 +71,7 @@ func _assert_chapter_structure_contract() -> bool:
 			push_error("Chapter %d must spawn its boss after wave %d" % [chapter_index, TOTAL_WAVES])
 			passed = false
 			break
+		chapter_boss_hp.append(int(boss.get("max_health")))
 		boss.call("take_damage", int(boss.get("max_health")))
 		await process_frame
 		await process_frame
@@ -80,6 +86,19 @@ func _assert_chapter_structure_contract() -> bool:
 				push_error("Defeating the boss of chapter %d must complete the mission" % chapter_index)
 				passed = false
 
+	if chapter_speeds.size() == TOTAL_CHAPTERS:
+		for i: int in range(1, TOTAL_CHAPTERS):
+			if chapter_speeds[i] <= chapter_speeds[i - 1]:
+				push_error("Chapter %d formation speed must be higher than chapter %d" % [i + 1, i])
+				passed = false
+	else:
+		push_error("EnemySpawner must expose formation_speed for each chapter")
+		passed = false
+	if chapter_boss_hp.size() == TOTAL_CHAPTERS:
+		for i: int in range(1, TOTAL_CHAPTERS):
+			if chapter_boss_hp[i] <= chapter_boss_hp[i - 1]:
+				push_error("Chapter %d boss must have more health than chapter %d" % [i + 1, i])
+				passed = false
 	root.remove_child(main)
 	main.free()
 	return passed

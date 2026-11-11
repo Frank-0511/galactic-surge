@@ -9,6 +9,8 @@ const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 10
 const TOTAL_CHAPTERS: int = 3
+const BOSS_BASE_HEALTH: int = 150
+const BOSS_HEALTH_STEP: float = 0.5
 const BOSS_POINTS: int = 3000
 const ASTEROID_WAVE_INDEX: int = 8
 const ASTEROID_LARGE_POINTS: int = 150
@@ -638,6 +640,7 @@ func _on_wave_announcement_finished() -> void:
 	_hud.set_wave(wave)
 	_update_hud()
 	_session_state = SessionState.PLAYING
+	_enemy_spawner.difficulty_level = _chapter
 	if _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
 		_enemy_spawner.stop()
 		_enemy_spawner.clear_formation()
@@ -654,6 +657,7 @@ func _start_boss_battle() -> void:
 		return
 	_active_boss = boss
 	boss.global_position = Vector2(get_viewport().get_visible_rect().size.x * 0.5, -100.0)
+	boss.max_health = int(round(BOSS_BASE_HEALTH * (1.0 + BOSS_HEALTH_STEP * float(_chapter - 1))))
 	boss.health_changed.connect(_on_boss_health_changed)
 	boss.boss_defeated.connect(_on_boss_defeated)
 	boss.boss_contacted_player.connect(_on_boss_contacted_player)
