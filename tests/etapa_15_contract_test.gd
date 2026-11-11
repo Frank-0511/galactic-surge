@@ -8,6 +8,7 @@ const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const BOSS_DEFEAT_CHAPTER_SCORE: int = 3000
 const TOTAL_WAVES: int = 10
 const TOTAL_CHAPTERS: int = 3
+const BONUS_WAVE_NUMBER: int = 8
 
 
 func _init() -> void:
@@ -17,6 +18,7 @@ func _init() -> void:
 func _run_contracts() -> void:
 	var passed: bool = true
 	passed = await _assert_chapter_structure_contract() and passed
+	passed = await _assert_bonus_wave_contract() and passed
 	quit(0 if passed else 1)
 
 
@@ -38,6 +40,7 @@ func _assert_chapter_structure_contract() -> bool:
 		main.set("enemy_drop_chance", 0.0)
 	if "clear_wave_drop_chance" in main:
 		main.set("clear_wave_drop_chance", 0.0)
+	main.set("bonus_drop_interval", 0.0)
 
 	if not main.has_method("get_chapter") or not main.has_method("get_total_chapters"):
 		push_error("Main must expose get_chapter() and get_total_chapters()")
@@ -66,6 +69,7 @@ func _assert_chapter_structure_contract() -> bool:
 		for wave_index: int in TOTAL_WAVES:
 			await _clear_current_wave(main)
 			await _finish_wave_transition(main)
+			await _wait_for_bonus(main)
 		var boss: Area2D = _find_boss(main)
 		if boss == null:
 			push_error("Chapter %d must spawn its boss after wave %d" % [chapter_index, TOTAL_WAVES])
@@ -102,6 +106,70 @@ func _assert_chapter_structure_contract() -> bool:
 	root.remove_child(main)
 	main.free()
 	return passed
+
+
+# Wave 8 of each chapter is a peaceful bonus: no fighters spawn, loot rains
+# down, and the next wave (9, the asteroid belt) starts after it.
+func _assert_bonus_wave_contract() -> bool:
+	var main: Node2D = (load(MAIN_SCENE_PATH) as PackedScene).instantiate() as Node2D
+	root.add_child(main)
+	main.start_session()
+	await process_frame
+	var passed: bool = true
+	var announcement: CanvasLayer = main.get_node_or_null("WaveAnnouncement") as CanvasLayer
+	if announcement != null and "display_duration" in announcement:
+		announcement.set("display_duration", 0.0)
+	if "enemy_drop_chance" in main:
+		main.set("enemy_drop_chance", 0.0)
+	if "clear_wave_drop_chance" in main:
+		main.set("clear_wave_drop_chance", 0.0)
+	main.set("bonus_drop_interval", 0.0)
+
+	for wave_index: int in BONUS_WAVE_NUMBER - 1:
+		await _clear_current_wave(main)
+		await _finish_wave_transition(main)
+	await _clear_current_wave(main)
+	await _finish_wave_transition(main)
+
+	if not main.has_method("is_bonus_wave_active") or not main.is_bonus_wave_active():
+		push_error("Wave %d must be a bonus (peaceful) wave" % BONUS_WAVE_NUMBER)
+		root.remove_child(main)
+		main.free()
+		return false
+
+	var fighters_during_bonus: int = 0
+	for _frame: int in range(400):
+		if not main.is_bonus_wave_active():
+			break
+		for child: Node in main.get_children():
+			if child is Area2D and child.is_in_group("enemies"):
+				fighters_during_bonus += 1
+		await process_frame
+	if main.is_bonus_wave_active():
+		push_error("Bonus wave must finish on its own")
+		passed = false
+	if fighters_during_bonus > 0:
+		push_error("Bonus wave must spawn no fighters")
+		passed = false
+	if int(main.call("get_bonus_drops_spawned")) <= 0:
+		push_error("Bonus wave must rain loot drops")
+		passed = false
+	if main.is_mission_complete() or main.wave != BONUS_WAVE_NUMBER + 1:
+		await _finish_wave_transition(main)
+	if main.wave != BONUS_WAVE_NUMBER + 1:
+		push_error("After the bonus wave the next wave must be %d, got %d" % [BONUS_WAVE_NUMBER + 1, main.wave])
+		passed = false
+
+	root.remove_child(main)
+	main.free()
+	return passed
+
+
+func _wait_for_bonus(main: Node2D) -> void:
+	for _frame: int in range(400):
+		if not main.is_bonus_wave_active():
+			return
+		await process_frame
 
 
 func _find_boss(main: Node2D) -> Area2D:

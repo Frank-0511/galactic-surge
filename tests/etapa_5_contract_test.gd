@@ -404,6 +404,7 @@ func _assert_main_boss_integration_contract() -> bool:
 		main.set("enemy_drop_chance", 0.0)
 	if "clear_wave_drop_chance" in main:
 		main.set("clear_wave_drop_chance", 0.0)
+	main.set("bonus_drop_interval", 0.0)
 
 	# Fast-forward clearing waves 1 to 5.
 	for wave_index: int in TOTAL_WAVES:
@@ -537,3 +538,8 @@ func _finish_wave_transition(main: Node2D) -> void:
 	await process_frame
 	await process_frame
 	await process_frame
+	# Etapa 15: wave 8 is a peaceful bonus that runs on its own; wait for it to end.
+	for _frame: int in range(400):
+		if not main.has_method("is_bonus_wave_active") or not main.is_bonus_wave_active():
+			return
+		await process_frame

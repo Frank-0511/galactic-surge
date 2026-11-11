@@ -11,6 +11,14 @@ const TOTAL_WAVES: int = 10
 const TOTAL_CHAPTERS: int = 3
 const BOSS_BASE_HEALTH: int = 150
 const BOSS_HEALTH_STEP: float = 0.5
+## Wave number (1-based) that is a peaceful bonus wave in every chapter.
+const BONUS_WAVE_NUMBER: int = 8
+const BONUS_DROP_COUNT: int = 8
+
+## Seconds between rained loot drops in a bonus wave. Tests set it to 0.
+var bonus_drop_interval: float = 0.6
+var _bonus_active: bool = false
+var _bonus_drops_spawned: int = 0
 const BOSS_POINTS: int = 3000
 const ASTEROID_WAVE_INDEX: int = 8
 const ASTEROID_LARGE_POINTS: int = 150
@@ -38,7 +46,7 @@ const _RADAR_PHRASES: Array[String] = [
 	"INCURSIÓN ESTELAR INMINENTE",
 ]
 
-enum SessionState { MAIN_MENU, PLAYING, PAUSED, WAVE_TRANSITION, BOSS_BATTLE, GAME_OVER, MISSION_COMPLETE }
+enum SessionState { MAIN_MENU, PLAYING, PAUSED, WAVE_TRANSITION, BOSS_BATTLE, GAME_OVER, MISSION_COMPLETE, BONUS_WAVE }
 
 ## Bullet scene to provide to the player.
 var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tscn")
@@ -243,6 +251,7 @@ func _enter_main_menu() -> void:
 	score = 0
 	wave = 1
 	_chapter = 1
+	_bonus_active = false
 	_session_active = false
 	_mission_complete = false
 	_wave_is_clean = true
@@ -641,6 +650,9 @@ func _on_wave_announcement_finished() -> void:
 	_update_hud()
 	_session_state = SessionState.PLAYING
 	_enemy_spawner.difficulty_level = _chapter
+	if wave == BONUS_WAVE_NUMBER:
+		_start_bonus_wave()
+		return
 	if _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
 		_enemy_spawner.stop()
 		_enemy_spawner.clear_formation()
@@ -726,6 +738,40 @@ func _begin_next_chapter() -> void:
 	_pending_wave_index = 0
 	_wave_is_clean = true
 	_wave_announcement.show_announcement(1, "¡CAPÍTULO %d INICIADO!" % _chapter)
+
+
+func is_bonus_wave_active() -> bool:
+	return _bonus_active
+
+
+func get_bonus_drops_spawned() -> int:
+	return _bonus_drops_spawned
+
+
+## Peaceful wave: no fighters, loot rains down, then the wave is cleared.
+func _start_bonus_wave() -> void:
+	_enemy_spawner.stop()
+	_enemy_spawner.clear_formation()
+	_bonus_active = true
+	_bonus_drops_spawned = 0
+	_session_state = SessionState.BONUS_WAVE
+	_run_bonus_wave()
+
+
+func _run_bonus_wave() -> void:
+	var vp_width: float = get_viewport().get_visible_rect().size.x
+	for _i: int in range(BONUS_DROP_COUNT):
+		await get_tree().create_timer(bonus_drop_interval).timeout
+		if not _session_active or not _bonus_active:
+			return
+		var loot_types: Array[int] = [LootDrop.Type.MEDALLION_BLASTER, LootDrop.Type.MEDALLION_MISSILE, LootDrop.Type.MEDALLION_LASER, LootDrop.Type.POWER_ATOM]
+		_spawn_loot(loot_types[randi() % loot_types.size()], Vector2(randf_range(60.0, vp_width - 60.0), -20.0))
+		_bonus_drops_spawned += 1
+	await get_tree().create_timer(bonus_drop_interval).timeout
+	if not _session_active or not _bonus_active:
+		return
+	_bonus_active = false
+	_on_wave_cleared(BONUS_WAVE_NUMBER - 1)
 
 
 func get_chapter() -> int:
@@ -832,6 +878,7 @@ func reset_session() -> void:
 	score = 0
 	wave = 1
 	_chapter = 1
+	_bonus_active = false
 	_last_extra_life_threshold = 0
 	if _player != null and _player.has_method(&"set_weapon_level"):
 		_player.set_weapon_level(1)
