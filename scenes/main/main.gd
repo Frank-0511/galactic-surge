@@ -18,6 +18,11 @@ const BONUS_DROP_COUNT: int = 8
 const GUARDIAN_WAVE_INDEX: int = 4
 const GUARDIAN_MAX_HEALTH: int = 80
 const GUARDIAN_POINTS: int = 500
+## Wave-cleared feedback (Etapa 15 T6): invulnerability grace and camera zoom pulse.
+const WAVE_CLEARED_INVULNERABILITY: float = 1.75
+const CAMERA_ZOOM_PULSE: float = 1.15
+const CAMERA_ZOOM_IN_DURATION: float = 0.2
+const CAMERA_ZOOM_OUT_DURATION: float = 0.5
 
 ## Seconds between rained loot drops in a bonus wave. Tests set it to 0.
 var bonus_drop_interval: float = 0.6
@@ -103,6 +108,7 @@ var _pending_wave_index: int = 0
 var _last_phrase_index: int = -1
 var _active_boss: Area2D = null
 var _active_guardian: Area2D = null
+var _zoom_tween: Tween = null
 
 var _game_layout: GameLayout = GameLayout.new()
 
@@ -230,6 +236,7 @@ func _enter_main_menu() -> void:
 	_enemy_spawner.clear_formation()
 	_clear_boss()
 	_clear_combat_transients()
+	_reset_wave_cleared_feedback()
 	_visual_feedback.clear_effects()
 	_wave_announcement.cancel_announcement()
 	_pending_wave_index = 0
@@ -629,6 +636,7 @@ func _on_wave_cleared(_wave_index: int) -> void:
 		_audio_feedback.stop_combat_music()
 		_wave_announcement.show_announcement(TOTAL_WAVES + 1, "¡AMENAZA COLOSAL DETECTADA!")
 		return
+	_show_wave_cleared_feedback()
 	# Enter wave transition instead of starting the next wave immediately.
 	_session_state = SessionState.WAVE_TRANSITION
 	_enemy_spawner.stop()
@@ -643,6 +651,31 @@ func _on_wave_cleared(_wave_index: int) -> void:
 		if _camera != null and _camera.has_method(&"add_trauma"):
 			_camera.add_trauma(0.20)
 	_wave_announcement.show_announcement(wave + 1, phrase)
+
+
+## Wave-cleared feedback (Etapa 15 T6): banner, camera zoom pulse, and a short
+## invulnerability grace period for the player.
+func _show_wave_cleared_feedback() -> void:
+	_hud.show_wave_cleared_banner()
+	_player.grant_invulnerability(WAVE_CLEARED_INVULNERABILITY)
+	if _camera == null:
+		return
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	_camera.zoom = Vector2.ONE
+	_zoom_tween = create_tween()
+	_zoom_tween.tween_property(_camera, "zoom", Vector2.ONE * CAMERA_ZOOM_PULSE, CAMERA_ZOOM_IN_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_zoom_tween.tween_property(_camera, "zoom", Vector2.ONE, CAMERA_ZOOM_OUT_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+## Stops the zoom pulse, returns the camera to its base zoom, and hides the banner.
+func _reset_wave_cleared_feedback() -> void:
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	_zoom_tween = null
+	if _camera != null:
+		_camera.zoom = Vector2.ONE
+	_hud.hide_wave_cleared_banner()
 
 
 func _on_wave_announcement_finished() -> void:
@@ -914,6 +947,7 @@ func reset_session() -> void:
 		_asteroid_spawner.clear_asteroids()
 	if _camera != null and _camera.has_method(&"reset_shake"):
 		_camera.reset_shake()
+	_reset_wave_cleared_feedback()
 	_clear_boss()
 	_clear_combat_transients()
 	_visual_feedback.clear_effects()

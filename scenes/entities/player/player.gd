@@ -560,6 +560,21 @@ func respawn(respawn_position: Vector2) -> void:
 		_blink_timer.start(blink_interval)
 
 
+## Grants a timed invulnerability window (e.g. after clearing a wave). Reuses the
+## respawn invulnerability state, so enemy hits are ignored until it expires.
+func grant_invulnerability(duration: float) -> void:
+	_is_invulnerable = true
+	if _invulnerability_timer != null:
+		_invulnerability_timer.start(duration)
+
+
+## Seconds left of the current invulnerability window, or 0.0 when vulnerable.
+func get_invulnerability_time_left() -> float:
+	if not _is_invulnerable or _invulnerability_timer == null:
+		return 0.0
+	return _invulnerability_timer.time_left
+
+
 func set_gameplay_enabled(enabled: bool) -> void:
 	_gameplay_enabled = enabled
 	if not _gameplay_enabled:

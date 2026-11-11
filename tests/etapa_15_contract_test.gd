@@ -20,6 +20,10 @@ const GUARDIAN_WAVE_NUMBER: int = 5
 const GUARDIAN_MAX_HEALTH: int = 80
 const GUARDIAN_POINTS: int = 500
 const CLEAN_WAVE_BONUS: int = 500
+# Etapa 15 T6: wave-cleared feedback (banner, camera zoom, invulnerability grace).
+const WAVE_CLEARED_BANNER_TEXT: String = "¡OLEADA SUPERADA!"
+const WAVE_CLEARED_GRACE_MIN: float = 1.5
+const WAVE_CLEARED_GRACE_MAX: float = 2.0
 
 
 func _init() -> void:
@@ -32,6 +36,7 @@ func _run_contracts() -> void:
 	passed = await _assert_bonus_wave_contract() and passed
 	passed = await _assert_guardian_contract() and passed
 	passed = await _assert_blindado_core_contract() and passed
+	passed = await _assert_wave_cleared_feedback_contract() and passed
 	quit(0 if passed else 1)
 
 
@@ -331,6 +336,63 @@ func _assert_blindado_core_contract() -> bool:
 	for node: Area2D in [boss, exterior_boss, plain_boss]:
 		root.remove_child(node)
 		node.free()
+	return passed
+
+
+# Wave-cleared feedback (T6): clearing a normal wave shows the "¡OLEADA SUPERADA!"
+# banner, pulses the Camera2D zoom away from 1.0 and grants the player a 1.5-2 s
+# invulnerability window in which enemy contact costs no life.
+func _assert_wave_cleared_feedback_contract() -> bool:
+	var main: Node2D = (load(MAIN_SCENE_PATH) as PackedScene).instantiate() as Node2D
+	root.add_child(main)
+	main.start_session()
+	await process_frame
+	var passed: bool = true
+	main.set("enemy_drop_chance", 0.0)
+	main.set("bonus_drop_interval", 0.0)
+
+	var player: CharacterBody2D = main.get_node("Player") as CharacterBody2D
+	var camera: Camera2D = main.get_node("Camera2D") as Camera2D
+	var hud: CanvasLayer = main.get_node("HUD") as CanvasLayer
+	var spawner: Node2D = main.get_node("EnemySpawner") as Node2D
+
+	# Let the spawn-time invulnerability expire so only the wave-cleared grace is measured.
+	await create_timer(WAVE_CLEARED_GRACE_MAX).timeout
+	await _clear_current_wave(main)
+	await process_frame
+
+	if not hud.has_method(&"get_wave_cleared_banner_text") or str(hud.call(&"get_wave_cleared_banner_text")) != WAVE_CLEARED_BANNER_TEXT:
+		push_error("Clearing a normal wave must show the banner '%s'" % WAVE_CLEARED_BANNER_TEXT)
+		passed = false
+	if camera.zoom == Vector2.ONE:
+		push_error("Clearing a normal wave must change the camera zoom away from 1.0")
+		passed = false
+
+	var lives_before: int = main.lives
+	spawner.enemy_contacted_player.emit(player)
+	if main.lives != lives_before:
+		push_error("Player must be invulnerable right after clearing a wave (lives %d -> %d)" % [lives_before, main.lives])
+		passed = false
+	if not player.has_method(&"get_invulnerability_time_left"):
+		push_error("Player must expose get_invulnerability_time_left()")
+		passed = false
+	else:
+		var grace: float = float(player.call(&"get_invulnerability_time_left"))
+		if grace < WAVE_CLEARED_GRACE_MIN or grace > WAVE_CLEARED_GRACE_MAX:
+			push_error("Wave-cleared invulnerability must last 1.5-2 s, got %.2f s" % grace)
+			passed = false
+
+	# Effects end on their own: zoom back to 1.0 and banner hidden after the grace window.
+	await create_timer(2.0).timeout
+	if camera.zoom != Vector2.ONE:
+		push_error("Camera zoom must return to 1.0 after the wave-cleared effect")
+		passed = false
+	if hud.has_method(&"get_wave_cleared_banner_text") and str(hud.call(&"get_wave_cleared_banner_text")) != "":
+		push_error("Wave-cleared banner must hide after its display time")
+		passed = false
+
+	root.remove_child(main)
+	main.free()
 	return passed
 
 

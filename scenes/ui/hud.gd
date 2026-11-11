@@ -36,14 +36,22 @@ signal weapon_selected_by_user(weapon_index: int)
 @onready var _retry_button: Button = $RetryButton
 @onready var _main_menu_button: Button = $MainMenuButton
 
+## Wave-cleared banner (Etapa 15 T6): text, display time, and fade-out length.
+const WAVE_CLEARED_BANNER_TEXT: String = "¡OLEADA SUPERADA!"
+const WAVE_CLEARED_BANNER_DURATION: float = 1.75
+const WAVE_CLEARED_BANNER_FADE: float = 0.35
+
 var _current_weapon_level: int = 1
 var _current_weapon_type: int = 0
 var _heat_fill_style: StyleBoxFlat = null
 var _overheat_pulse_time: float = 0.0
+var _wave_cleared_label: Label = null
+var _wave_cleared_tween: Tween = null
 
 
 func _ready() -> void:
 	_init_styles()
+	_init_wave_cleared_banner()
 	set_active_weapon(_current_weapon_type)
 	set_weapon_level(1, 0)
 	set_heat(0.0, 100.0, false)
@@ -55,6 +63,55 @@ func _process(delta: float) -> void:
 		_overheat_pulse_time += delta * 12.0
 		var alpha: float = 0.5 + 0.5 * sin(_overheat_pulse_time)
 		_overheat_warning_label.modulate = Color(1.0, 1.0, 1.0, 0.4 + 0.6 * alpha)
+
+
+## Creates the hidden "¡OLEADA SUPERADA!" label centered near the top of the screen.
+func _init_wave_cleared_banner() -> void:
+	_wave_cleared_label = Label.new()
+	_wave_cleared_label.name = "WaveClearedLabel"
+	_wave_cleared_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_wave_cleared_label.offset_left = -300.0
+	_wave_cleared_label.offset_right = 300.0
+	_wave_cleared_label.offset_top = 96.0
+	_wave_cleared_label.offset_bottom = 150.0
+	_wave_cleared_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_wave_cleared_label.add_theme_font_size_override(&"font_size", 36)
+	_wave_cleared_label.add_theme_color_override(&"font_color", Color(0.45, 1.0, 0.6, 1.0))
+	_wave_cleared_label.add_theme_color_override(&"font_outline_color", Color(0.02, 0.05, 0.09, 0.95))
+	_wave_cleared_label.add_theme_constant_override(&"outline_size", 6)
+	_wave_cleared_label.visible = false
+	add_child(_wave_cleared_label)
+
+
+## Shows the wave-cleared banner, then fades and hides it after its display time.
+func show_wave_cleared_banner() -> void:
+	if _wave_cleared_label == null:
+		return
+	if _wave_cleared_tween != null and _wave_cleared_tween.is_valid():
+		_wave_cleared_tween.kill()
+	_wave_cleared_label.text = WAVE_CLEARED_BANNER_TEXT
+	_wave_cleared_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_wave_cleared_label.visible = true
+	_wave_cleared_tween = create_tween()
+	_wave_cleared_tween.tween_interval(WAVE_CLEARED_BANNER_DURATION - WAVE_CLEARED_BANNER_FADE)
+	_wave_cleared_tween.tween_property(_wave_cleared_label, "modulate:a", 0.0, WAVE_CLEARED_BANNER_FADE)
+	_wave_cleared_tween.tween_callback(hide_wave_cleared_banner)
+
+
+## Hides the wave-cleared banner immediately.
+func hide_wave_cleared_banner() -> void:
+	if _wave_cleared_tween != null and _wave_cleared_tween.is_valid():
+		_wave_cleared_tween.kill()
+	if _wave_cleared_label != null:
+		_wave_cleared_label.visible = false
+		_wave_cleared_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
+
+
+## Returns the banner text while it is visible, or an empty string otherwise.
+func get_wave_cleared_banner_text() -> String:
+	if _wave_cleared_label == null or not _wave_cleared_label.visible:
+		return ""
+	return _wave_cleared_label.text
 
 
 func _init_styles() -> void:
