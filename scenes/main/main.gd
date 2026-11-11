@@ -8,6 +8,7 @@ const STARTING_LIVES: int = 3
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 10
+const TOTAL_CHAPTERS: int = 3
 const BOSS_POINTS: int = 3000
 const ASTEROID_WAVE_INDEX: int = 8
 const ASTEROID_LARGE_POINTS: int = 150
@@ -58,6 +59,9 @@ var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tsc
 var lives: int = STARTING_LIVES
 var score: int = 0
 var wave: int = 1
+
+## Current campaign chapter (1-based). Each chapter is TOTAL_WAVES waves plus a boss.
+var _chapter: int = 1
 
 ## Best score ever reached, loaded on startup and persisted to disk.
 var _high_score: int = 0
@@ -236,6 +240,7 @@ func _enter_main_menu() -> void:
 	lives = STARTING_LIVES
 	score = 0
 	wave = 1
+	_chapter = 1
 	_session_active = false
 	_mission_complete = false
 	_wave_is_clean = true
@@ -702,7 +707,29 @@ func _on_boss_defeated(boss: Area2D) -> void:
 	_audio_feedback.stop_boss_music()
 	_hud.hide_boss_health_bar()
 	_active_boss = null
-	_complete_mission()
+	if _chapter < TOTAL_CHAPTERS:
+		_begin_next_chapter()
+	else:
+		_complete_mission()
+
+
+## Starts the next chapter: waves restart at 1 after the chapter announcement.
+func _begin_next_chapter() -> void:
+	_chapter += 1
+	_session_state = SessionState.WAVE_TRANSITION
+	_enemy_spawner.stop()
+	_enemy_spawner.clear_formation()
+	_pending_wave_index = 0
+	_wave_is_clean = true
+	_wave_announcement.show_announcement(1, "¡CAPÍTULO %d INICIADO!" % _chapter)
+
+
+func get_chapter() -> int:
+	return _chapter
+
+
+func get_total_chapters() -> int:
+	return TOTAL_CHAPTERS
 
 
 func _clear_boss() -> void:
@@ -800,6 +827,7 @@ func reset_session() -> void:
 	lives = STARTING_LIVES
 	score = 0
 	wave = 1
+	_chapter = 1
 	_last_extra_life_threshold = 0
 	if _player != null and _player.has_method(&"set_weapon_level"):
 		_player.set_weapon_level(1)

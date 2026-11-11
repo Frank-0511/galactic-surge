@@ -457,8 +457,28 @@ func _assert_main_boss_integration_contract() -> bool:
 		await process_frame
 		await process_frame
 
+		# Etapa 15: defeating the chapter 1 Boss starts chapter 2; mission completes only after chapter 3.
+		if main.is_mission_complete():
+			push_error("Defeating the chapter 1 Boss must NOT complete the mission")
+			passed = false
+		for chapter_index: int in range(2):
+			await _finish_wave_transition(main)
+			for wave_index: int in TOTAL_WAVES:
+				await _clear_current_wave(main)
+				await _finish_wave_transition(main)
+			var next_boss: Area2D = null
+			for child: Node in main.get_children():
+				if child is Area2D and child.has_signal(&"boss_defeated"):
+					next_boss = child as Area2D
+			if next_boss == null:
+				push_error("Chapter %d must spawn its Boss" % (chapter_index + 2))
+				passed = false
+				break
+			next_boss.call("take_damage", int(next_boss.get("max_health")))
+			await process_frame
+			await process_frame
 		if not main.has_method("is_mission_complete") or not main.is_mission_complete():
-			push_error("Defeating the Boss must trigger mission complete")
+			push_error("Defeating the last Boss must trigger mission complete")
 			passed = false
 
 		if main.score - score_before_defeat < BOSS_DEFEAT_SCORE:

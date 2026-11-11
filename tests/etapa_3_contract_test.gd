@@ -347,15 +347,27 @@ func _assert_mission_complete_contract() -> bool:
 			for wave_index: int in TOTAL_WAVES:
 				await _clear_current_wave(main)
 				await _finish_wave_transition(main)
-			# In Etapa 5+, defeat the boss if present to reach mission complete.
+			# Etapa 15: each of the 3 chapters is 10 waves plus its boss; mission completes after the last boss.
+			for chapter_index: int in range(1, 3):
+				for child: Node in main.get_children():
+					if child is Area2D and child.has_method("take_damage"):
+						var boss_hp: int = int(child.get("health")) if "health" in child else 150
+						child.call("take_damage", boss_hp)
+						await process_frame
+						await process_frame
+						break
+				await _finish_wave_transition(main)
+				for wave_index: int in TOTAL_WAVES:
+					await _clear_current_wave(main)
+					await _finish_wave_transition(main)
 			for child: Node in main.get_children():
 				if child is Area2D and child.has_method("take_damage"):
-					var boss_hp: int = int(child.get("health")) if "health" in child else 150
-					child.call("take_damage", boss_hp)
+					var final_hp: int = int(child.get("health")) if "health" in child else 150
+					child.call("take_damage", final_hp)
 					await process_frame
 					await process_frame
 					break
-			# After 5 waves and boss battle, mission must be complete.
+			# After 3 chapters and their bosses, mission must be complete.
 			if not main.has_method("is_mission_complete") or not main.is_mission_complete():
 				push_error("Main must report mission complete after clearing all waves")
 				passed = false
