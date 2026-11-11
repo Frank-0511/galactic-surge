@@ -10,6 +10,8 @@ const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const STARTING_LIVES: int = 3
 const TOTAL_WAVES: int = 10
+# Etapa 15 T5: sector guardian of wave 5 (80 HP).
+const GUARDIAN_MAX_HEALTH: int = 80
 
 
 func _init() -> void:
@@ -507,6 +509,10 @@ func _clear_current_wave(main: Node2D) -> void:
 	if main.has_method("is_asteroid_wave_active") and main.call("is_asteroid_wave_active"):
 		await _clear_asteroid_wave(main)
 		return
+	# Etapa 15 T5: the sector guardian of wave 5 must fall to clear the wave.
+	var guardian: Area2D = _find_boss(main)
+	if guardian != null and int(guardian.get("max_health")) == GUARDIAN_MAX_HEALTH:
+		guardian.call("take_damage", GUARDIAN_MAX_HEALTH)
 	var spawner: Node2D = main.get_node_or_null("EnemySpawner")
 	if spawner == null:
 		return
@@ -533,6 +539,13 @@ func _clear_asteroid_wave(main: Node2D) -> void:
 			if is_instance_valid(child) and child is Area2D and child.has_method("destroy"):
 				child.call("destroy")
 		await process_frame
+
+
+func _find_boss(main: Node2D) -> Area2D:
+	for child: Node in main.get_children():
+		if child is Area2D and child.has_signal(&"boss_defeated"):
+			return child as Area2D
+	return null
 
 
 func _get_formation_enemies(spawner: Node2D) -> Array[Area2D]:

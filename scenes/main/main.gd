@@ -14,6 +14,10 @@ const BOSS_HEALTH_STEP: float = 0.5
 ## Wave number (1-based) that is a peaceful bonus wave in every chapter.
 const BONUS_WAVE_NUMBER: int = 8
 const BONUS_DROP_COUNT: int = 8
+## Sector guardian (Etapa 15 T5): 0-based wave index 4 (wave 5 in every chapter).
+const GUARDIAN_WAVE_INDEX: int = 4
+const GUARDIAN_MAX_HEALTH: int = 80
+const GUARDIAN_POINTS: int = 500
 
 ## Seconds between rained loot drops in a bonus wave. Tests set it to 0.
 var bonus_drop_interval: float = 0.6
@@ -98,6 +102,7 @@ var _wave_is_clean: bool = true
 var _pending_wave_index: int = 0
 var _last_phrase_index: int = -1
 var _active_boss: Area2D = null
+var _active_guardian: Area2D = null
 
 var _game_layout: GameLayout = GameLayout.new()
 
@@ -655,12 +660,51 @@ func _on_wave_announcement_finished() -> void:
 	if wave == BONUS_WAVE_NUMBER:
 		_start_bonus_wave()
 		return
-	if _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
+	if _pending_wave_index == GUARDIAN_WAVE_INDEX:
+		# Guardian wave: the sector guardian replaces the formation for this wave.
+		_enemy_spawner.stop()
+		_enemy_spawner.clear_formation()
+		_start_guardian()
+	elif _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
 		_enemy_spawner.stop()
 		_enemy_spawner.clear_formation()
 		_asteroid_spawner.start_asteroid_wave(8)
 	else:
 		_enemy_spawner.start_wave(_pending_wave_index)
+
+
+## Spawns the sector guardian (no multi-phase). Wave 5 clears only when it falls.
+func _start_guardian() -> void:
+	var guardian: Area2D = BOSS_SCENE.instantiate() as Area2D
+	if guardian == null:
+		return
+	_active_guardian = guardian
+	guardian.global_position = Vector2(get_viewport().get_visible_rect().size.x * 0.5, -100.0)
+	guardian.max_health = GUARDIAN_MAX_HEALTH
+	guardian.multi_phase_enabled = false
+	guardian.health_changed.connect(_on_boss_health_changed)
+	guardian.boss_defeated.connect(_on_guardian_defeated)
+	guardian.boss_contacted_player.connect(_on_boss_contacted_player)
+	add_child(guardian)
+	_hud.show_boss_health_bar("GUARDIÁN DE SECTOR", GUARDIAN_MAX_HEALTH)
+
+
+## Guardian reward: points and a medallion drop, then the wave is cleared.
+func _on_guardian_defeated(guardian: Area2D) -> void:
+	if not _session_active:
+		return
+	_active_guardian = null
+	var explosion_pos: Vector2 = guardian.global_position
+	_visual_feedback.play_enemy_explosion(explosion_pos)
+	_visual_feedback.play_score_popup(explosion_pos, GUARDIAN_POINTS, true)
+	_camera.shake(6.0, 0.25)
+	_audio_feedback.play_enemy_explosion()
+	score += GUARDIAN_POINTS
+	_check_score_milestones()
+	_hud.set_score(score)
+	_hud.hide_boss_health_bar()
+	_spawn_loot(LootDrop.Type.MEDALLION_BLASTER, explosion_pos)
+	_on_wave_cleared(GUARDIAN_WAVE_INDEX)
 
 
 func _start_boss_battle() -> void:
@@ -804,6 +848,7 @@ func _clear_boss() -> void:
 	if is_instance_valid(_active_boss):
 		_active_boss.queue_free()
 	_active_boss = null
+	_active_guardian = null
 	for child: Node in get_children():
 		if child is Area2D and child.has_signal(&"boss_defeated"):
 			child.queue_free()
