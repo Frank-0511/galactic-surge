@@ -90,6 +90,9 @@ func _assert_chapter_structure_contract() -> bool:
 				push_error("Defeating the boss of chapter %d must complete the mission" % chapter_index)
 				passed = false
 
+	if not main.has_method("get_hyperspace_jump_count") or int(main.call("get_hyperspace_jump_count")) != TOTAL_CHAPTERS - 1:
+		push_error("Each chapter change must perform one hyperspace jump (%d expected)" % (TOTAL_CHAPTERS - 1))
+		passed = false
 	if chapter_speeds.size() == TOTAL_CHAPTERS:
 		for i: int in range(1, TOTAL_CHAPTERS):
 			if chapter_speeds[i] <= chapter_speeds[i - 1]:

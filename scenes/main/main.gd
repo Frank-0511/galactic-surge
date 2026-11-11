@@ -19,6 +19,7 @@ const BONUS_DROP_COUNT: int = 8
 var bonus_drop_interval: float = 0.6
 var _bonus_active: bool = false
 var _bonus_drops_spawned: int = 0
+var _hyperspace_jumps: int = 0
 const BOSS_POINTS: int = 3000
 const ASTEROID_WAVE_INDEX: int = 8
 const ASTEROID_LARGE_POINTS: int = 150
@@ -252,6 +253,7 @@ func _enter_main_menu() -> void:
 	wave = 1
 	_chapter = 1
 	_bonus_active = false
+	_hyperspace_jumps = 0
 	_session_active = false
 	_mission_complete = false
 	_wave_is_clean = true
@@ -732,6 +734,7 @@ func _on_boss_defeated(boss: Area2D) -> void:
 ## Starts the next chapter: waves restart at 1 after the chapter announcement.
 func _begin_next_chapter() -> void:
 	_chapter += 1
+	_perform_hyperspace_jump()
 	_session_state = SessionState.WAVE_TRANSITION
 	_enemy_spawner.stop()
 	_enemy_spawner.clear_formation()
@@ -772,6 +775,19 @@ func _run_bonus_wave() -> void:
 		return
 	_bonus_active = false
 	_on_wave_cleared(BONUS_WAVE_NUMBER - 1)
+
+
+## Cinematic jump between chapters: strong starfield warp plus camera trauma.
+func _perform_hyperspace_jump() -> void:
+	_hyperspace_jumps += 1
+	if _starfield != null and _starfield.has_method(&"trigger_warp_boost"):
+		_starfield.trigger_warp_boost(2.5, 18.0)
+	if _camera != null and _camera.has_method(&"add_trauma"):
+		_camera.add_trauma(0.5)
+
+
+func get_hyperspace_jump_count() -> int:
+	return _hyperspace_jumps
 
 
 func get_chapter() -> int:
@@ -879,6 +895,7 @@ func reset_session() -> void:
 	wave = 1
 	_chapter = 1
 	_bonus_active = false
+	_hyperspace_jumps = 0
 	_last_extra_life_threshold = 0
 	if _player != null and _player.has_method(&"set_weapon_level"):
 		_player.set_weapon_level(1)
