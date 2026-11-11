@@ -672,6 +672,8 @@ func _start_boss_battle() -> void:
 	_active_boss = boss
 	boss.global_position = Vector2(get_viewport().get_visible_rect().size.x * 0.5, -100.0)
 	boss.max_health = int(round(BOSS_BASE_HEALTH * (1.0 + BOSS_HEALTH_STEP * float(_chapter - 1))))
+	# Núcleo Blindado three-phase fight is reserved for the final chapter.
+	boss.multi_phase_enabled = _chapter == TOTAL_CHAPTERS
 	boss.health_changed.connect(_on_boss_health_changed)
 	boss.boss_defeated.connect(_on_boss_defeated)
 	boss.boss_contacted_player.connect(_on_boss_contacted_player)

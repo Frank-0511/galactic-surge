@@ -14,6 +14,9 @@ signal boss_defeated(boss: Area2D)
 ## Emitted when the boss makes direct physical contact with the player ship.
 signal boss_contacted_player(player: Node2D)
 
+## Emitted when the Núcleo Blindado moves to another armor phase (multi-phase mode only).
+signal armor_phase_changed(phase: int)
+
 ## Movement states for autonomous flight navigation.
 enum MovementState {
 	ENTERING,
@@ -23,6 +26,20 @@ enum MovementState {
 	DIVE_ASCENT,
 }
 
+## Núcleo Blindado armor phases, ordered from outer shell to exposed core.
+enum ArmorPhase {
+	EXTERIOR_ARMOR = 1,
+	SUBCORE = 2,
+	EXPOSED_CORE = 3,
+}
+
+## Subcore phase starts at or below this health percentage.
+const SUBCORE_THRESHOLD_PERCENT: int = 66
+## Exposed core phase starts at or below this health percentage.
+const EXPOSED_CORE_THRESHOLD_PERCENT: int = 33
+## Damage multiplier applied to every hit while the exposed core is vulnerable.
+const EXPOSED_CORE_DAMAGE_MULTIPLIER: float = 1.5
+
 ## Maximum health points.
 @export var max_health: int = 150
 
@@ -31,6 +48,9 @@ enum MovementState {
 
 ## Base hover elevation in cruise mode.
 @export var base_y: float = 140.0
+
+## Enables the three-phase Núcleo Blindado mode. Set by main.gd for chapter 3 only.
+var multi_phase_enabled: bool = false
 
 ## Current health points.
 var health: int = 150
@@ -57,6 +77,7 @@ var _telegraph_timer: float = 0.0
 var _dive_target: Vector2 = Vector2.ZERO
 var _shoot_cycle_phase1: int = 0
 var _shoot_cycle_phase2: int = 0
+var _armor_phase: ArmorPhase = ArmorPhase.EXTERIOR_ARMOR
 
 
 func _ready() -> void:
@@ -185,12 +206,36 @@ func get_movement_state() -> MovementState:
 	return _state
 
 
+## Returns the Núcleo Blindado phase. Without multi-phase mode the boss stays in the exterior phase.
+func get_armor_phase() -> ArmorPhase:
+	if not multi_phase_enabled:
+		return ArmorPhase.EXTERIOR_ARMOR
+	return _armor_phase_for_health(health)
+
+
+func _armor_phase_for_health(current: int) -> ArmorPhase:
+	# Integer comparison avoids float rounding at the exact thresholds.
+	if current * 100 <= max_health * EXPOSED_CORE_THRESHOLD_PERCENT:
+		return ArmorPhase.EXPOSED_CORE
+	if current * 100 <= max_health * SUBCORE_THRESHOLD_PERCENT:
+		return ArmorPhase.SUBCORE
+	return ArmorPhase.EXTERIOR_ARMOR
+
+
 func take_damage(amount: int = 1) -> void:
 	if _is_defeated:
 		return
-	health = maxi(0, health - amount)
+	var applied: int = amount
+	if get_armor_phase() == ArmorPhase.EXPOSED_CORE:
+		applied = int(round(float(amount) * EXPOSED_CORE_DAMAGE_MULTIPLIER))
+	health = maxi(0, health - applied)
 	current_health = health
 	_hit_flash_time = 0.12
+
+	var new_phase: ArmorPhase = get_armor_phase()
+	if new_phase != _armor_phase:
+		_armor_phase = new_phase
+		armor_phase_changed.emit(int(new_phase))
 
 	if health <= (max_health / 2) and not is_enraged:
 		is_enraged = true

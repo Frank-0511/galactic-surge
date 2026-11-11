@@ -9,6 +9,12 @@ const BOSS_DEFEAT_CHAPTER_SCORE: int = 3000
 const TOTAL_WAVES: int = 10
 const TOTAL_CHAPTERS: int = 3
 const BONUS_WAVE_NUMBER: int = 8
+const BOSS_SCENE_PATH := "res://scenes/entities/boss/boss.tscn"
+# Chapter 3 boss health (T1 scaling: 150 -> 225 -> 300).
+const BLINDADO_MAX_HEALTH: int = 300
+const ARMOR_PHASE_EXTERIOR: int = 1
+const ARMOR_PHASE_SUBCORE: int = 2
+const ARMOR_PHASE_EXPOSED_CORE: int = 3
 
 
 func _init() -> void:
@@ -19,6 +25,7 @@ func _run_contracts() -> void:
 	var passed: bool = true
 	passed = await _assert_chapter_structure_contract() and passed
 	passed = await _assert_bonus_wave_contract() and passed
+	passed = await _assert_blindado_core_contract() and passed
 	quit(0 if passed else 1)
 
 
@@ -76,6 +83,9 @@ func _assert_chapter_structure_contract() -> bool:
 			passed = false
 			break
 		chapter_boss_hp.append(int(boss.get("max_health")))
+		if (boss.get("multi_phase_enabled") == true) != (chapter_index == TOTAL_CHAPTERS):
+			push_error("Only chapter %d boss may enable the Núcleo Blindado phases" % TOTAL_CHAPTERS)
+			passed = false
 		boss.call("take_damage", int(boss.get("max_health")))
 		await process_frame
 		await process_frame
@@ -166,6 +176,93 @@ func _assert_bonus_wave_contract() -> bool:
 	root.remove_child(main)
 	main.free()
 	return passed
+
+
+# Núcleo Blindado (T4): with multi_phase_enabled the boss moves through three
+# armor phases by health threshold (exterior > 66%, subcore <= 66%, exposed core
+# <= 33%), and the exposed core takes more damage per hit. Without the flag the
+# boss keeps its chapter 1-2 behaviour: one phase and exact damage.
+func _assert_blindado_core_contract() -> bool:
+	var passed: bool = true
+	var boss_scene: PackedScene = load(BOSS_SCENE_PATH) as PackedScene
+	if boss_scene == null:
+		push_error("Missing scene: %s" % BOSS_SCENE_PATH)
+		return false
+
+	var boss: Area2D = _spawn_test_boss(boss_scene, true)
+	if boss == null or not boss.has_method("get_armor_phase"):
+		push_error("Boss must expose get_armor_phase() for the Núcleo Blindado")
+		if boss != null:
+			boss.free()
+		return false
+
+	var transitions: Array[int] = []
+	boss.connect(&"armor_phase_changed", func(phase: int) -> void: transitions.append(phase))
+
+	if int(boss.call("get_armor_phase")) != ARMOR_PHASE_EXTERIOR:
+		push_error("Núcleo Blindado must start in the exterior armor phase")
+		passed = false
+
+	# 300 -> 199 HP: still above 66%, exterior armor.
+	boss.call("take_damage", 101)
+	if int(boss.call("get_armor_phase")) != ARMOR_PHASE_EXTERIOR:
+		push_error("Exterior armor must hold above 66%% health (199/300)")
+		passed = false
+	# 198 HP: exactly 66%, subcore starts.
+	boss.call("take_damage", 1)
+	if int(boss.call("get_armor_phase")) != ARMOR_PHASE_SUBCORE:
+		push_error("Subcore phase must start at 66%% health (198/300)")
+		passed = false
+	# 100 HP: still above 33%, subcore.
+	boss.call("take_damage", 98)
+	if int(boss.call("get_armor_phase")) != ARMOR_PHASE_SUBCORE:
+		push_error("Subcore phase must hold above 33%% health (100/300)")
+		passed = false
+	# 99 HP: exactly 33%, exposed core starts.
+	boss.call("take_damage", 1)
+	if int(boss.call("get_armor_phase")) != ARMOR_PHASE_EXPOSED_CORE:
+		push_error("Exposed core phase must start at 33%% health (99/300)")
+		passed = false
+	if transitions != [ARMOR_PHASE_SUBCORE, ARMOR_PHASE_EXPOSED_CORE]:
+		push_error("armor_phase_changed must emit subcore then exposed core, got %s" % str(transitions))
+		passed = false
+
+	# Exposed core: a 10-damage hit removes 15 HP (1.5x).
+	boss.call("take_damage", 10)
+	var core_health: int = int(boss.get("health"))
+	if core_health != 84:
+		push_error("Exposed core must take 1.5x damage (expected 84 HP, got %d)" % core_health)
+		passed = false
+
+	# Same 10-damage hit in the exterior phase removes exactly 10 HP.
+	var exterior_boss: Area2D = _spawn_test_boss(boss_scene, true)
+	exterior_boss.call("take_damage", 10)
+	if int(exterior_boss.get("health")) != BLINDADO_MAX_HEALTH - 10:
+		push_error("Exterior armor must take exact damage (expected 290 HP)")
+		passed = false
+
+	# Chapter 1-2 behaviour: flag off means one phase and exact damage even at low HP.
+	var plain_boss: Area2D = _spawn_test_boss(boss_scene, false)
+	plain_boss.call("take_damage", BLINDADO_MAX_HEALTH - 50)
+	if int(plain_boss.call("get_armor_phase")) != ARMOR_PHASE_EXTERIOR:
+		push_error("Boss without multi_phase_enabled must stay in one phase")
+		passed = false
+	if int(plain_boss.get("health")) != 50:
+		push_error("Boss without multi_phase_enabled must take exact damage (expected 50 HP)")
+		passed = false
+
+	for node: Area2D in [boss, exterior_boss, plain_boss]:
+		root.remove_child(node)
+		node.free()
+	return passed
+
+
+func _spawn_test_boss(boss_scene: PackedScene, multi_phase: bool) -> Area2D:
+	var boss: Area2D = boss_scene.instantiate() as Area2D
+	boss.max_health = BLINDADO_MAX_HEALTH
+	boss.set("multi_phase_enabled", multi_phase)
+	root.add_child(boss)
+	return boss
 
 
 func _wait_for_bonus(main: Node2D) -> void:
