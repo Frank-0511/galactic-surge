@@ -53,19 +53,6 @@ func play_extra_life_alert(position: Vector2) -> void:
 
 
 
-## Full-screen mint flash with a label, used when an antimatter charge detonates.
-func play_antimatter_blast() -> void:
-	var blast: ColorRect = ColorRect.new()
-	blast.color = Color(0.5, 1.0, 0.7, 0.55)
-	blast.set_anchors_preset(Control.PRESET_FULL_RECT)
-	blast.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	$DamageFlashLayer.add_child(blast)
-	var tween: Tween = create_tween()
-	tween.tween_property(blast, "modulate:a", 0.0, 0.5)
-	tween.tween_callback(blast.queue_free)
-	play_text_popup(get_viewport_rect().size * 0.5, "ANTIMATERIA", Color(0.5, 1.0, 0.7))
-
-
 func play_damage_flash() -> void:
 	if is_instance_valid(_flash_tween):
 		_flash_tween.kill()

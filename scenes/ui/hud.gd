@@ -1,6 +1,6 @@
 # hud.gd
 # Displays player lives, score, wave, boss health bar,
-# barrel overheat status, active combo multipliers, and the plasma meter.
+# barrel overheat status, and active combo multipliers.
 # Emits semantic signals for player retries and menu navigation.
 
 extends CanvasLayer
@@ -40,18 +40,14 @@ var _current_weapon_level: int = 1
 var _current_weapon_type: int = 0
 var _heat_fill_style: StyleBoxFlat = null
 var _overheat_pulse_time: float = 0.0
-var _plasma_label: Label = null
-var _plasma_bar: ProgressBar = null
 
 
 func _ready() -> void:
 	_init_styles()
-	_build_plasma_meter()
 	set_active_weapon(_current_weapon_type)
 	set_weapon_level(1, 0)
 	set_heat(0.0, 100.0, false)
 	set_combo(1, 0, 0.0)
-	set_plasma(0, 50, 0)
 
 
 func _process(delta: float) -> void:
@@ -160,39 +156,6 @@ func update_boss_health(current: int, max_health: int) -> void:
 
 func hide_boss_health_bar() -> void:
 	_boss_container.visible = false
-
-
-## Bottom-left meter for plasma cells collected toward the next antimatter
-## charge, plus the number of charges ready to detonate.
-func set_plasma(cells: int, per_charge: int, charges: int) -> void:
-	if _plasma_bar == null or _plasma_label == null:
-		return
-	_plasma_bar.max_value = per_charge
-	_plasma_bar.value = cells
-	_plasma_label.text = "Plasma: %d/%d   Antimateria: %d" % [cells, per_charge, charges]
-
-
-func _build_plasma_meter() -> void:
-	var container: Control = Control.new()
-	container.name = "PlasmaContainer"
-	container.anchor_top = 1.0
-	container.anchor_bottom = 1.0
-	container.offset_left = 16.0
-	container.offset_top = -72.0
-	container.offset_right = 296.0
-	container.offset_bottom = -16.0
-	add_child(container)
-
-	_plasma_label = Label.new()
-	_plasma_label.name = "PlasmaLabel"
-	container.add_child(_plasma_label)
-
-	_plasma_bar = ProgressBar.new()
-	_plasma_bar.name = "PlasmaBar"
-	_plasma_bar.show_percentage = false
-	_plasma_bar.position = Vector2(0.0, 28.0)
-	_plasma_bar.size = Vector2(280.0, 14.0)
-	container.add_child(_plasma_bar)
 
 
 func set_lives(lives: int) -> void:
