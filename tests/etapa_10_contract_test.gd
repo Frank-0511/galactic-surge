@@ -24,6 +24,8 @@ func _run_contracts() -> void:
 	var loot_contract_passed: bool = await _assert_loot_contract()
 	var player_dilemma_passed: bool = await _assert_player_dilemma_contract()
 	var firing_patterns_passed: bool = await _assert_firing_patterns_contract()
+	var blaster_coverage_passed: bool = await _assert_blaster_lateral_coverage_contract()
+	var laser_high_level_passed: bool = await _assert_laser_high_level_power_contract()
 	var hud_contract_passed: bool = await _assert_hud_contract()
 	var extra_life_passed: bool = await _assert_extra_life_contract()
 	var main_integration_passed: bool = await _assert_main_integration_contract()
@@ -32,6 +34,8 @@ func _run_contracts() -> void:
 		loot_contract_passed
 		and player_dilemma_passed
 		and firing_patterns_passed
+		and blaster_coverage_passed
+		and laser_high_level_passed
 		and hud_contract_passed
 		and extra_life_passed
 		and main_integration_passed
@@ -327,6 +331,127 @@ func _assert_firing_patterns_contract() -> bool:
 			push_error("Missile L%d cooldown expected %f, got %f" % [lvl, float(cooldown_expected[lvl]), cooldown_timer.wait_time])
 			passed = false
 		_cleanup_bullets()
+
+	player.queue_free()
+	await process_frame
+	return passed
+
+
+# ---------------------------------------------------------------------------
+# 3b. Ion Blaster lateral coverage (high levels) and Laser power above L10
+# ---------------------------------------------------------------------------
+
+## Public metric: horizontal position of a projectile after 300 px of vertical travel.
+## Projectiles move along (sin(a), -cos(a)), so x300 = offset_x + 300 * tan(a).
+const COVERAGE_TRAVEL_PX: float = 300.0
+const CENTER_BAND_PX: float = 40.0
+
+
+## Fires one blaster volley and returns [x300, angle_deg] per projectile, relative to the ship.
+func _collect_blaster_volley(player: CharacterBody2D) -> Array[Vector2]:
+	var pre_children: Array[Node] = root.get_children()
+	player.simulate_shot()
+	var volley: Array[Vector2] = []
+	for child: Node in root.get_children():
+		if child in pre_children or not (child is Area2D):
+			continue
+		var dir: Vector2 = child.get("direction") as Vector2
+		var offset_x: float = (child as Area2D).global_position.x - player.global_position.x
+		var tan_angle: float = dir.x / maxf(-dir.y, 0.0001)
+		var x300: float = offset_x + COVERAGE_TRAVEL_PX * tan_angle
+		volley.append(Vector2(x300, rad_to_deg(atan2(dir.x, -dir.y))))
+		child.free()
+	return volley
+
+
+func _assert_blaster_lateral_coverage_contract() -> bool:
+	var packed: PackedScene = load(PLAYER_PATH) as PackedScene
+	var player: CharacterBody2D = packed.instantiate() as CharacterBody2D
+	root.add_child(player)
+	await process_frame
+	player.global_position = Vector2(500.0, 800.0)
+	player.set_weapon(0) # BLASTER
+
+	var passed: bool = true
+	# Level -> [expected shots, minimum |x300| required on each side]
+	var cases: Dictionary = {10: [10, 140.0], 15: [15, 180.0]}
+	for lvl: int in [10, 15]:
+		var expected_count: int = int(cases[lvl][0])
+		var min_side: float = float(cases[lvl][1])
+		player.set_weapon_level(lvl)
+		var volley: Array[Vector2] = _collect_blaster_volley(player)
+		if volley.size() != expected_count:
+			push_error("Blaster L%d coverage: expected %d shots, got %d" % [lvl, expected_count, volley.size()])
+			passed = false
+			continue
+
+		var center_count: int = 0
+		var max_left: float = 0.0
+		var max_right: float = 0.0
+		var max_angle: float = 0.0
+		var xs: Array[float] = []
+		for shot: Vector2 in volley:
+			if absf(shot.x) <= CENTER_BAND_PX:
+				center_count += 1
+			max_left = minf(max_left, shot.x)
+			max_right = maxf(max_right, shot.x)
+			max_angle = maxf(max_angle, absf(shot.y))
+			xs.append(shot.x)
+
+		var center_share: float = float(center_count) / float(expected_count)
+		if center_share > 0.35 + 0.0001:
+			push_error("Blaster L%d: at most 35%% of shots may be central (|x300| <= 40), got %d of %d" % [lvl, center_count, expected_count])
+			passed = false
+		if absf(max_left) < min_side or max_right < min_side:
+			push_error("Blaster L%d: needs shots on both sides with |x300| >= %.0f (left %.1f, right %.1f)" % [lvl, min_side, max_left, max_right])
+			passed = false
+		if max_angle > 45.0 + 0.001:
+			push_error("Blaster L%d: max angle must be <= 45 deg, got %.2f" % [lvl, max_angle])
+			passed = false
+
+		# Mirror symmetry: sorted x300 values must equal their negated reversed list.
+		xs.sort()
+		for i: int in range(xs.size()):
+			if absf(xs[i] + xs[xs.size() - 1 - i]) > 0.5:
+				push_error("Blaster L%d: pattern must be mirror-symmetric (x300 %.1f vs %.1f)" % [lvl, xs[i], xs[xs.size() - 1 - i]])
+				passed = false
+				break
+
+	player.queue_free()
+	await process_frame
+	return passed
+
+
+func _assert_laser_high_level_power_contract() -> bool:
+	var packed: PackedScene = load(PLAYER_PATH) as PackedScene
+	var player: CharacterBody2D = packed.instantiate() as CharacterBody2D
+	root.add_child(player)
+	await process_frame
+	player.set_weapon(2) # LASER
+
+	var passed: bool = true
+	var expected_dps: Dictionary = {9: 18.5, 10: 20.5, 11: 25.0, 15: 43.0}
+	var widths: Dictionary = {}
+	for lvl: int in [9, 10, 11, 15]:
+		player.set_weapon_level(lvl)
+		var beam: Area2D = player.call(&"_ensure_laser_beam") as Area2D
+		if beam == null:
+			push_error("Laser beam missing at L%d" % lvl)
+			passed = false
+			break
+		var dps: float = float(beam.get("damage_per_second"))
+		widths[lvl] = float(beam.get("beam_width"))
+		if absf(dps - float(expected_dps[lvl])) > 0.001:
+			push_error("Laser L%d DPS expected %.2f, got %.2f" % [lvl, float(expected_dps[lvl]), dps])
+			passed = false
+
+	if widths.has(15) and widths.has(10):
+		if float(widths[15]) <= float(widths[10]):
+			push_error("Laser L15 beam_width must exceed L10 (L15 %.2f, L10 %.2f)" % [float(widths[15]), float(widths[10])])
+			passed = false
+		if absf(float(widths[15]) - 38.8) > 0.001:
+			push_error("Laser L15 beam_width expected 38.8, got %.2f" % float(widths[15]))
+			passed = false
 
 	player.queue_free()
 	await process_frame
