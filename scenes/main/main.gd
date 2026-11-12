@@ -8,7 +8,32 @@ const STARTING_LIVES: int = 3
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 10
+const TOTAL_CHAPTERS: int = 3
+const BOSS_BASE_HEALTH: int = 150
+const BOSS_HEALTH_STEP: float = 0.5
+## Wave number (1-based) that is a peaceful bonus wave in every chapter.
+const BONUS_WAVE_NUMBER: int = 8
+const BONUS_DROP_COUNT: int = 8
+## Wave-cleared feedback (Etapa 15 T6): invulnerability grace and camera zoom pulse.
+const WAVE_CLEARED_INVULNERABILITY: float = 1.75
+const CAMERA_ZOOM_PULSE: float = 1.15
+const CAMERA_ZOOM_IN_DURATION: float = 0.35
+const CAMERA_ZOOM_OUT_DURATION: float = 0.8
+
+## Seconds between rained loot drops in a bonus wave. Tests set it to 0.
+var bonus_drop_interval: float = 0.6
+var _bonus_active: bool = false
+var _bonus_drops_spawned: int = 0
+var _hyperspace_jumps: int = 0
 const BOSS_POINTS: int = 3000
+## Boss per chapter (Etapa 15 T7): index 0 is chapter 1.
+const BOSS_VARIANTS_BY_CHAPTER: Array[StringName] = [&"nexus", &"espectro", &"blindado"]
+const BOSS_NAMES_BY_CHAPTER: Array[String] = ["NAVE NODRIZA NEXUS", "CRUCERO ESPECTRO", "NÚCLEO BLINDADO"]
+const ARMOR_PHASE_SUBCORE: int = 2
+const ARMOR_PHASE_EXPOSED_CORE: int = 3
+const ARMOR_BROKEN_TEXT: String = "ARMADURA EXTERIOR ROTA"
+const CORE_EXPOSED_TEXT: String = "NÚCLEO EXPUESTO"
+const ARMOR_PHASE_CHANGE_TRAUMA: float = 0.35
 const ASTEROID_WAVE_INDEX: int = 8
 const ASTEROID_LARGE_POINTS: int = 150
 const ASTEROID_MEDIUM_POINTS: int = 75
@@ -35,7 +60,7 @@ const _RADAR_PHRASES: Array[String] = [
 	"INCURSIÓN ESTELAR INMINENTE",
 ]
 
-enum SessionState { MAIN_MENU, PLAYING, PAUSED, WAVE_TRANSITION, BOSS_BATTLE, GAME_OVER, MISSION_COMPLETE }
+enum SessionState { MAIN_MENU, PLAYING, PAUSED, WAVE_TRANSITION, BOSS_BATTLE, GAME_OVER, MISSION_COMPLETE, BONUS_WAVE }
 
 ## Bullet scene to provide to the player.
 var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tscn")
@@ -59,6 +84,9 @@ var lives: int = STARTING_LIVES
 var score: int = 0
 var wave: int = 1
 
+## Current campaign chapter (1-based). Each chapter is TOTAL_WAVES waves plus a boss.
+var _chapter: int = 1
+
 ## Best score ever reached, loaded on startup and persisted to disk.
 var _high_score: int = 0
 var _last_extra_life_threshold: int = 0
@@ -81,8 +109,11 @@ var _session_active: bool = false
 var _mission_complete: bool = false
 var _wave_is_clean: bool = true
 var _pending_wave_index: int = 0
+## True while the boss of the current chapter is the next encounter (not a regular wave).
+var _boss_pending: bool = false
 var _last_phrase_index: int = -1
 var _active_boss: Area2D = null
+var _zoom_tween: Tween = null
 
 var _game_layout: GameLayout = GameLayout.new()
 
@@ -210,6 +241,8 @@ func _enter_main_menu() -> void:
 	_enemy_spawner.clear_formation()
 	_clear_boss()
 	_clear_combat_transients()
+	_reset_wave_cleared_feedback()
+	_boss_pending = false
 	_visual_feedback.clear_effects()
 	_wave_announcement.cancel_announcement()
 	_pending_wave_index = 0
@@ -236,6 +269,9 @@ func _enter_main_menu() -> void:
 	lives = STARTING_LIVES
 	score = 0
 	wave = 1
+	_chapter = 1
+	_bonus_active = false
+	_hyperspace_jumps = 0
 	_session_active = false
 	_mission_complete = false
 	_wave_is_clean = true
@@ -588,6 +624,16 @@ func _on_loot_collected(loot_type: int) -> void:
 
 
 
+## Wave number within the current chapter (1-based, 1-10) from the global wave number.
+func _local_wave(global_wave: int) -> int:
+	return (global_wave - 1) % TOTAL_WAVES + 1
+
+
+## Wave index within the current chapter (0-based, 0-9) from a global 0-based index.
+func _local_index(global_index: int) -> int:
+	return global_index % TOTAL_WAVES
+
+
 func _on_wave_cleared(_wave_index: int) -> void:
 	if not _session_active:
 		return
@@ -598,20 +644,21 @@ func _on_wave_cleared(_wave_index: int) -> void:
 		_check_score_milestones()
 		_hud.set_score(score)
 		_visual_feedback.play_score_popup(_player.global_position + Vector2(0, -50), CLEAN_WAVE_BONUS, true)
-	if wave >= TOTAL_WAVES:
+	if _local_wave(wave) >= TOTAL_WAVES:
 		# Transition to Boss encounter instead of completing mission directly
 		_session_state = SessionState.WAVE_TRANSITION
 		_enemy_spawner.stop()
-		_pending_wave_index = TOTAL_WAVES
+		_boss_pending = true
 		_audio_feedback.stop_combat_music()
-		_wave_announcement.show_announcement(TOTAL_WAVES + 1, "¡AMENAZA COLOSAL DETECTADA!")
+		_wave_announcement.show_announcement(wave + 1, "¡AMENAZA COLOSAL DETECTADA!")
 		return
+	_show_wave_cleared_feedback()
 	# Enter wave transition instead of starting the next wave immediately.
 	_session_state = SessionState.WAVE_TRANSITION
 	_enemy_spawner.stop()
 	_pending_wave_index = wave
 	var phrase: String = _pick_radar_phrase()
-	if _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
+	if _local_index(_pending_wave_index) == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
 		phrase = "¡ALERTA: CINTURÓN DE ASTEROIDES INMINENTE!"
 		if _audio_feedback != null and _audio_feedback.has_method(&"play_asteroid_warning"):
 			_audio_feedback.play_asteroid_warning()
@@ -622,10 +669,36 @@ func _on_wave_cleared(_wave_index: int) -> void:
 	_wave_announcement.show_announcement(wave + 1, phrase)
 
 
+## Wave-cleared feedback (Etapa 15 T6): banner, camera zoom pulse, and a short
+## invulnerability grace period for the player.
+func _show_wave_cleared_feedback() -> void:
+	_hud.show_wave_cleared_banner()
+	_player.grant_invulnerability(WAVE_CLEARED_INVULNERABILITY)
+	if _camera == null:
+		return
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	_camera.zoom = Vector2.ONE
+	_zoom_tween = create_tween()
+	_zoom_tween.tween_property(_camera, "zoom", Vector2.ONE * CAMERA_ZOOM_PULSE, CAMERA_ZOOM_IN_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_zoom_tween.tween_property(_camera, "zoom", Vector2.ONE, CAMERA_ZOOM_OUT_DURATION).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+## Stops the zoom pulse, returns the camera to its base zoom, and hides the banner.
+func _reset_wave_cleared_feedback() -> void:
+	if _zoom_tween != null and _zoom_tween.is_valid():
+		_zoom_tween.kill()
+	_zoom_tween = null
+	if _camera != null:
+		_camera.zoom = Vector2.ONE
+	_hud.hide_wave_cleared_banner()
+
+
 func _on_wave_announcement_finished() -> void:
 	if _session_state != SessionState.WAVE_TRANSITION or not _session_active:
 		return
-	if _pending_wave_index >= TOTAL_WAVES:
+	if _boss_pending:
+		_boss_pending = false
 		_start_boss_battle()
 		return
 	wave = _pending_wave_index + 1
@@ -633,12 +706,16 @@ func _on_wave_announcement_finished() -> void:
 	_hud.set_wave(wave)
 	_update_hud()
 	_session_state = SessionState.PLAYING
-	if _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
+	_enemy_spawner.difficulty_level = _chapter
+	if _local_wave(wave) == BONUS_WAVE_NUMBER:
+		_start_bonus_wave()
+		return
+	if _local_index(_pending_wave_index) == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
 		_enemy_spawner.stop()
 		_enemy_spawner.clear_formation()
 		_asteroid_spawner.start_asteroid_wave(8)
 	else:
-		_enemy_spawner.start_wave(_pending_wave_index)
+		_enemy_spawner.start_wave(_local_index(_pending_wave_index), _pending_wave_index)
 
 
 func _start_boss_battle() -> void:
@@ -649,12 +726,18 @@ func _start_boss_battle() -> void:
 		return
 	_active_boss = boss
 	boss.global_position = Vector2(get_viewport().get_visible_rect().size.x * 0.5, -100.0)
+	boss.max_health = int(round(BOSS_BASE_HEALTH * (1.0 + BOSS_HEALTH_STEP * float(_chapter - 1))))
+	var chapter_index: int = clampi(_chapter - 1, 0, TOTAL_CHAPTERS - 1)
+	boss.boss_variant = BOSS_VARIANTS_BY_CHAPTER[chapter_index]
+	# Núcleo Blindado three-phase fight is reserved for the final chapter.
+	boss.multi_phase_enabled = _chapter == TOTAL_CHAPTERS
+	boss.armor_phase_changed.connect(_on_boss_armor_phase_changed)
 	boss.health_changed.connect(_on_boss_health_changed)
 	boss.boss_defeated.connect(_on_boss_defeated)
 	boss.boss_contacted_player.connect(_on_boss_contacted_player)
 	add_child(boss)
 	var max_hp: int = int(boss.get("max_health")) if "max_health" in boss else 150
-	_hud.show_boss_health_bar("NAVE NODRIZA NEXUS", max_hp)
+	_hud.show_boss_health_bar(BOSS_NAMES_BY_CHAPTER[chapter_index], max_hp)
 	_audio_feedback.stop_combat_music()
 	_audio_feedback.start_boss_music()
 
@@ -662,6 +745,19 @@ func _start_boss_battle() -> void:
 func _on_boss_health_changed(current: int, max_hp: int) -> void:
 	_hud.update_boss_health(current, max_hp)
 	_camera.shake(4.0, 0.15)
+
+
+## Núcleo Blindado armor phase change: camera shake and a short on-screen message.
+func _on_boss_armor_phase_changed(phase: int) -> void:
+	if not _session_active:
+		return
+	if phase != ARMOR_PHASE_SUBCORE and phase != ARMOR_PHASE_EXPOSED_CORE:
+		return
+	var text: String = ARMOR_BROKEN_TEXT if phase == ARMOR_PHASE_SUBCORE else CORE_EXPOSED_TEXT
+	if _camera != null and _camera.has_method(&"add_trauma"):
+		_camera.add_trauma(ARMOR_PHASE_CHANGE_TRAUMA)
+	if _visual_feedback != null and _active_boss != null:
+		_visual_feedback.play_text_popup(_active_boss.global_position + Vector2(0, -60), text, Color(1.0, 0.75, 0.25))
 
 
 func _on_boss_contacted_player(player: Node2D) -> void:
@@ -702,7 +798,78 @@ func _on_boss_defeated(boss: Area2D) -> void:
 	_audio_feedback.stop_boss_music()
 	_hud.hide_boss_health_bar()
 	_active_boss = null
-	_complete_mission()
+	if _chapter < TOTAL_CHAPTERS:
+		_begin_next_chapter()
+	else:
+		_complete_mission()
+
+
+## Starts the next chapter: waves restart at 1 after the chapter announcement.
+func _begin_next_chapter() -> void:
+	_chapter += 1
+	_perform_hyperspace_jump()
+	_session_state = SessionState.WAVE_TRANSITION
+	_enemy_spawner.stop()
+	_enemy_spawner.clear_formation()
+	# Wave numbering is global: the next chapter continues after the boss wave.
+	_pending_wave_index = wave
+	_wave_is_clean = true
+	_wave_announcement.show_announcement(wave + 1, "¡CAPÍTULO %d INICIADO!" % _chapter)
+
+
+func is_bonus_wave_active() -> bool:
+	return _bonus_active
+
+
+func get_bonus_drops_spawned() -> int:
+	return _bonus_drops_spawned
+
+
+## Peaceful wave: no fighters, loot rains down, then the wave is cleared.
+func _start_bonus_wave() -> void:
+	_enemy_spawner.stop()
+	_enemy_spawner.clear_formation()
+	_bonus_active = true
+	_bonus_drops_spawned = 0
+	_session_state = SessionState.BONUS_WAVE
+	_run_bonus_wave()
+
+
+func _run_bonus_wave() -> void:
+	var vp_width: float = get_viewport().get_visible_rect().size.x
+	for _i: int in range(BONUS_DROP_COUNT):
+		await get_tree().create_timer(bonus_drop_interval).timeout
+		if not _session_active or not _bonus_active:
+			return
+		var loot_types: Array[int] = [LootDrop.Type.MEDALLION_BLASTER, LootDrop.Type.MEDALLION_MISSILE, LootDrop.Type.MEDALLION_LASER, LootDrop.Type.POWER_ATOM]
+		_spawn_loot(loot_types[randi() % loot_types.size()], Vector2(randf_range(60.0, vp_width - 60.0), -20.0))
+		_bonus_drops_spawned += 1
+	await get_tree().create_timer(bonus_drop_interval).timeout
+	if not _session_active or not _bonus_active:
+		return
+	_bonus_active = false
+	_on_wave_cleared(BONUS_WAVE_NUMBER - 1)
+
+
+## Cinematic jump between chapters: strong starfield warp plus camera trauma.
+func _perform_hyperspace_jump() -> void:
+	_hyperspace_jumps += 1
+	if _starfield != null and _starfield.has_method(&"trigger_warp_boost"):
+		_starfield.trigger_warp_boost(2.5, 18.0)
+	if _camera != null and _camera.has_method(&"add_trauma"):
+		_camera.add_trauma(0.5)
+
+
+func get_hyperspace_jump_count() -> int:
+	return _hyperspace_jumps
+
+
+func get_chapter() -> int:
+	return _chapter
+
+
+func get_total_chapters() -> int:
+	return TOTAL_CHAPTERS
 
 
 func _clear_boss() -> void:
@@ -774,7 +941,9 @@ func reset_session() -> void:
 		_asteroid_spawner.clear_asteroids()
 	if _camera != null and _camera.has_method(&"reset_shake"):
 		_camera.reset_shake()
+	_reset_wave_cleared_feedback()
 	_clear_boss()
+	_boss_pending = false
 	_clear_combat_transients()
 	_visual_feedback.clear_effects()
 	_wave_announcement.cancel_announcement()
@@ -800,6 +969,9 @@ func reset_session() -> void:
 	lives = STARTING_LIVES
 	score = 0
 	wave = 1
+	_chapter = 1
+	_bonus_active = false
+	_hyperspace_jumps = 0
 	_last_extra_life_threshold = 0
 	if _player != null and _player.has_method(&"set_weapon_level"):
 		_player.set_weapon_level(1)

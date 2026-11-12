@@ -347,15 +347,27 @@ func _assert_mission_complete_contract() -> bool:
 			for wave_index: int in TOTAL_WAVES:
 				await _clear_current_wave(main)
 				await _finish_wave_transition(main)
-			# In Etapa 5+, defeat the boss if present to reach mission complete.
+			# Etapa 15: each of the 3 chapters is 10 waves plus its boss; mission completes after the last boss.
+			for chapter_index: int in range(1, 3):
+				for child: Node in main.get_children():
+					if child is Area2D and child.has_method("take_damage"):
+						var boss_hp: int = int(child.get("health")) if "health" in child else 150
+						child.call("take_damage", boss_hp)
+						await process_frame
+						await process_frame
+						break
+				await _finish_wave_transition(main)
+				for wave_index: int in TOTAL_WAVES:
+					await _clear_current_wave(main)
+					await _finish_wave_transition(main)
 			for child: Node in main.get_children():
 				if child is Area2D and child.has_method("take_damage"):
-					var boss_hp: int = int(child.get("health")) if "health" in child else 150
-					child.call("take_damage", boss_hp)
+					var final_hp: int = int(child.get("health")) if "health" in child else 150
+					child.call("take_damage", final_hp)
 					await process_frame
 					await process_frame
 					break
-			# After 5 waves and boss battle, mission must be complete.
+			# After 3 chapters and their bosses, mission must be complete.
 			if not main.has_method("is_mission_complete") or not main.is_mission_complete():
 				push_error("Main must report mission complete after clearing all waves")
 				passed = false
@@ -523,6 +535,13 @@ func _clear_asteroid_wave(main: Node2D) -> void:
 		await process_frame
 
 
+func _find_boss(main: Node2D) -> Area2D:
+	for child: Node in main.get_children():
+		if child is Area2D and child.has_signal(&"boss_defeated"):
+			return child as Area2D
+	return null
+
+
 func _get_formation_enemies(spawner: Node2D) -> Array[Area2D]:
 	var enemies: Array[Area2D] = []
 	for child: Node in spawner.get_children():
@@ -540,6 +559,7 @@ func _set_zero_display_duration(main: Node2D) -> void:
 		main.set("enemy_drop_chance", 0.0)
 	if "clear_wave_drop_chance" in main:
 		main.set("clear_wave_drop_chance", 0.0)
+	main.set("bonus_drop_interval", 0.0)
 	if "enemy_loot_drop_chance" in main:
 		main.set("enemy_loot_drop_chance", 0.0)
 
@@ -549,3 +569,8 @@ func _finish_wave_transition(main: Node2D) -> void:
 	await process_frame
 	await process_frame
 	await process_frame
+	# Etapa 15: wave 8 is a peaceful bonus that runs on its own; wait for it to end.
+	for _frame: int in range(400):
+		if not main.has_method("is_bonus_wave_active") or not main.is_bonus_wave_active():
+			return
+		await process_frame

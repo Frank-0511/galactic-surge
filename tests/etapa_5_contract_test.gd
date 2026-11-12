@@ -404,6 +404,7 @@ func _assert_main_boss_integration_contract() -> bool:
 		main.set("enemy_drop_chance", 0.0)
 	if "clear_wave_drop_chance" in main:
 		main.set("clear_wave_drop_chance", 0.0)
+	main.set("bonus_drop_interval", 0.0)
 
 	# Fast-forward clearing waves 1 to 5.
 	for wave_index: int in TOTAL_WAVES:
@@ -457,8 +458,28 @@ func _assert_main_boss_integration_contract() -> bool:
 		await process_frame
 		await process_frame
 
+		# Etapa 15: defeating the chapter 1 Boss starts chapter 2; mission completes only after chapter 3.
+		if main.is_mission_complete():
+			push_error("Defeating the chapter 1 Boss must NOT complete the mission")
+			passed = false
+		for chapter_index: int in range(2):
+			await _finish_wave_transition(main)
+			for wave_index: int in TOTAL_WAVES:
+				await _clear_current_wave(main)
+				await _finish_wave_transition(main)
+			var next_boss: Area2D = null
+			for child: Node in main.get_children():
+				if child is Area2D and child.has_signal(&"boss_defeated"):
+					next_boss = child as Area2D
+			if next_boss == null:
+				push_error("Chapter %d must spawn its Boss" % (chapter_index + 2))
+				passed = false
+				break
+			next_boss.call("take_damage", int(next_boss.get("max_health")))
+			await process_frame
+			await process_frame
 		if not main.has_method("is_mission_complete") or not main.is_mission_complete():
-			push_error("Defeating the Boss must trigger mission complete")
+			push_error("Defeating the last Boss must trigger mission complete")
 			passed = false
 
 		if main.score - score_before_defeat < BOSS_DEFEAT_SCORE:
@@ -499,6 +520,13 @@ func _clear_current_wave(main: Node2D) -> void:
 # Destroys every asteroid and fragment of the belt wave until the spawner reports
 # completion. Spawn timing uses wall-clock delta, so the timer is forced to 0 on
 # each frame to spawn pending asteroids without waiting.
+func _find_boss(main: Node2D) -> Area2D:
+	for child: Node in main.get_children():
+		if child is Area2D and child.has_signal(&"boss_defeated"):
+			return child as Area2D
+	return null
+
+
 func _clear_asteroid_wave(main: Node2D) -> void:
 	var asteroid_spawner: Node2D = main.call("get_asteroid_spawner") as Node2D
 	if asteroid_spawner == null:
@@ -517,3 +545,8 @@ func _finish_wave_transition(main: Node2D) -> void:
 	await process_frame
 	await process_frame
 	await process_frame
+	# Etapa 15: wave 8 is a peaceful bonus that runs on its own; wait for it to end.
+	for _frame: int in range(400):
+		if not main.has_method("is_bonus_wave_active") or not main.is_bonus_wave_active():
+			return
+		await process_frame

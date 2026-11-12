@@ -23,9 +23,9 @@ signal warning_requested(duration: float, message: String)
 
 @export var asteroid_scene: PackedScene = preload("res://scenes/entities/asteroid/asteroid.tscn")
 @export var wave_asteroid_count: int = 8
-@export var spawn_interval: float = 1.0
-@export var min_speed: float = 85.0
-@export var max_speed: float = 175.0
+@export var spawn_interval: float = 1.5
+@export var min_speed: float = 60.0
+@export var max_speed: float = 120.0
 @export var loot_chance: float = 0.50
 
 var _active_asteroids: Array[Area2D] = []
@@ -110,7 +110,7 @@ func _spawn_random_large_asteroid() -> void:
 	var spawn_x: float = randf_range(80.0, vp_width - 80.0)
 	var spawn_pos: Vector2 = Vector2(spawn_x, -70.0)
 	var speed: float = randf_range(min_speed, max_speed)
-	var drift: float = randf_range(-35.0, 35.0)
+	var drift: float = randf_range(-10.0, 10.0)
 	var vel: Vector2 = Vector2(drift, speed)
 
 	var ast: Area2D = spawn_asteroid(0, spawn_pos, vel) # 0 = Size.LARGE

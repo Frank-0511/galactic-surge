@@ -143,6 +143,8 @@ var _is_running: bool = false
 var _is_flying_in: bool = false
 var _flying_in_count: int = 0
 var _current_wave: int = 0
+## Config in effect for the running wave (scaled for waves past chapter 1).
+var _current_config: Dictionary = {}
 var _alive_count: int = 0
 var _wave_cleared_emitted: bool = false
 var _formation_origin: Vector2 = Vector2.ZERO
@@ -274,7 +276,7 @@ func spawn_formation() -> void:
 	_is_enraged = false
 	_dive_cooldown_timer = 3.5
 
-	var wave_config: Dictionary = get_wave_config(_current_wave)
+	var wave_config: Dictionary = _current_config if not _current_config.is_empty() else get_wave_config(_current_wave)
 	var wave_variants: Dictionary = wave_config.get("variants", {}) if ENEMY_AI_ENABLED else {}
 	var variant_slots: Dictionary = assign_variant_slots(wave_variants, slots.size())
 	for i: int in range(slots.size()):
@@ -365,14 +367,49 @@ func get_wave_config(wave_index: int) -> Dictionary:
 	return config.duplicate()
 
 
-func start_wave(wave_index: int) -> void:
-	var config: Dictionary = get_wave_config(wave_index)
+## Waves past the first chapter (global index >= 10) start from the wave-10 configuration and
+## get one extra difficulty step per wave: faster formation and fire, capped columns.
+const GLOBAL_STEP_SPEED: float = 0.04
+const GLOBAL_STEP_FIRE: float = 0.02
+const MIN_FIRE_RATE_SCALE: float = 0.5
+
+
+## Returns the wave config for a local index (0-9) at a global wave index (0-29).
+## Chapter 1 returns the base config; later waves are harder than the previous one.
+func get_scaled_wave_config(local_index: int, global_index: int) -> Dictionary:
+	var config: Dictionary = get_wave_config(local_index)
+	if global_index < _WAVE_CONFIGS.size() or config.is_empty():
+		return config
+	var scaled: Dictionary = get_wave_config(_WAVE_CONFIGS.size() - 1)
+	var step: int = global_index - _WAVE_CONFIGS.size() + 1
+	# Keep the local wave's visual variety (formation and fly-in), harden the rest.
+	scaled["formation_type"] = config.get("formation_type", "grid")
+	scaled["fly_in_trajectory"] = config.get("fly_in_trajectory", "swoop_left")
+	scaled["formation_speed"] = float(scaled["formation_speed"]) * (1.0 + GLOBAL_STEP_SPEED * step)
+	scaled["fire_rate_scale"] = maxf(float(scaled["fire_rate_scale"]) - GLOBAL_STEP_FIRE * step, MIN_FIRE_RATE_SCALE)
+	scaled["columns"] = mini(int(scaled["columns"]), MAX_FORMATION_COLUMNS)
+	return scaled
+
+
+## Campaign chapter (1-based). Later chapters speed up formations and add one column per level above 1.
+var difficulty_level: int = 1
+const DIFFICULTY_SPEED_STEP: float = 0.15
+const MAX_FORMATION_COLUMNS: int = 8
+
+
+## wave_index is the local index (0-9); global_index (0-29, -1 = same as local) drives the
+## difficulty ramp across chapters.
+func start_wave(wave_index: int, global_index: int = -1) -> void:
+	var effective_global: int = global_index if global_index >= 0 else wave_index
+	var config: Dictionary = get_scaled_wave_config(wave_index, effective_global)
 	if config.is_empty():
 		return
 	_current_wave = wave_index
+	_current_config = config
+	var level_offset: int = maxi(difficulty_level - 1, 0)
 	rows = int(config["rows"])
-	columns = int(config["columns"])
-	formation_speed = float(config["formation_speed"])
+	columns = mini(int(config["columns"]) + level_offset, MAX_FORMATION_COLUMNS)
+	formation_speed = float(config["formation_speed"]) * (1.0 + DIFFICULTY_SPEED_STEP * level_offset)
 	_current_pattern_type = String(config.get("formation_type", "grid"))
 	_current_trajectory = String(config.get("fly_in_trajectory", "swoop_left"))
 	spawn_formation()

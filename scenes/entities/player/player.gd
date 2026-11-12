@@ -16,7 +16,7 @@ signal shot_fired(is_double_shot: bool)
 ## Emitted when active weapon changes (WeaponType enum value).
 signal weapon_changed(new_weapon: int)
 
-## Emitted when active weapon power level changes (1 to 10).
+## Emitted when active weapon power level changes (1 to 15).
 signal weapon_level_changed(new_level: int)
 
 ## Emitted when barrel heat changes.
@@ -33,10 +33,12 @@ enum WeaponType {
 }
 
 const WEAPON_COUNT: int = 3
-const MAX_WEAPON_LEVEL: int = 10
+const MAX_WEAPON_LEVEL: int = 15
+## Last level of the original calibration (heat curve, missile cooldown). Levels above it reuse its heat.
+const LEGACY_MAX_LEVEL: int = 10
 
-## Power level of the current weapon system (1 to 10).
-@export_range(1, 10) var weapon_level: int = 1
+## Power level of the current weapon system (1 to 15).
+@export_range(1, 15) var weapon_level: int = 1
 
 ## Horizontal movement speed in pixels per second.
 @export var speed: float = 400.0
@@ -105,7 +107,11 @@ var _overheat_timer: float = 0.0
 var _is_invulnerable: bool = false
 var _gameplay_enabled: bool = true
 var _double_shot_enabled: bool = false
+const MAX_SHIELD_LEVEL: int = 3
+## Extra duration (as a fraction of the base) added per level above 1: 10 s, 14 s, 18 s.
+const SHIELD_LEVEL_DURATION_BONUS: float = 0.4
 var _shield_active: bool = false
+var _shield_level: int = 0
 var _horizontal_limits: Vector2 = Vector2.ZERO
 
 ## Local clock used only to animate engine flicker, lights, and heat pulsation.
@@ -210,12 +216,12 @@ func cycle_weapon(forward: bool = true) -> void:
 	set_weapon(next_type)
 
 
-## Returns current weapon level (1 to 10).
+## Returns current weapon level (1 to 15).
 func get_weapon_level() -> int:
 	return weapon_level
 
 
-## Sets weapon power level clamped between 1 and 10, emitting weapon_level_changed.
+## Sets weapon power level clamped between 1 and 15, emitting weapon_level_changed.
 func set_weapon_level(level: int) -> void:
 	var clamped: int = clampi(level, 1, MAX_WEAPON_LEVEL)
 	weapon_level = clamped
@@ -334,7 +340,7 @@ const OVERHEAT_SECONDS: Dictionary = {
 ## Heat per second needed so sustained fire overheats in the target time for the current level.
 func _get_heat_per_second(weapon: int) -> float:
 	var range_s: Vector2 = OVERHEAT_SECONDS.get(weapon, Vector2(8.0, 8.0))
-	var t: float = float(clampi(weapon_level, 1, MAX_WEAPON_LEVEL) - 1) / float(MAX_WEAPON_LEVEL - 1)
+	var t: float = float(clampi(weapon_level, 1, LEGACY_MAX_LEVEL) - 1) / float(LEGACY_MAX_LEVEL - 1)
 	var seconds: float = lerpf(range_s.x, range_s.y, t)
 	return max_heat / maxf(seconds, 0.1)
 
@@ -376,21 +382,29 @@ func _shoot() -> void:
 
 
 ## Ion Blaster pattern per level (index 0 = level 1). Each shot is [offset_x, angle_deg].
+## Coverage metric: x300 = offset_x + 300 * tan(angle_deg), the horizontal landing spot after 300 px.
+## L6 and L8-L15 keep at most 35% of shots with |x300| <= 40 and mirror-symmetric pairs. L5 and L7
+## keep their legacy layout: etapa 12.5 time-to-kill windows need 3+ central hits there.
 const ION_PATTERNS: Array = [
 	[[0.0, 0.0]],                                                                  # L1: 1 recto
 	[[-8.0, 0.0], [8.0, 0.0]],                                                     # L2: 2 rectos
 	[[-12.0, 0.0], [0.0, 0.0], [12.0, 0.0]],                                       # L3: 3 rectos
 	[[-8.0, 0.0], [8.0, 0.0], [-14.0, -8.0], [14.0, 8.0]],                         # L4: 2 rectos + 2 diagonales
 	[[-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [-16.0, -10.0], [16.0, 10.0]],         # L5: 3 rectos + 2 diagonales
-	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-20.0, -12.0], [20.0, 12.0]],  # L6: 4 rectos + 2 diag
+	[[-12.0, 0.0], [12.0, 0.0], [-18.0, -12.0], [18.0, 12.0], [-24.0, -24.0], [24.0, 24.0]],  # L6: 2 central + 2 diagonal pairs
 	[[-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [-16.0, -9.0], [16.0, 9.0], [-20.0, -18.0], [20.0, 18.0]],  # L7: 3 rectos + 4 diag
-	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0]],  # L8: 4 rectos + 4 diag
-	[[-24.0, 0.0], [-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [24.0, 0.0], [-20.0, -11.0], [20.0, 11.0], [-24.0, -22.0], [24.0, 22.0]],  # L9: 5 rectos + 4 diag
-	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0]],  # L10: 4 rectos + 6 diag
+	[[-12.0, 0.0], [12.0, 0.0], [-18.0, -12.0], [18.0, 12.0], [-22.0, -22.0], [22.0, 22.0], [-24.0, -34.0], [24.0, 34.0]],  # L8: 1 central pair + 3 diagonal pairs
+	[[0.0, 0.0], [-12.0, 0.0], [12.0, 0.0], [-18.0, -12.0], [18.0, 12.0], [-22.0, -22.0], [22.0, 22.0], [-26.0, -34.0], [26.0, 34.0]],  # L9: 3 central + 3 diagonal pairs
+	[[-12.0, 0.0], [12.0, 0.0], [-18.0, -12.0], [18.0, 12.0], [-22.0, -22.0], [22.0, 22.0], [-26.0, -34.0], [26.0, 34.0], [-30.0, -40.0], [30.0, 40.0]],  # L10: 1 central pair + 4 diagonal pairs
+	[[0.0, 0.0], [-12.0, 0.0], [12.0, 0.0], [-20.0, -14.0], [20.0, 14.0], [-22.0, -24.0], [22.0, 24.0], [-26.0, -33.0], [26.0, 33.0], [-28.0, -40.0], [28.0, 40.0]],  # L11: 3 central + 4 diagonal pairs
+	[[-12.0, 0.0], [12.0, 0.0], [-20.0, -14.0], [20.0, 14.0], [-22.0, -22.0], [22.0, 22.0], [-24.0, -28.0], [24.0, 28.0], [-26.0, -34.0], [26.0, 34.0], [-28.0, -40.0], [28.0, 40.0]],  # L12: 1 central pair + 5 diagonal pairs
+	[[0.0, 0.0], [-12.0, 0.0], [12.0, 0.0], [-20.0, -14.0], [20.0, 14.0], [-22.0, -22.0], [22.0, 22.0], [-24.0, -28.0], [24.0, 28.0], [-26.0, -34.0], [26.0, 34.0], [-28.0, -40.0], [28.0, 40.0]],  # L13: 3 central + 5 diagonal pairs
+	[[-12.0, 0.0], [12.0, 0.0], [-18.0, -12.0], [18.0, 12.0], [-20.0, -18.0], [20.0, 18.0], [-22.0, -22.0], [22.0, 22.0], [-24.0, -30.0], [24.0, 30.0], [-26.0, -36.0], [26.0, 36.0], [-28.0, -40.0], [28.0, 40.0]],  # L14: 1 central pair + 6 diagonal pairs
+	[[0.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [-12.0, 0.0], [12.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -18.0], [22.0, 18.0], [-24.0, -24.0], [24.0, 24.0], [-26.0, -30.0], [26.0, 30.0], [-30.0, -40.0], [30.0, 40.0]],  # L15: 5 central + 5 diagonal pairs
 ]
 
-## Damage per Ion Blaster projectile by level (index 0 = level 1): 1 up to L4, 2 up to L8, 3 at L9-L10.
-const BLASTER_DAMAGE: Array[int] = [1, 1, 1, 1, 2, 2, 2, 2, 3, 3]
+## Damage per Ion Blaster projectile by level (index 0 = level 1): 1 up to L4, 2 up to L8, 3 at L9-L10, 3-4 at L11-L15.
+const BLASTER_DAMAGE: Array[int] = [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4]
 
 
 ## Returns the damage of one Ion Blaster projectile at the given level.
@@ -436,6 +450,11 @@ const MISSILE_OFFSETS: Array = [
 	[-24.0, -12.0, 0.0, 12.0, 24.0],          # L8
 	[-24.0, -12.0, 0.0, 12.0, 24.0],          # L9
 	[-30.0, -18.0, -6.0, 6.0, 18.0, 30.0],    # L10
+	[-30.0, -18.0, -6.0, 6.0, 18.0, 30.0],    # L11 (mismo que L10)
+	[-36.0, -24.0, -12.0, 0.0, 12.0, 24.0, 36.0],    # L12
+	[-36.0, -24.0, -12.0, 0.0, 12.0, 24.0, 36.0],    # L13
+	[-42.0, -30.0, -18.0, -6.0, 6.0, 18.0, 30.0, 42.0],    # L14
+	[-42.0, -30.0, -18.0, -6.0, 6.0, 18.0, 30.0, 42.0],    # L15
 ]
 
 func _shoot_missile() -> void:
@@ -471,7 +490,9 @@ func _shoot_missile() -> void:
 					missile.call(&"set_target", target_assigned)
 			_add_combat_transient(missile)
 
-	var cooldown: float = lerpf(0.55, 0.35, float(weapon_level - 1) / 9.0)
+	var cooldown: float = lerpf(0.55, 0.35, float(mini(weapon_level, LEGACY_MAX_LEVEL) - 1) / float(LEGACY_MAX_LEVEL - 1))
+	if weapon_level > LEGACY_MAX_LEVEL:
+		cooldown = lerpf(0.35, 0.28, float(weapon_level - LEGACY_MAX_LEVEL) / 5.0)
 	add_heat(_get_heat_per_second(WeaponType.MISSILE) * cooldown)
 	_shoot_cooldown.start(cooldown)
 	shot_fired.emit(false)
@@ -560,6 +581,21 @@ func respawn(respawn_position: Vector2) -> void:
 		_blink_timer.start(blink_interval)
 
 
+## Grants a timed invulnerability window (e.g. after clearing a wave). Reuses the
+## respawn invulnerability state, so enemy hits are ignored until it expires.
+func grant_invulnerability(duration: float) -> void:
+	_is_invulnerable = true
+	if _invulnerability_timer != null:
+		_invulnerability_timer.start(duration)
+
+
+## Seconds left of the current invulnerability window, or 0.0 when vulnerable.
+func get_invulnerability_time_left() -> float:
+	if not _is_invulnerable or _invulnerability_timer == null:
+		return 0.0
+	return _invulnerability_timer.time_left
+
+
 func set_gameplay_enabled(enabled: bool) -> void:
 	_gameplay_enabled = enabled
 	if not _gameplay_enabled:
@@ -588,12 +624,17 @@ func has_double_shot() -> bool:
 	return _double_shot_enabled
 
 
+## Activates the shield. Picking one up while another is still active raises its level
+## (up to MAX_SHIELD_LEVEL); each level lasts SHIELD_LEVEL_DURATION_BONUS longer.
 func activate_shield(duration: float) -> void:
+	_shield_level = mini(_shield_level + 1, MAX_SHIELD_LEVEL) if _shield_active else 1
 	_shield_active = true
 	if _shield_ring != null:
 		_shield_ring.visible = true
+		if _shield_ring.has_method(&"set_level"):
+			_shield_ring.call(&"set_level", _shield_level)
 	if _shield_timer != null:
-		_shield_timer.wait_time = duration
+		_shield_timer.wait_time = duration * (1.0 + SHIELD_LEVEL_DURATION_BONUS * float(_shield_level - 1))
 		_shield_timer.start()
 
 
@@ -601,9 +642,15 @@ func has_shield() -> bool:
 	return _shield_active
 
 
+## Current shield level: 0 when there is no shield, otherwise 1 to MAX_SHIELD_LEVEL.
+func get_shield_level() -> int:
+	return _shield_level if _shield_active else 0
+
+
 func clear_power_ups() -> void:
 	_double_shot_enabled = false
 	_shield_active = false
+	_shield_level = 0
 	if _shield_timer != null:
 		_shield_timer.stop()
 	if _shield_ring != null:
@@ -637,6 +684,7 @@ func _on_blink_timer_timeout() -> void:
 
 func _on_shield_timer_timeout() -> void:
 	_shield_active = false
+	_shield_level = 0
 	if _shield_ring != null:
 		_shield_ring.visible = false
 
