@@ -23,7 +23,7 @@ signal warning_requested(duration: float, message: String)
 
 @export var asteroid_scene: PackedScene = preload("res://scenes/entities/asteroid/asteroid.tscn")
 @export var wave_asteroid_count: int = 8
-@export var spawn_interval: float = 1.5
+@export var spawn_interval: float = 2.25
 @export var min_speed: float = 60.0
 @export var max_speed: float = 120.0
 @export var loot_chance: float = 0.50
