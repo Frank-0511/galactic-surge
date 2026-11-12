@@ -13,8 +13,6 @@ const BOSS_MUSIC_PATH := "res://assets/audio/music/boss_battle_8bit.mp3"
 const BOSS_MAX_HEALTH: int = 150
 const BOSS_DEFEAT_SCORE: int = 3000
 const TOTAL_WAVES: int = 10
-# Etapa 15 T5: sector guardian of wave 5 (80 HP).
-const GUARDIAN_MAX_HEALTH: int = 80
 
 
 func _init() -> void:
@@ -508,10 +506,6 @@ func _clear_current_wave(main: Node2D) -> void:
 	if main.has_method("is_asteroid_wave_active") and main.call("is_asteroid_wave_active"):
 		await _clear_asteroid_wave(main)
 		return
-	# Etapa 15 T5: the sector guardian of wave 5 must fall to clear the wave.
-	var guardian: Area2D = _find_boss(main)
-	if guardian != null and int(guardian.get("max_health")) == GUARDIAN_MAX_HEALTH:
-		guardian.call("take_damage", GUARDIAN_MAX_HEALTH)
 	var spawner: Node2D = main.get_node_or_null("EnemySpawner")
 	if spawner == null:
 		return

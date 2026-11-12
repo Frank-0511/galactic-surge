@@ -15,10 +15,6 @@ const BLINDADO_MAX_HEALTH: int = 300
 const ARMOR_PHASE_EXTERIOR: int = 1
 const ARMOR_PHASE_SUBCORE: int = 2
 const ARMOR_PHASE_EXPOSED_CORE: int = 3
-# Etapa 15 T5: wave 5 of every chapter is guarded by a sector guardian.
-const GUARDIAN_WAVE_NUMBER: int = 5
-const GUARDIAN_MAX_HEALTH: int = 80
-const GUARDIAN_POINTS: int = 500
 const CLEAN_WAVE_BONUS: int = 500
 # Etapa 15 T6: wave-cleared feedback (banner, camera zoom, invulnerability grace).
 const WAVE_CLEARED_BANNER_TEXT: String = "¡OLEADA SUPERADA!"
@@ -40,7 +36,6 @@ func _run_contracts() -> void:
 	var passed: bool = true
 	passed = await _assert_chapter_structure_contract() and passed
 	passed = await _assert_bonus_wave_contract() and passed
-	passed = await _assert_guardian_contract() and passed
 	passed = await _assert_blindado_core_contract() and passed
 	passed = await _assert_boss_variants_contract() and passed
 	passed = await _assert_wave_cleared_feedback_contract() and passed
@@ -178,6 +173,10 @@ func _assert_chapter_structure_contract() -> bool:
 		if spawner != null:
 			chapter_speeds.append(float(spawner.get("formation_speed")))
 		for wave_index: int in TOTAL_WAVES:
+			# Waves 5, 15 and 25 are regular waves: no boss or guardian may appear.
+			if wave_index == 4 and _find_boss(main) != null:
+				push_error("Wave %d must be a normal wave without a boss or guardian" % main.wave)
+				passed = false
 			await _clear_current_wave(main)
 			await _finish_wave_transition(main)
 			await _wait_for_bonus(main)
@@ -279,77 +278,6 @@ func _assert_bonus_wave_contract() -> bool:
 		await _finish_wave_transition(main)
 	if main.wave != BONUS_WAVE_NUMBER + 1:
 		push_error("After the bonus wave the next wave must be %d, got %d" % [BONUS_WAVE_NUMBER + 1, main.wave])
-		passed = false
-
-	root.remove_child(main)
-	main.free()
-	return passed
-
-
-# Sector guardian (T5): wave 5 of each chapter spawns a guardian with 80 HP and no
-# multi-phase. The wave is not cleared while the guardian lives; defeating it
-# advances the wave, pays 500 points and drops a medallion.
-func _assert_guardian_contract() -> bool:
-	var main: Node2D = (load(MAIN_SCENE_PATH) as PackedScene).instantiate() as Node2D
-	root.add_child(main)
-	main.start_session()
-	await process_frame
-	var passed: bool = true
-	var announcement: CanvasLayer = main.get_node_or_null("WaveAnnouncement") as CanvasLayer
-	if announcement != null and "display_duration" in announcement:
-		announcement.set("display_duration", 0.0)
-	if "enemy_drop_chance" in main:
-		main.set("enemy_drop_chance", 0.0)
-	main.set("bonus_drop_interval", 0.0)
-
-	for wave_index: int in GUARDIAN_WAVE_NUMBER - 1:
-		await _clear_current_wave(main)
-		await _finish_wave_transition(main)
-	if main.wave != GUARDIAN_WAVE_NUMBER:
-		push_error("Expected wave %d before its guardian, got %d" % [GUARDIAN_WAVE_NUMBER, main.wave])
-		root.remove_child(main)
-		main.free()
-		return false
-
-	var guardian: Area2D = _find_boss(main)
-	if guardian == null:
-		push_error("Wave %d must spawn a sector guardian" % GUARDIAN_WAVE_NUMBER)
-		root.remove_child(main)
-		main.free()
-		return false
-	if int(guardian.get("max_health")) != GUARDIAN_MAX_HEALTH:
-		push_error("Sector guardian must have max_health %d, got %d" % [GUARDIAN_MAX_HEALTH, int(guardian.get("max_health"))])
-		passed = false
-	if bool(guardian.get("multi_phase_enabled")):
-		push_error("Sector guardian must not enable multi-phase")
-		passed = false
-
-	# The wave must stay alive while the guardian lives.
-	for _frame: int in range(60):
-		await process_frame
-	if main.wave != GUARDIAN_WAVE_NUMBER or not is_instance_valid(guardian):
-		push_error("Wave %d must not clear while its guardian is alive" % GUARDIAN_WAVE_NUMBER)
-		passed = false
-
-	# Defeating the guardian clears the wave and advances to the next one.
-	var score_before: int = main.score
-	guardian.call("take_damage", GUARDIAN_MAX_HEALTH)
-	await process_frame
-	await process_frame
-	await _finish_wave_transition(main)
-	if main.wave != GUARDIAN_WAVE_NUMBER + 1:
-		push_error("Defeating the guardian must advance to wave %d, got %d" % [GUARDIAN_WAVE_NUMBER + 1, main.wave])
-		passed = false
-	# No damage was taken, so the clean wave bonus applies on top of the guardian points.
-	if main.score - score_before != GUARDIAN_POINTS + CLEAN_WAVE_BONUS:
-		push_error("Guardian defeat must award %d points, got %d" % [GUARDIAN_POINTS + CLEAN_WAVE_BONUS, main.score - score_before])
-		passed = false
-	var has_medallion: bool = false
-	for child: Node in main.get_children():
-		if child.has_method("get_type") and int(child.call("get_type")) == LootDrop.Type.MEDALLION_BLASTER:
-			has_medallion = true
-	if not has_medallion:
-		push_error("Defeating the sector guardian must drop a medallion")
 		passed = false
 
 	root.remove_child(main)
@@ -659,10 +587,6 @@ func _clear_current_wave(main: Node2D) -> void:
 					child.call("destroy")
 			await process_frame
 		return
-	# Sector guardians (wave 5) must also fall to clear the wave.
-	var guardian: Area2D = _find_boss(main)
-	if guardian != null and int(guardian.get("max_health")) == GUARDIAN_MAX_HEALTH:
-		guardian.call("take_damage", GUARDIAN_MAX_HEALTH)
 	var spawner: Node2D = main.get_node_or_null("EnemySpawner")
 	if spawner == null:
 		return
