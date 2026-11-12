@@ -21,8 +21,8 @@ const GUARDIAN_POINTS: int = 500
 ## Wave-cleared feedback (Etapa 15 T6): invulnerability grace and camera zoom pulse.
 const WAVE_CLEARED_INVULNERABILITY: float = 1.75
 const CAMERA_ZOOM_PULSE: float = 1.15
-const CAMERA_ZOOM_IN_DURATION: float = 0.2
-const CAMERA_ZOOM_OUT_DURATION: float = 0.5
+const CAMERA_ZOOM_IN_DURATION: float = 0.35
+const CAMERA_ZOOM_OUT_DURATION: float = 0.8
 
 ## Seconds between rained loot drops in a bonus wave. Tests set it to 0.
 var bonus_drop_interval: float = 0.6
@@ -105,6 +105,8 @@ var _session_active: bool = false
 var _mission_complete: bool = false
 var _wave_is_clean: bool = true
 var _pending_wave_index: int = 0
+## True while the boss of the current chapter is the next encounter (not a regular wave).
+var _boss_pending: bool = false
 var _last_phrase_index: int = -1
 var _active_boss: Area2D = null
 var _active_guardian: Area2D = null
@@ -237,6 +239,7 @@ func _enter_main_menu() -> void:
 	_clear_boss()
 	_clear_combat_transients()
 	_reset_wave_cleared_feedback()
+	_boss_pending = false
 	_visual_feedback.clear_effects()
 	_wave_announcement.cancel_announcement()
 	_pending_wave_index = 0
@@ -618,6 +621,16 @@ func _on_loot_collected(loot_type: int) -> void:
 
 
 
+## Wave number within the current chapter (1-based, 1-10) from the global wave number.
+func _local_wave(global_wave: int) -> int:
+	return (global_wave - 1) % TOTAL_WAVES + 1
+
+
+## Wave index within the current chapter (0-based, 0-9) from a global 0-based index.
+func _local_index(global_index: int) -> int:
+	return global_index % TOTAL_WAVES
+
+
 func _on_wave_cleared(_wave_index: int) -> void:
 	if not _session_active:
 		return
@@ -628,13 +641,13 @@ func _on_wave_cleared(_wave_index: int) -> void:
 		_check_score_milestones()
 		_hud.set_score(score)
 		_visual_feedback.play_score_popup(_player.global_position + Vector2(0, -50), CLEAN_WAVE_BONUS, true)
-	if wave >= TOTAL_WAVES:
+	if _local_wave(wave) >= TOTAL_WAVES:
 		# Transition to Boss encounter instead of completing mission directly
 		_session_state = SessionState.WAVE_TRANSITION
 		_enemy_spawner.stop()
-		_pending_wave_index = TOTAL_WAVES
+		_boss_pending = true
 		_audio_feedback.stop_combat_music()
-		_wave_announcement.show_announcement(TOTAL_WAVES + 1, "¡AMENAZA COLOSAL DETECTADA!")
+		_wave_announcement.show_announcement(wave + 1, "¡AMENAZA COLOSAL DETECTADA!")
 		return
 	_show_wave_cleared_feedback()
 	# Enter wave transition instead of starting the next wave immediately.
@@ -642,7 +655,7 @@ func _on_wave_cleared(_wave_index: int) -> void:
 	_enemy_spawner.stop()
 	_pending_wave_index = wave
 	var phrase: String = _pick_radar_phrase()
-	if _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
+	if _local_index(_pending_wave_index) == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
 		phrase = "¡ALERTA: CINTURÓN DE ASTEROIDES INMINENTE!"
 		if _audio_feedback != null and _audio_feedback.has_method(&"play_asteroid_warning"):
 			_audio_feedback.play_asteroid_warning()
@@ -681,7 +694,8 @@ func _reset_wave_cleared_feedback() -> void:
 func _on_wave_announcement_finished() -> void:
 	if _session_state != SessionState.WAVE_TRANSITION or not _session_active:
 		return
-	if _pending_wave_index >= TOTAL_WAVES:
+	if _boss_pending:
+		_boss_pending = false
 		_start_boss_battle()
 		return
 	wave = _pending_wave_index + 1
@@ -690,20 +704,20 @@ func _on_wave_announcement_finished() -> void:
 	_update_hud()
 	_session_state = SessionState.PLAYING
 	_enemy_spawner.difficulty_level = _chapter
-	if wave == BONUS_WAVE_NUMBER:
+	if _local_wave(wave) == BONUS_WAVE_NUMBER:
 		_start_bonus_wave()
 		return
-	if _pending_wave_index == GUARDIAN_WAVE_INDEX:
+	if _local_index(_pending_wave_index) == GUARDIAN_WAVE_INDEX:
 		# Guardian wave: the sector guardian replaces the formation for this wave.
 		_enemy_spawner.stop()
 		_enemy_spawner.clear_formation()
 		_start_guardian()
-	elif _pending_wave_index == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
+	elif _local_index(_pending_wave_index) == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
 		_enemy_spawner.stop()
 		_enemy_spawner.clear_formation()
 		_asteroid_spawner.start_asteroid_wave(8)
 	else:
-		_enemy_spawner.start_wave(_pending_wave_index)
+		_enemy_spawner.start_wave(_local_index(_pending_wave_index))
 
 
 ## Spawns the sector guardian (no multi-phase). Wave 5 clears only when it falls.
@@ -817,9 +831,10 @@ func _begin_next_chapter() -> void:
 	_session_state = SessionState.WAVE_TRANSITION
 	_enemy_spawner.stop()
 	_enemy_spawner.clear_formation()
-	_pending_wave_index = 0
+	# Wave numbering is global: the next chapter continues after the boss wave.
+	_pending_wave_index = wave
 	_wave_is_clean = true
-	_wave_announcement.show_announcement(1, "¡CAPÍTULO %d INICIADO!" % _chapter)
+	_wave_announcement.show_announcement(wave + 1, "¡CAPÍTULO %d INICIADO!" % _chapter)
 
 
 func is_bonus_wave_active() -> bool:
@@ -949,6 +964,7 @@ func reset_session() -> void:
 		_camera.reset_shake()
 	_reset_wave_cleared_feedback()
 	_clear_boss()
+	_boss_pending = false
 	_clear_combat_transients()
 	_visual_feedback.clear_effects()
 	_wave_announcement.cancel_announcement()

@@ -1,7 +1,7 @@
 # Contract harness for Etapa 15 (T1): campaign structure in 3 chapters.
-# Chapter 1 is the current 10-wave campaign plus boss. Defeating the boss of
-# chapters 1 and 2 starts the next chapter (waves restart at 1); defeating the
-# boss of chapter 3 completes the mission.
+# Chapter 1 is the current 10-wave campaign plus boss. Wave numbering is global
+# (1-30): defeating the boss of chapters 1 and 2 starts the next chapter and the
+# wave continues at 11 and 21; defeating the boss of chapter 3 completes the mission.
 extends SceneTree
 
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
@@ -106,6 +106,10 @@ func _assert_chapter_structure_contract() -> bool:
 				passed = false
 				break
 			await _finish_wave_transition(main)
+			var expected_wave: int = chapter_index * TOTAL_WAVES + 1
+			if int(main.get("wave")) != expected_wave:
+				push_error("After chapter %d's boss the wave must continue at %d, got %d" % [chapter_index, expected_wave, int(main.get("wave"))])
+				passed = false
 		else:
 			if not main.is_mission_complete():
 				push_error("Defeating the boss of chapter %d must complete the mission" % chapter_index)
@@ -382,8 +386,8 @@ func _assert_wave_cleared_feedback_contract() -> bool:
 			push_error("Wave-cleared invulnerability must last 1.5-2 s, got %.2f s" % grace)
 			passed = false
 
-	# Effects end on their own: zoom back to 1.0 and banner hidden after the grace window.
-	await create_timer(2.0).timeout
+	# Effects end on their own: zoom back to 1.0 and banner hidden after its display time (2.5 s).
+	await create_timer(2.75).timeout
 	if camera.zoom != Vector2.ONE:
 		push_error("Camera zoom must return to 1.0 after the wave-cleared effect")
 		passed = false

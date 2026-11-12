@@ -225,13 +225,15 @@ func split() -> Array[Area2D]:
 
 		var frag_dir: Vector2 = base_dir.rotated(angles[i])
 		var offset_dist: float = SIZES[asteroid_size]["radius"] * 0.45
-		frag.global_position = global_position + frag_dir * offset_dist
 		frag.linear_velocity = frag_dir * base_speed
 		frag.angular_velocity = spins[i]
 		frag.rotation = rotation + angles[i]
 
 		if parent_container != null:
 			parent_container.add_child(frag)
+		# Set after add_child: global_position outside the tree is treated as local,
+		# which would offset the fragment by its parent's own position.
+		frag.global_position = global_position + frag_dir * offset_dist
 
 		fragments.append(frag)
 		fragment_spawned.emit(frag)

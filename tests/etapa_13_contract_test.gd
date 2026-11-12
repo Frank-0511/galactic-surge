@@ -36,8 +36,9 @@ func _run_contracts() -> void:
 	var t5: bool = await _assert_camera_shake_trauma_contract()
 	var t6: bool = await _assert_asteroid_spawner_contract()
 	var t7: bool = await _assert_main_asteroid_integration_contract()
+	var t8: bool = await _assert_fragments_spawn_near_parent_contract()
 
-	var all_passed: bool = t1 and t2 and t3 and t4 and t5 and t6 and t7
+	var all_passed: bool = t1 and t2 and t3 and t4 and t5 and t6 and t7 and t8
 
 	if all_passed:
 		print("ETAPA 13 CONTRACT TESTS: ALL PASSED")
@@ -358,6 +359,30 @@ func _assert_camera_shake_trauma_contract() -> bool:
 # ---------------------------------------------------------------------------
 # 6. AsteroidSpawner: dedicated wave management & tracking
 # ---------------------------------------------------------------------------
+# Fragments must appear next to the asteroid that split, even when the spawner
+# (their parent) sits at a non-zero position like in main.tscn (x = 540).
+func _assert_fragments_spawn_near_parent_contract() -> bool:
+	var spawner: Node2D = (load(ASTEROID_SPAWNER_PATH) as PackedScene).instantiate() as Node2D
+	spawner.position = Vector2(540.0, 0.0)
+	root.add_child(spawner)
+	await process_frame
+	var passed: bool = true
+	var parent_pos: Vector2 = Vector2(300.0, 200.0)
+	var ast: Area2D = spawner.call("spawn_asteroid", 0, parent_pos, Vector2(0.0, 100.0)) as Area2D
+	var frags: Array[Area2D] = ast.split()
+	if frags.size() != 2:
+		push_error("LARGE asteroid must split into 2 fragments, got %d" % frags.size())
+		passed = false
+	for frag: Area2D in frags:
+		var dist: float = frag.global_position.distance_to(parent_pos)
+		if dist > 60.0:
+			push_error("Fragment must spawn next to its parent asteroid, but it is %.0f px away" % dist)
+			passed = false
+	root.remove_child(spawner)
+	spawner.free()
+	return passed
+
+
 func _assert_asteroid_spawner_contract() -> bool:
 	if not ResourceLoader.exists(ASTEROID_SPAWNER_PATH):
 		push_error("Missing AsteroidSpawner scene: %s" % ASTEROID_SPAWNER_PATH)

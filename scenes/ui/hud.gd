@@ -38,7 +38,7 @@ signal weapon_selected_by_user(weapon_index: int)
 
 ## Wave-cleared banner (Etapa 15 T6): text, display time, and fade-out length.
 const WAVE_CLEARED_BANNER_TEXT: String = "¡OLEADA SUPERADA!"
-const WAVE_CLEARED_BANNER_DURATION: float = 1.75
+const WAVE_CLEARED_BANNER_DURATION: float = 2.5
 const WAVE_CLEARED_BANNER_FADE: float = 0.35
 
 var _current_weapon_level: int = 1
