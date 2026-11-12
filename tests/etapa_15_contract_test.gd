@@ -38,7 +38,50 @@ func _run_contracts() -> void:
 	passed = await _assert_blindado_core_contract() and passed
 	passed = await _assert_wave_cleared_feedback_contract() and passed
 	passed = await _assert_global_difficulty_contract() and passed
+	passed = await _assert_stacking_shield_contract() and passed
 	quit(0 if passed else 1)
+
+
+# Picking up a shield while one is active raises its level (1 -> 3): each level has
+# its own ring color and lasts longer; once it expires the next pickup is level 1 again.
+func _assert_stacking_shield_contract() -> bool:
+	var player: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	root.add_child(player)
+	await process_frame
+	var passed: bool = true
+	if not player.has_method(&"get_shield_level"):
+		push_error("Player must expose get_shield_level()")
+		root.remove_child(player)
+		player.free()
+		return false
+	var ring: Node2D = player.get_node("ShieldRing") as Node2D
+	var timer: Timer = player.get_node("ShieldTimer") as Timer
+	var colors: Array[Color] = []
+	var durations: Array[float] = []
+	for expected_level: int in [1, 2, 3, 3]:
+		player.call(&"activate_shield", 10.0)
+		if int(player.call(&"get_shield_level")) != expected_level:
+			push_error("Shield level must be %d, got %d" % [expected_level, int(player.call(&"get_shield_level"))])
+			passed = false
+		colors.append(ring.call(&"get_ring_color") as Color)
+		durations.append(timer.wait_time)
+	if colors[0] == colors[1] or colors[1] == colors[2] or colors[0] == colors[2]:
+		push_error("Shield levels 1, 2 and 3 must each use a different ring color")
+		passed = false
+	if durations[0] != 10.0 or not (durations[1] > durations[0] and durations[2] > durations[1]):
+		push_error("Level 1 lasts the given 10 s and each higher level must last longer, got %s" % [durations])
+		passed = false
+	player.call(&"_on_shield_timer_timeout")
+	if player.call(&"has_shield") or int(player.call(&"get_shield_level")) != 0:
+		push_error("An expired shield must be gone and report level 0")
+		passed = false
+	player.call(&"activate_shield", 10.0)
+	if int(player.call(&"get_shield_level")) != 1:
+		push_error("A shield picked up after expiry must start at level 1")
+		passed = false
+	root.remove_child(player)
+	player.free()
+	return passed
 
 
 # Waves 11-30 keep getting harder: wave 11 is harder than wave 10 and wave 30 is

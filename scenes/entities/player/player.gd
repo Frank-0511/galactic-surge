@@ -105,7 +105,11 @@ var _overheat_timer: float = 0.0
 var _is_invulnerable: bool = false
 var _gameplay_enabled: bool = true
 var _double_shot_enabled: bool = false
+const MAX_SHIELD_LEVEL: int = 3
+## Extra duration (as a fraction of the base) added per level above 1: 10 s, 14 s, 18 s.
+const SHIELD_LEVEL_DURATION_BONUS: float = 0.4
 var _shield_active: bool = false
+var _shield_level: int = 0
 var _horizontal_limits: Vector2 = Vector2.ZERO
 
 ## Local clock used only to animate engine flicker, lights, and heat pulsation.
@@ -603,12 +607,17 @@ func has_double_shot() -> bool:
 	return _double_shot_enabled
 
 
+## Activates the shield. Picking one up while another is still active raises its level
+## (up to MAX_SHIELD_LEVEL); each level lasts SHIELD_LEVEL_DURATION_BONUS longer.
 func activate_shield(duration: float) -> void:
+	_shield_level = mini(_shield_level + 1, MAX_SHIELD_LEVEL) if _shield_active else 1
 	_shield_active = true
 	if _shield_ring != null:
 		_shield_ring.visible = true
+		if _shield_ring.has_method(&"set_level"):
+			_shield_ring.call(&"set_level", _shield_level)
 	if _shield_timer != null:
-		_shield_timer.wait_time = duration
+		_shield_timer.wait_time = duration * (1.0 + SHIELD_LEVEL_DURATION_BONUS * float(_shield_level - 1))
 		_shield_timer.start()
 
 
@@ -616,9 +625,15 @@ func has_shield() -> bool:
 	return _shield_active
 
 
+## Current shield level: 0 when there is no shield, otherwise 1 to MAX_SHIELD_LEVEL.
+func get_shield_level() -> int:
+	return _shield_level if _shield_active else 0
+
+
 func clear_power_ups() -> void:
 	_double_shot_enabled = false
 	_shield_active = false
+	_shield_level = 0
 	if _shield_timer != null:
 		_shield_timer.stop()
 	if _shield_ring != null:
@@ -652,6 +667,7 @@ func _on_blink_timer_timeout() -> void:
 
 func _on_shield_timer_timeout() -> void:
 	_shield_active = false
+	_shield_level = 0
 	if _shield_ring != null:
 		_shield_ring.visible = false
 
