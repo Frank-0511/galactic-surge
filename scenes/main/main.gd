@@ -717,7 +717,7 @@ func _on_wave_announcement_finished() -> void:
 		_enemy_spawner.clear_formation()
 		_asteroid_spawner.start_asteroid_wave(8)
 	else:
-		_enemy_spawner.start_wave(_local_index(_pending_wave_index))
+		_enemy_spawner.start_wave(_local_index(_pending_wave_index), _pending_wave_index)
 
 
 ## Spawns the sector guardian (no multi-phase). Wave 5 clears only when it falls.

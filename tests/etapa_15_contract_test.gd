@@ -37,7 +37,50 @@ func _run_contracts() -> void:
 	passed = await _assert_guardian_contract() and passed
 	passed = await _assert_blindado_core_contract() and passed
 	passed = await _assert_wave_cleared_feedback_contract() and passed
+	passed = await _assert_global_difficulty_contract() and passed
 	quit(0 if passed else 1)
+
+
+# Waves 11-30 keep getting harder: wave 11 is harder than wave 10 and wave 30 is
+# harder than wave 11 (faster formation, faster fire, never beyond 8 columns).
+func _assert_global_difficulty_contract() -> bool:
+	var spawner: Node2D = (load("res://scenes/systems/enemy_spawner.tscn") as PackedScene).instantiate() as Node2D
+	root.add_child(spawner)
+	await process_frame
+	var passed: bool = true
+	if not spawner.has_method(&"get_scaled_wave_config"):
+		push_error("EnemySpawner must expose get_scaled_wave_config(local_index, global_index)")
+		root.remove_child(spawner)
+		spawner.free()
+		return false
+	# Chapter 1 is untouched: the scaled config equals the base config.
+	for i: int in range(10):
+		if spawner.call(&"get_scaled_wave_config", i, i) != spawner.call(&"get_wave_config", i):
+			push_error("Wave %d (chapter 1) must keep its base configuration" % (i + 1))
+			passed = false
+	var wave10: Dictionary = spawner.call(&"get_scaled_wave_config", 9, 9)
+	var wave11: Dictionary = spawner.call(&"get_scaled_wave_config", 0, 10)
+	var wave30: Dictionary = spawner.call(&"get_scaled_wave_config", 9, 29)
+	if float(wave11["formation_speed"]) <= float(wave10["formation_speed"]):
+		push_error("Wave 11 must be faster than wave 10")
+		passed = false
+	if float(wave11["fire_rate_scale"]) >= float(wave10["fire_rate_scale"]):
+		push_error("Wave 11 must fire faster than wave 10 (lower fire_rate_scale)")
+		passed = false
+	if float(wave30["formation_speed"]) <= float(wave11["formation_speed"]):
+		push_error("Wave 30 must be faster than wave 11")
+		passed = false
+	for g: int in range(10, 30):
+		var cfg: Dictionary = spawner.call(&"get_scaled_wave_config", g % 10, g)
+		if int(cfg["columns"]) > 8:
+			push_error("Wave %d must not exceed 8 columns" % (g + 1))
+			passed = false
+		if float(cfg["fire_rate_scale"]) < 0.5:
+			push_error("Wave %d fire_rate_scale must stay >= 0.5" % (g + 1))
+			passed = false
+	root.remove_child(spawner)
+	spawner.free()
+	return passed
 
 
 func _assert_chapter_structure_contract() -> bool:
