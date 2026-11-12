@@ -1,9 +1,9 @@
 # etapa_10_contract_test.gd
-# Contract test harness for Etapa 10: Medallones Neón, Niveles 1-10 y Riesgo/Recompensa.
+# Contract test harness for Etapa 10: Medallones Neón, Niveles 1-15 y Riesgo/Recompensa.
 # Verifies:
 # 1. LootDrop enum types (Medallions, Power Atom, Recovery Capsule) and lifetime countdown.
 # 2. Player weapon level scaling, tactical dilemma (upgrade vs switch/reset), power atom, and death penalty.
-# 3. Scaled firing patterns for Ion Blaster, Missile, and Laser width across levels 1 to 10.
+# 3. Scaled firing patterns for Ion Blaster, Missile, and Laser width across levels 1 to 15.
 # 4. Extra life milestone rewards per 1,000,000 points in Main.
 # 5. HUD weapon level text and glowing neon pips synchronization.
 # 6. Main integration: medallion collection, death capsule spawn, and session reset.
@@ -153,15 +153,20 @@ func _assert_player_dilemma_contract() -> bool:
 		push_error("set_weapon_level failed to set or emit level 3")
 		passed = false
 
-	# Clamping between 1 and 10
+	# Clamping between 1 and 15
 	player.set_weapon_level(10)
 	if player.get_weapon_level() != 10:
 		push_error("set_weapon_level(10) must return 10, got %d" % player.get_weapon_level())
 		passed = false
 
 	player.set_weapon_level(15)
-	if player.get_weapon_level() != 10:
-		push_error("set_weapon_level(15) must clamp to 10, got %d" % player.get_weapon_level())
+	if player.get_weapon_level() != 15:
+		push_error("set_weapon_level(15) must return 15, got %d" % player.get_weapon_level())
+		passed = false
+
+	player.set_weapon_level(20)
+	if player.get_weapon_level() != 15:
+		push_error("set_weapon_level(20) must clamp to 15, got %d" % player.get_weapon_level())
 		passed = false
 
 	player.set_weapon_level(-2)
@@ -169,7 +174,7 @@ func _assert_player_dilemma_contract() -> bool:
 		push_error("set_weapon_level(-2) must clamp to 1, got %d" % player.get_weapon_level())
 		passed = false
 
-	# Same medallion -> level upgrade (+1) up to 10
+	# Same medallion -> level upgrade (+1) up to 15
 	player.set_weapon(0) # BLASTER
 	player.set_weapon_level(1)
 	player.apply_medallion(0)
@@ -177,16 +182,16 @@ func _assert_player_dilemma_contract() -> bool:
 		push_error("apply_medallion with same weapon must upgrade level to 2, got %d" % player.get_weapon_level())
 		passed = false
 
-	for i in range(12):
+	for i in range(20):
 		player.apply_medallion(0)
-	if player.get_weapon_level() != 10:
-		push_error("apply_medallion must cap at level 10, got %d" % player.get_weapon_level())
+	if player.get_weapon_level() != 15:
+		push_error("apply_medallion must cap at level 15, got %d" % player.get_weapon_level())
 		passed = false
 
 	# Different medallion -> Chicken Invaders model: switches weapon and preserves weapon level
 	player.apply_medallion(1) # MISSILE
-	if player.get_weapon() != 1 or player.get_weapon_level() != 10:
-		push_error("apply_medallion with different weapon must switch to MISSILE and preserve level 10 (got weapon %d, level %d)" % [player.get_weapon(), player.get_weapon_level()])
+	if player.get_weapon() != 1 or player.get_weapon_level() != 15:
+		push_error("apply_medallion with different weapon must switch to MISSILE and preserve level 15 (got weapon %d, level %d)" % [player.get_weapon(), player.get_weapon_level()])
 		passed = false
 
 	# Power atom -> upgrades level (+1) without changing current weapon
@@ -226,10 +231,11 @@ func _assert_firing_patterns_contract() -> bool:
 
 	var passed: bool = true
 
-	# Test Blaster bullet counts: Level 1..10 -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+	# Test Blaster bullet counts: Level 1..15 -> [1..10, 11, 12, 13, 14, 15]
 	player.set_weapon(0) # BLASTER
-	var expected_blaster_counts: Array[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-	for lvl: int in range(1, 11):
+	var expected_blaster_counts: Array[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+	var blaster_damage_by_level: Dictionary = {}
+	for lvl: int in range(1, 16):
 		player.set_weapon_level(lvl)
 		var pre_children: Array[Node] = root.get_children()
 		player.simulate_shot()
@@ -240,6 +246,8 @@ func _assert_firing_patterns_contract() -> bool:
 		if spawned_bullets.size() != expected_blaster_counts[lvl - 1]:
 			push_error("Blaster level %d expected %d bullets, spawned %d" % [lvl, expected_blaster_counts[lvl - 1], spawned_bullets.size()])
 			passed = false
+		if not spawned_bullets.is_empty():
+			blaster_damage_by_level[lvl] = int(spawned_bullets[0].get("damage"))
 
 		# Direction checks: levels 1-3 all straight (direction.x == 0), level 4+ has diagonals (direction.x != 0)
 		var has_diagonal: bool = false
@@ -256,10 +264,14 @@ func _assert_firing_patterns_contract() -> bool:
 			passed = false
 		_cleanup_bullets()
 
-	# Test Missile counts: Level 1..10 -> [1, 2, 2, 3, 3, 4, 4, 5, 5, 6]
+	if int(blaster_damage_by_level.get(15, 0)) <= int(blaster_damage_by_level.get(10, 0)):
+		push_error("Blaster L15 projectile damage must exceed L10 (L15 %d, L10 %d)" % [int(blaster_damage_by_level.get(15, 0)), int(blaster_damage_by_level.get(10, 0))])
+		passed = false
+
+	# Test Missile counts: Level 1..15 -> [1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
 	player.set_weapon(1) # MISSILE
-	var expected_missile_counts: Array[int] = [1, 2, 2, 3, 3, 4, 4, 5, 5, 6]
-	for lvl: int in range(1, 11):
+	var expected_missile_counts: Array[int] = [1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8]
+	for lvl: int in range(1, 16):
 		player.set_weapon_level(lvl)
 		var pre_count: int = root.get_child_count()
 		player.simulate_shot()
@@ -283,6 +295,38 @@ func _assert_firing_patterns_contract() -> bool:
 		if width_lvl10 <= width_lvl1:
 			push_error("Laser beam_width must scale with level (lvl1: %f, lvl10: %f)" % [width_lvl1, width_lvl10])
 			passed = false
+		var dps_lvl10: float = float(beam.get("damage_per_second"))
+		player.set_weapon_level(15)
+		var dps_lvl15: float = float(beam.get("damage_per_second"))
+		if dps_lvl15 <= dps_lvl10:
+			push_error("Laser DPS must grow from L10 to L15 (L10: %f, L15: %f)" % [dps_lvl10, dps_lvl15])
+			passed = false
+
+	# Preserve: levels 1-10 keep the original heat and missile cooldown; 11-15 reuse the L10 heat.
+	player.set_weapon(0) # BLASTER
+	player.set_weapon_level(1)
+	if absf(player.get_heat_per_second(0) - 10.0) > 0.001:
+		push_error("Blaster L1 heat per second must stay 10.0, got %f" % player.get_heat_per_second(0))
+		passed = false
+	player.set_weapon_level(10)
+	if absf(player.get_heat_per_second(0) - 12.5) > 0.001:
+		push_error("Blaster L10 heat per second must stay 12.5, got %f" % player.get_heat_per_second(0))
+		passed = false
+	player.set_weapon_level(15)
+	if absf(player.get_heat_per_second(0) - 12.5) > 0.001:
+		push_error("Blaster L15 heat per second must reuse L10 value 12.5, got %f" % player.get_heat_per_second(0))
+		passed = false
+
+	player.set_weapon(1) # MISSILE
+	var cooldown_expected: Dictionary = {1: 0.55, 10: 0.35, 15: 0.28}
+	for lvl: int in [1, 10, 15]:
+		player.set_weapon_level(lvl)
+		player.simulate_shot()
+		var cooldown_timer: Timer = player.get_node("ShootCooldown") as Timer
+		if absf(cooldown_timer.wait_time - float(cooldown_expected[lvl])) > 0.001:
+			push_error("Missile L%d cooldown expected %f, got %f" % [lvl, float(cooldown_expected[lvl]), cooldown_timer.wait_time])
+			passed = false
+		_cleanup_bullets()
 
 	player.queue_free()
 	await process_frame

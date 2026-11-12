@@ -33,11 +33,13 @@ var _time: float = 0.0
 var _target: Node2D = null
 
 
-## Scales damage (3 + level / 2) and splash radius (36 px at L1 to 90 px at L10) by weapon level.
+## Scales damage (3 + level / 2) and splash radius (36 px at L1, 90 px at L10, capped at 110 px above L10) by weapon level.
 func set_power_level(level: int) -> void:
-	var clamped: int = clampi(level, 1, 10)
+	var clamped: int = clampi(level, 1, 15)
 	damage = 3 + clamped / 2
 	explosion_radius = 36.0 + 6.0 * float(clamped - 1)
+	if clamped > 10:
+		explosion_radius = minf(explosion_radius, 110.0)
 
 
 func set_target(new_target: Variant) -> void:

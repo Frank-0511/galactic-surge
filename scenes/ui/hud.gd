@@ -145,7 +145,7 @@ func set_active_weapon(weapon_index: int) -> void:
 func set_weapon_level(level: int, weapon_type: int = -1) -> void:
 	if weapon_type >= 0:
 		_current_weapon_type = weapon_type
-	_current_weapon_level = clampi(level, 1, 10)
+	_current_weapon_level = clampi(level, 1, 15)
 
 
 

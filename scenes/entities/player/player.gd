@@ -16,7 +16,7 @@ signal shot_fired(is_double_shot: bool)
 ## Emitted when active weapon changes (WeaponType enum value).
 signal weapon_changed(new_weapon: int)
 
-## Emitted when active weapon power level changes (1 to 10).
+## Emitted when active weapon power level changes (1 to 15).
 signal weapon_level_changed(new_level: int)
 
 ## Emitted when barrel heat changes.
@@ -33,10 +33,12 @@ enum WeaponType {
 }
 
 const WEAPON_COUNT: int = 3
-const MAX_WEAPON_LEVEL: int = 10
+const MAX_WEAPON_LEVEL: int = 15
+## Last level of the original calibration (heat curve, missile cooldown). Levels above it reuse its heat.
+const LEGACY_MAX_LEVEL: int = 10
 
-## Power level of the current weapon system (1 to 10).
-@export_range(1, 10) var weapon_level: int = 1
+## Power level of the current weapon system (1 to 15).
+@export_range(1, 15) var weapon_level: int = 1
 
 ## Horizontal movement speed in pixels per second.
 @export var speed: float = 400.0
@@ -214,12 +216,12 @@ func cycle_weapon(forward: bool = true) -> void:
 	set_weapon(next_type)
 
 
-## Returns current weapon level (1 to 10).
+## Returns current weapon level (1 to 15).
 func get_weapon_level() -> int:
 	return weapon_level
 
 
-## Sets weapon power level clamped between 1 and 10, emitting weapon_level_changed.
+## Sets weapon power level clamped between 1 and 15, emitting weapon_level_changed.
 func set_weapon_level(level: int) -> void:
 	var clamped: int = clampi(level, 1, MAX_WEAPON_LEVEL)
 	weapon_level = clamped
@@ -338,7 +340,7 @@ const OVERHEAT_SECONDS: Dictionary = {
 ## Heat per second needed so sustained fire overheats in the target time for the current level.
 func _get_heat_per_second(weapon: int) -> float:
 	var range_s: Vector2 = OVERHEAT_SECONDS.get(weapon, Vector2(8.0, 8.0))
-	var t: float = float(clampi(weapon_level, 1, MAX_WEAPON_LEVEL) - 1) / float(MAX_WEAPON_LEVEL - 1)
+	var t: float = float(clampi(weapon_level, 1, LEGACY_MAX_LEVEL) - 1) / float(LEGACY_MAX_LEVEL - 1)
 	var seconds: float = lerpf(range_s.x, range_s.y, t)
 	return max_heat / maxf(seconds, 0.1)
 
@@ -391,10 +393,15 @@ const ION_PATTERNS: Array = [
 	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0]],  # L8: 4 rectos + 4 diag
 	[[-24.0, 0.0], [-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [24.0, 0.0], [-20.0, -11.0], [20.0, 11.0], [-24.0, -22.0], [24.0, 22.0]],  # L9: 5 rectos + 4 diag
 	[[-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0]],  # L10: 4 rectos + 6 diag
+	[[-24.0, 0.0], [-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [24.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0]],  # L11: 5 rectos + 6 diag
+	[[-30.0, 0.0], [-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [30.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0]],  # L12: 6 rectos + 6 diag
+	[[-24.0, 0.0], [-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [24.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0], [-30.0, -40.0], [30.0, 40.0]],  # L13: 5 rectos + 8 diag
+	[[-30.0, 0.0], [-18.0, 0.0], [-6.0, 0.0], [6.0, 0.0], [18.0, 0.0], [30.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0], [-30.0, -40.0], [30.0, 40.0]],  # L14: 6 rectos + 8 diag
+	[[-36.0, 0.0], [-24.0, 0.0], [-12.0, 0.0], [0.0, 0.0], [12.0, 0.0], [24.0, 0.0], [36.0, 0.0], [-18.0, -10.0], [18.0, 10.0], [-22.0, -20.0], [22.0, 20.0], [-26.0, -30.0], [26.0, 30.0], [-30.0, -40.0], [30.0, 40.0]],  # L15: 7 rectos + 8 diag
 ]
 
-## Damage per Ion Blaster projectile by level (index 0 = level 1): 1 up to L4, 2 up to L8, 3 at L9-L10.
-const BLASTER_DAMAGE: Array[int] = [1, 1, 1, 1, 2, 2, 2, 2, 3, 3]
+## Damage per Ion Blaster projectile by level (index 0 = level 1): 1 up to L4, 2 up to L8, 3 at L9-L10, 3-4 at L11-L15.
+const BLASTER_DAMAGE: Array[int] = [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4]
 
 
 ## Returns the damage of one Ion Blaster projectile at the given level.
@@ -440,6 +447,11 @@ const MISSILE_OFFSETS: Array = [
 	[-24.0, -12.0, 0.0, 12.0, 24.0],          # L8
 	[-24.0, -12.0, 0.0, 12.0, 24.0],          # L9
 	[-30.0, -18.0, -6.0, 6.0, 18.0, 30.0],    # L10
+	[-30.0, -18.0, -6.0, 6.0, 18.0, 30.0],    # L11 (mismo que L10)
+	[-36.0, -24.0, -12.0, 0.0, 12.0, 24.0, 36.0],    # L12
+	[-36.0, -24.0, -12.0, 0.0, 12.0, 24.0, 36.0],    # L13
+	[-42.0, -30.0, -18.0, -6.0, 6.0, 18.0, 30.0, 42.0],    # L14
+	[-42.0, -30.0, -18.0, -6.0, 6.0, 18.0, 30.0, 42.0],    # L15
 ]
 
 func _shoot_missile() -> void:
@@ -475,7 +487,9 @@ func _shoot_missile() -> void:
 					missile.call(&"set_target", target_assigned)
 			_add_combat_transient(missile)
 
-	var cooldown: float = lerpf(0.55, 0.35, float(weapon_level - 1) / 9.0)
+	var cooldown: float = lerpf(0.55, 0.35, float(mini(weapon_level, LEGACY_MAX_LEVEL) - 1) / float(LEGACY_MAX_LEVEL - 1))
+	if weapon_level > LEGACY_MAX_LEVEL:
+		cooldown = lerpf(0.35, 0.28, float(weapon_level - LEGACY_MAX_LEVEL) / 5.0)
 	add_heat(_get_heat_per_second(WeaponType.MISSILE) * cooldown)
 	_shoot_cooldown.start(cooldown)
 	shot_fired.emit(false)
