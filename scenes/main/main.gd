@@ -30,6 +30,14 @@ var _bonus_active: bool = false
 var _bonus_drops_spawned: int = 0
 var _hyperspace_jumps: int = 0
 const BOSS_POINTS: int = 3000
+## Boss per chapter (Etapa 15 T7): index 0 is chapter 1.
+const BOSS_VARIANTS_BY_CHAPTER: Array[StringName] = [&"nexus", &"espectro", &"blindado"]
+const BOSS_NAMES_BY_CHAPTER: Array[String] = ["NAVE NODRIZA NEXUS", "CRUCERO ESPECTRO", "NÚCLEO BLINDADO"]
+const ARMOR_PHASE_SUBCORE: int = 2
+const ARMOR_PHASE_EXPOSED_CORE: int = 3
+const ARMOR_BROKEN_TEXT: String = "ARMADURA EXTERIOR ROTA"
+const CORE_EXPOSED_TEXT: String = "NÚCLEO EXPUESTO"
+const ARMOR_PHASE_CHANGE_TRAUMA: float = 0.35
 const ASTEROID_WAVE_INDEX: int = 8
 const ASTEROID_LARGE_POINTS: int = 150
 const ASTEROID_MEDIUM_POINTS: int = 75
@@ -763,14 +771,17 @@ func _start_boss_battle() -> void:
 	_active_boss = boss
 	boss.global_position = Vector2(get_viewport().get_visible_rect().size.x * 0.5, -100.0)
 	boss.max_health = int(round(BOSS_BASE_HEALTH * (1.0 + BOSS_HEALTH_STEP * float(_chapter - 1))))
+	var chapter_index: int = clampi(_chapter - 1, 0, TOTAL_CHAPTERS - 1)
+	boss.boss_variant = BOSS_VARIANTS_BY_CHAPTER[chapter_index]
 	# Núcleo Blindado three-phase fight is reserved for the final chapter.
 	boss.multi_phase_enabled = _chapter == TOTAL_CHAPTERS
+	boss.armor_phase_changed.connect(_on_boss_armor_phase_changed)
 	boss.health_changed.connect(_on_boss_health_changed)
 	boss.boss_defeated.connect(_on_boss_defeated)
 	boss.boss_contacted_player.connect(_on_boss_contacted_player)
 	add_child(boss)
 	var max_hp: int = int(boss.get("max_health")) if "max_health" in boss else 150
-	_hud.show_boss_health_bar("NAVE NODRIZA NEXUS", max_hp)
+	_hud.show_boss_health_bar(BOSS_NAMES_BY_CHAPTER[chapter_index], max_hp)
 	_audio_feedback.stop_combat_music()
 	_audio_feedback.start_boss_music()
 
@@ -778,6 +789,19 @@ func _start_boss_battle() -> void:
 func _on_boss_health_changed(current: int, max_hp: int) -> void:
 	_hud.update_boss_health(current, max_hp)
 	_camera.shake(4.0, 0.15)
+
+
+## Núcleo Blindado armor phase change: camera shake and a short on-screen message.
+func _on_boss_armor_phase_changed(phase: int) -> void:
+	if not _session_active:
+		return
+	if phase != ARMOR_PHASE_SUBCORE and phase != ARMOR_PHASE_EXPOSED_CORE:
+		return
+	var text: String = ARMOR_BROKEN_TEXT if phase == ARMOR_PHASE_SUBCORE else CORE_EXPOSED_TEXT
+	if _camera != null and _camera.has_method(&"add_trauma"):
+		_camera.add_trauma(ARMOR_PHASE_CHANGE_TRAUMA)
+	if _visual_feedback != null and _active_boss != null:
+		_visual_feedback.play_text_popup(_active_boss.global_position + Vector2(0, -60), text, Color(1.0, 0.75, 0.25))
 
 
 func _on_boss_contacted_player(player: Node2D) -> void:

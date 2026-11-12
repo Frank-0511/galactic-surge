@@ -24,6 +24,12 @@ const CLEAN_WAVE_BONUS: int = 500
 const WAVE_CLEARED_BANNER_TEXT: String = "¡OLEADA SUPERADA!"
 const WAVE_CLEARED_GRACE_MIN: float = 1.5
 const WAVE_CLEARED_GRACE_MAX: float = 2.0
+# Etapa 15 T7: one boss per chapter (names as shown on the boss health bar).
+const BOSS_NAME_NEXUS: String = "NAVE NODRIZA NEXUS"
+const BOSS_NAME_ESPECTRO: String = "CRUCERO ESPECTRO"
+const BOSS_NAME_BLINDADO: String = "NÚCLEO BLINDADO"
+const ARMOR_BROKEN_TEXT: String = "ARMADURA EXTERIOR ROTA"
+const CORE_EXPOSED_TEXT: String = "NÚCLEO EXPUESTO"
 
 
 func _init() -> void:
@@ -36,6 +42,7 @@ func _run_contracts() -> void:
 	passed = await _assert_bonus_wave_contract() and passed
 	passed = await _assert_guardian_contract() and passed
 	passed = await _assert_blindado_core_contract() and passed
+	passed = await _assert_boss_variants_contract() and passed
 	passed = await _assert_wave_cleared_feedback_contract() and passed
 	passed = await _assert_global_difficulty_contract() and passed
 	passed = await _assert_stacking_shield_contract() and passed
@@ -427,6 +434,138 @@ func _assert_blindado_core_contract() -> bool:
 		root.remove_child(node)
 		node.free()
 	return passed
+
+
+# Boss per chapter (T7): chapter 1 Nexus (unchanged), chapter 2 Espectro (fan of 5
+# alternating with a ring of 8), chapter 3 Núcleo Blindado (armor phase feedback).
+# Each chapter boss shows its own name on the health bar.
+func _assert_boss_variants_contract() -> bool:
+	var main: Node2D = (load(MAIN_SCENE_PATH) as PackedScene).instantiate() as Node2D
+	root.add_child(main)
+	main.start_session()
+	await process_frame
+	var passed: bool = true
+	var announcement: CanvasLayer = main.get_node_or_null("WaveAnnouncement") as CanvasLayer
+	if announcement != null and "display_duration" in announcement:
+		announcement.set("display_duration", 0.0)
+	if "enemy_drop_chance" in main:
+		main.set("enemy_drop_chance", 0.0)
+	main.set("bonus_drop_interval", 0.0)
+
+	var hud: CanvasLayer = main.get_node("HUD") as CanvasLayer
+	var name_label: Label = hud.get_node("BossContainer/BossNameLabel") as Label
+	var expected_variants: Array[StringName] = [&"nexus", &"espectro", &"blindado"]
+	var expected_names: Array[String] = [BOSS_NAME_NEXUS, BOSS_NAME_ESPECTRO, BOSS_NAME_BLINDADO]
+	var volleys: Array[Array] = []
+
+	for chapter_index: int in range(1, TOTAL_CHAPTERS + 1):
+		for wave_index: int in TOTAL_WAVES:
+			await _clear_current_wave(main)
+			await _finish_wave_transition(main)
+			await _wait_for_bonus(main)
+		var boss: Area2D = _find_boss(main)
+		if boss == null:
+			push_error("Chapter %d must spawn its boss" % chapter_index)
+			passed = false
+			break
+		var variant: Variant = boss.get("boss_variant")
+		if variant != expected_variants[chapter_index - 1]:
+			push_error("Chapter %d boss_variant must be %s, got %s" % [chapter_index, expected_variants[chapter_index - 1], str(variant)])
+			passed = false
+		if name_label.text != "BOSS: %s" % expected_names[chapter_index - 1]:
+			push_error("Chapter %d boss bar must read '%s', got '%s'" % [chapter_index, expected_names[chapter_index - 1], name_label.text])
+			passed = false
+		await _wait_until_boss_in_cruise(boss)
+		var sizes: Array[int] = _sample_volley_sizes(boss, 2)
+		volleys.append(sizes)
+		if chapter_index == TOTAL_CHAPTERS:
+			passed = await _assert_blindado_phase_feedback(main, boss) and passed
+		boss.call("take_damage", int(boss.get("health")))
+		await process_frame
+		await process_frame
+		if chapter_index < TOTAL_CHAPTERS:
+			await _finish_wave_transition(main)
+
+	if volleys.size() == TOTAL_CHAPTERS:
+		if volleys[0] != [2, 1]:
+			push_error("Nexus volleys must keep the chapter 1 pattern [2, 1], got %s" % str(volleys[0]))
+			passed = false
+		if volleys[1] != [5, 8]:
+			push_error("Espectro must alternate a fan of 5 with a ring of 8, got %s" % str(volleys[1]))
+			passed = false
+	else:
+		passed = false
+
+	root.remove_child(main)
+	main.free()
+	return passed
+
+
+# Núcleo Blindado feedback (T7): each armor phase change emits armor_phase_changed,
+# shakes the camera and shows its short text on screen.
+func _assert_blindado_phase_feedback(main: Node2D, boss: Area2D) -> bool:
+	var passed: bool = true
+	var camera: Camera2D = main.get_node("Camera2D") as Camera2D
+	var popups: Node = main.get_node("VisualFeedback/ExplosionLayer")
+	var phases: Array[int] = []
+	boss.connect(&"armor_phase_changed", func(phase: int) -> void: phases.append(phase))
+
+	camera.set("trauma", 0.0)
+	boss.call("take_damage", 102)
+	if phases != [2]:
+		push_error("Losing the exterior armor must emit phase 2, got %s" % str(phases))
+		passed = false
+	if not _has_label_text(popups, ARMOR_BROKEN_TEXT):
+		push_error("Breaking the exterior armor must show '%s'" % ARMOR_BROKEN_TEXT)
+		passed = false
+	if float(camera.get("trauma")) <= 0.0:
+		push_error("Breaking the exterior armor must shake the camera")
+		passed = false
+
+	camera.set("trauma", 0.0)
+	boss.call("take_damage", 99)
+	if phases != [2, 3]:
+		push_error("Exposing the core must emit phase 3 after phase 2, got %s" % str(phases))
+		passed = false
+	if not _has_label_text(popups, CORE_EXPOSED_TEXT):
+		push_error("Exposing the core must show '%s'" % CORE_EXPOSED_TEXT)
+		passed = false
+	if float(camera.get("trauma")) <= 0.0:
+		push_error("Exposing the core must shake the camera")
+		passed = false
+	return passed
+
+
+# Fires two volleys by emitting the boss shoot timer and returns the bullets each one created.
+func _sample_volley_sizes(boss: Area2D, volley_count: int) -> Array[int]:
+	var sizes: Array[int] = []
+	var shoot_timer: Timer = boss.get_node("ShootTimer") as Timer
+	for _volley: int in volley_count:
+		var before: Array = get_nodes_in_group(&"enemy_bullets")
+		shoot_timer.timeout.emit()
+		var created: int = 0
+		for bullet: Node in get_nodes_in_group(&"enemy_bullets"):
+			if not before.has(bullet):
+				created += 1
+				bullet.queue_free()
+		sizes.append(created)
+	return sizes
+
+
+func _wait_until_boss_in_cruise(boss: Area2D) -> void:
+	for _frame: int in range(600):
+		if int(boss.call("get_movement_state")) != 0:
+			return
+		await process_frame
+
+
+func _has_label_text(node: Node, text: String) -> bool:
+	if node is Label and (node as Label).text == text:
+		return true
+	for child: Node in node.get_children():
+		if _has_label_text(child, text):
+			return true
+	return false
 
 
 # Wave-cleared feedback (T6): clearing a normal wave shows the "¡OLEADA SUPERADA!"

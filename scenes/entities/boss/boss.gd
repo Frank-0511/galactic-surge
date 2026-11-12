@@ -1,5 +1,6 @@
 # boss.gd
-# Final boss entity ("Nave Nodriza Nexus") for Etapa 5.
+# Boss entity for Etapa 5 and Etapa 15: "Nave Nodriza Nexus" (default), "Crucero Espectro"
+# and "Núcleo Blindado", selected per chapter through boss_variant.
 # Autonomous Area2D in group "enemies" with vector neon art, phase-based attack patterns,
 # dynamic banking tilt, sinusoidal cruise oscillation, dive maneuvers, and health-based defeat signaling.
 
@@ -39,6 +40,16 @@ const SUBCORE_THRESHOLD_PERCENT: int = 66
 const EXPOSED_CORE_THRESHOLD_PERCENT: int = 33
 ## Damage multiplier applied to every hit while the exposed core is vulnerable.
 const EXPOSED_CORE_DAMAGE_MULTIPLIER: float = 1.5
+## Espectro volley sizes: a fan of 5 aimed at the player alternates with a ring of 8.
+const SPECTRE_FAN_BULLET_COUNT: int = 5
+const SPECTRE_RING_BULLET_COUNT: int = 8
+const SPECTRE_FAN_BULLET_SPEED: float = 340.0
+const SPECTRE_RING_BULLET_SPEED: float = 280.0
+## Seconds between Espectro volleys. 13 bullets per two volleys every 3.25 s is the same
+## average rate as the Nexus phase 1 (2 bullets per second), so damage pressure does not rise.
+const SPECTRE_VOLLEY_INTERVAL: float = 3.25
+## Enraged Espectro matches the Nexus phase 2 rate (about 7 bullets per second).
+const SPECTRE_ENRAGED_VOLLEY_INTERVAL: float = 0.95
 
 ## Maximum health points.
 @export var max_health: int = 150
@@ -48,6 +59,9 @@ const EXPOSED_CORE_DAMAGE_MULTIPLIER: float = 1.5
 
 ## Base hover elevation in cruise mode.
 @export var base_y: float = 140.0
+
+## Boss variant: "nexus" (chapter 1, default), "espectro" (chapter 2) or "blindado" (chapter 3).
+@export var boss_variant: StringName = &"nexus"
 
 ## Enables the three-phase Núcleo Blindado mode. Set by main.gd for chapter 3 only.
 var multi_phase_enabled: bool = false
@@ -77,6 +91,7 @@ var _telegraph_timer: float = 0.0
 var _dive_target: Vector2 = Vector2.ZERO
 var _shoot_cycle_phase1: int = 0
 var _shoot_cycle_phase2: int = 0
+var _shoot_cycle_spectre: int = 0
 var _armor_phase: ArmorPhase = ArmorPhase.EXTERIOR_ARMOR
 
 
@@ -258,6 +273,10 @@ func _on_shoot_timer_timeout() -> void:
 	if _is_defeated or _is_entering or boss_bullet_scene == null:
 		return
 
+	if boss_variant == &"espectro":
+		_fire_spectre_volley()
+		return
+
 	if not is_enraged:
 		# Phase 1: Alternate between dual heavy cannons and aimed shot
 		if (_shoot_cycle_phase1 % 2) == 0:
@@ -295,6 +314,26 @@ func _on_shoot_timer_timeout() -> void:
 			_spawn_bullet(Vector2(36, 32), aim_dir, 420.0, true)
 		_shoot_cycle_phase2 += 1
 		_schedule_shoot(0.5)
+
+
+# Espectro attack: fan of 5 aimed at the player, then a radial ring of 8, alternating.
+func _fire_spectre_volley() -> void:
+	if (_shoot_cycle_spectre % 2) == 0:
+		var player: Node2D = _get_player_node()
+		var aim_dir: Vector2 = Vector2.DOWN
+		if player != null:
+			var to_player: Vector2 = global_position.direction_to(player.global_position)
+			if to_player.length_squared() > 0.0001:
+				aim_dir = to_player.normalized()
+		for fan_index: int in SPECTRE_FAN_BULLET_COUNT:
+			var fan_angle: float = lerpf(-30.0, 30.0, float(fan_index) / float(SPECTRE_FAN_BULLET_COUNT - 1))
+			_spawn_bullet(Vector2(0, 36), aim_dir.rotated(deg_to_rad(fan_angle)), SPECTRE_FAN_BULLET_SPEED, true)
+	else:
+		for ring_index: int in SPECTRE_RING_BULLET_COUNT:
+			var ring_angle: float = TAU * float(ring_index) / float(SPECTRE_RING_BULLET_COUNT)
+			_spawn_bullet(Vector2.ZERO, Vector2.RIGHT.rotated(ring_angle), SPECTRE_RING_BULLET_SPEED, true)
+	_shoot_cycle_spectre += 1
+	_schedule_shoot(SPECTRE_ENRAGED_VOLLEY_INTERVAL if is_enraged else SPECTRE_VOLLEY_INTERVAL)
 
 
 func _get_player_node() -> Node2D:
@@ -356,6 +395,15 @@ func _on_body_entered(body: Node2D) -> void:
 
 
 func _draw() -> void:
+	if boss_variant == &"espectro":
+		_draw_espectro()
+	elif boss_variant == &"blindado":
+		_draw_blindado()
+	else:
+		_draw_nexus()
+
+
+func _draw_nexus() -> void:
 	var pulse_speed: float = 9.0 if is_enraged else 4.0
 	if _state == MovementState.DIVE_TELEGRAPH:
 		pulse_speed = 22.0
@@ -429,6 +477,127 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, core_radius * 0.55, Color(1.0, 1.0, 1.0, 0.95))
 
 	# 6. Hit flash overlay
+	if _hit_flash_time > 0.0:
+		var flash_alpha: float = clampf(_hit_flash_time / 0.12, 0.0, 1.0) * 0.75
+		draw_colored_polygon(hull, Color(1.0, 1.0, 1.0, flash_alpha))
+
+
+# Dive telegraph warning ring shared by the Espectro and Núcleo Blindado looks.
+func _draw_dive_warning() -> void:
+	if _state != MovementState.DIVE_TELEGRAPH:
+		return
+	var warn_color: Color = Color(1.0, 0.2, 0.35, 0.55 + 0.35 * sin(_time * 24.0))
+	draw_arc(Vector2.ZERO, 72.0 + 8.0 * sin(_time * 16.0), 0.0, TAU, 32, warn_color, 3.5)
+	draw_circle(Vector2.ZERO, 85.0, Color(1.0, 0.1, 0.2, 0.12))
+
+
+# Crucero Espectro (chapter 2): swept diamond hull with blade wings, green-violet palette.
+func _draw_espectro() -> void:
+	var pulse_speed: float = 9.0 if is_enraged else 4.0
+	if _state == MovementState.DIVE_TELEGRAPH:
+		pulse_speed = 22.0
+	var core_pulse: float = 0.5 + 0.5 * sin(_time * pulse_speed)
+	var neon_primary: Color = Color(0.85, 1.0, 0.2) if is_enraged else Color(0.35, 1.0, 0.55)
+	var neon_secondary: Color = Color(1.0, 0.25, 0.75) if is_enraged else Color(0.62, 0.3, 1.0)
+	var hull_color: Color = Color(0.06, 0.04, 0.14)
+
+	_draw_dive_warning()
+	draw_circle(Vector2.ZERO, 60.0 + 8.0 * core_pulse, Color(neon_primary.r, neon_primary.g, neon_primary.b, 0.1 + 0.08 * core_pulse))
+
+	var hull: PackedVector2Array = PackedVector2Array([
+		Vector2(0, -40),
+		Vector2(22, -14),
+		Vector2(40, -10),
+		Vector2(40, 10),
+		Vector2(22, 34),
+		Vector2(0, 24),
+		Vector2(-22, 34),
+		Vector2(-40, 10),
+		Vector2(-40, -10),
+		Vector2(-22, -14),
+	])
+	draw_colored_polygon(hull, hull_color)
+	var hull_loop: PackedVector2Array = hull.duplicate()
+	hull_loop.append(hull[0])
+	draw_polyline(hull_loop, neon_primary, 2.0)
+
+	# Swept blade wings
+	for side: float in [-1.0, 1.0]:
+		var wing: PackedVector2Array = PackedVector2Array([
+			Vector2(side * 36, -6), Vector2(side * 80, -18), Vector2(side * 66, 6), Vector2(side * 36, 12),
+		])
+		draw_colored_polygon(wing, Color(0.14, 0.08, 0.26))
+		var wing_loop: PackedVector2Array = wing.duplicate()
+		wing_loop.append(wing[0])
+		draw_polyline(wing_loop, neon_secondary, 1.4)
+
+	# Forward emitter and diamond reactor core
+	draw_circle(Vector2(0, 24), 3.0, neon_primary)
+	var core_size: float = 8.0 + 3.0 * core_pulse
+	var core: PackedVector2Array = PackedVector2Array([
+		Vector2(0, -core_size), Vector2(core_size, 0), Vector2(0, core_size), Vector2(-core_size, 0),
+	])
+	draw_colored_polygon(core, neon_primary)
+	draw_circle(Vector2.ZERO, core_size * 0.45, Color(1.0, 1.0, 1.0, 0.95))
+
+	if _hit_flash_time > 0.0:
+		var flash_alpha: float = clampf(_hit_flash_time / 0.12, 0.0, 1.0) * 0.75
+		draw_colored_polygon(hull, Color(1.0, 1.0, 1.0, flash_alpha))
+
+
+# Núcleo Blindado (chapter 3): steel armor plates that come off with each armor phase.
+# Phase 1 full plating, phase 2 only centre plates left, phase 3 bare bright core.
+func _draw_blindado() -> void:
+	var pulse_speed: float = 9.0 if is_enraged else 4.0
+	if _state == MovementState.DIVE_TELEGRAPH:
+		pulse_speed = 22.0
+	var core_pulse: float = 0.5 + 0.5 * sin(_time * pulse_speed)
+	var accent: Color = Color(1.0, 0.3, 0.2) if is_enraged else Color(1.0, 0.72, 0.22)
+	var steel: Color = Color(0.5, 0.56, 0.66)
+	var seam: Color = Color(0.16, 0.19, 0.25)
+	var hull_color: Color = Color(0.09, 0.1, 0.13)
+
+	_draw_dive_warning()
+
+	var hull: PackedVector2Array = PackedVector2Array([
+		Vector2(-72, -22), Vector2(72, -22), Vector2(74, 0), Vector2(64, 24),
+		Vector2(-64, 24), Vector2(-74, 0),
+	])
+	draw_colored_polygon(hull, hull_color)
+
+	# Exposed reactor: visible from the subcore phase on, bright and pulsing once the armor is gone.
+	if _armor_phase == ArmorPhase.EXTERIOR_ARMOR:
+		draw_circle(Vector2.ZERO, 7.0, Color(accent.r, accent.g, accent.b, 0.35))
+	elif _armor_phase == ArmorPhase.SUBCORE:
+		draw_circle(Vector2.ZERO, 11.0, Color(accent.r, accent.g, accent.b, 0.6))
+	else:
+		var core_radius: float = 16.0 + 4.0 * core_pulse
+		draw_circle(Vector2.ZERO, core_radius + 6.0, Color(accent.r, accent.g, accent.b, 0.3))
+		draw_circle(Vector2.ZERO, core_radius, accent)
+		draw_circle(Vector2.ZERO, core_radius * 0.5, Color(1.0, 1.0, 1.0, 0.95))
+
+	# Armor plates: six in phase 1, only the centre pair in phase 2, none in phase 3.
+	if _armor_phase != ArmorPhase.EXPOSED_CORE:
+		var plates: Array[PackedVector2Array] = []
+		if _armor_phase == ArmorPhase.EXTERIOR_ARMOR:
+			plates.append(PackedVector2Array([Vector2(-70, -22), Vector2(-26, -22), Vector2(-30, -8), Vector2(-70, -6)]))
+			plates.append(PackedVector2Array([Vector2(-70, -4), Vector2(-30, -4), Vector2(-34, 12), Vector2(-64, 22), Vector2(-72, 6)]))
+			plates.append(PackedVector2Array([Vector2(70, -22), Vector2(26, -22), Vector2(30, -8), Vector2(70, -6)]))
+			plates.append(PackedVector2Array([Vector2(70, -4), Vector2(30, -4), Vector2(34, 12), Vector2(64, 22), Vector2(72, 6)]))
+		plates.append(PackedVector2Array([Vector2(-22, -22), Vector2(22, -22), Vector2(16, -8), Vector2(-16, -8)]))
+		plates.append(PackedVector2Array([Vector2(-22, 6), Vector2(22, 6), Vector2(14, 22), Vector2(-14, 22)]))
+		for plate: PackedVector2Array in plates:
+			draw_colored_polygon(plate, steel)
+			var plate_loop: PackedVector2Array = plate.duplicate()
+			plate_loop.append(plate[0])
+			draw_polyline(plate_loop, seam, 1.5)
+
+	# Hull outline: accent colour when the armor is gone, steel while plated.
+	var outline_color: Color = accent if _armor_phase != ArmorPhase.EXTERIOR_ARMOR else steel
+	var hull_loop: PackedVector2Array = hull.duplicate()
+	hull_loop.append(hull[0])
+	draw_polyline(hull_loop, outline_color, 2.0)
+
 	if _hit_flash_time > 0.0:
 		var flash_alpha: float = clampf(_hit_flash_time / 0.12, 0.0, 1.0) * 0.75
 		draw_colored_polygon(hull, Color(1.0, 1.0, 1.0, flash_alpha))
