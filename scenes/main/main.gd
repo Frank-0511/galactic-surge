@@ -237,6 +237,7 @@ func return_to_main_menu() -> void:
 
 func _enter_main_menu() -> void:
 	get_tree().paused = false
+	_end_belt_camera_follow()
 	_enemy_spawner.stop()
 	_enemy_spawner.clear_formation()
 	_clear_boss()
@@ -433,6 +434,7 @@ func _on_asteroid_player_contacted(player: Node2D) -> void:
 
 
 func _on_asteroid_wave_completed() -> void:
+	_end_belt_camera_follow()
 	if not _session_active:
 		return
 	_on_wave_cleared(ASTEROID_WAVE_INDEX)
@@ -714,6 +716,7 @@ func _on_wave_announcement_finished() -> void:
 		_enemy_spawner.stop()
 		_enemy_spawner.clear_formation()
 		_asteroid_spawner.start_asteroid_wave(8)
+		_begin_belt_camera_follow()
 	else:
 		_enemy_spawner.start_wave(_local_index(_pending_wave_index), _pending_wave_index)
 
@@ -893,6 +896,7 @@ func _end_session() -> void:
 	if not _session_active:
 		return
 	_session_active = false
+	_end_belt_camera_follow()
 	_session_state = SessionState.GAME_OVER
 	_player.set_gameplay_enabled(false)
 	_enemy_spawner.stop()
@@ -909,6 +913,7 @@ func _end_session() -> void:
 
 func _complete_mission() -> void:
 	_session_active = false
+	_end_belt_camera_follow()
 	_mission_complete = true
 	_session_state = SessionState.MISSION_COMPLETE
 	_player.set_gameplay_enabled(false)
@@ -939,6 +944,7 @@ func reset_session() -> void:
 	if _asteroid_spawner != null:
 		_asteroid_spawner.stop()
 		_asteroid_spawner.clear_asteroids()
+	_end_belt_camera_follow()
 	if _camera != null and _camera.has_method(&"reset_shake"):
 		_camera.reset_shake()
 	_reset_wave_cleared_feedback()
@@ -1064,6 +1070,17 @@ func _on_hud_retry_mission_requested() -> void:
 func _on_main_menu_quit_requested() -> void:
 	return_to_main_menu()
 	get_tree().quit()
+
+
+## Etapa 16: the camera follows the ship only while the asteroid belt runs.
+func _begin_belt_camera_follow() -> void:
+	if _camera != null and _player != null and _camera.has_method(&"begin_follow"):
+		_camera.begin_follow(_player)
+
+
+func _end_belt_camera_follow() -> void:
+	if _camera != null and _camera.has_method(&"end_follow"):
+		_camera.end_follow()
 
 
 func get_asteroid_spawner() -> Node2D:

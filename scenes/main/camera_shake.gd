@@ -23,10 +23,20 @@ extends Camera2D
 ## Exponent that governs non-linear shake perception (2.0 = quadratic).
 @export var trauma_exponent: float = 2.0
 
+## Maximum horizontal distance in pixels the camera may drift from home while following.
+@export var follow_max_offset: float = 120.0
+
+## Position smoothing speed used while following a target.
+@export var follow_smoothing_speed: float = 5.0
+
 ## Legacy shake state
 var _time_left: float = 0.0
 var _duration: float = 0.0
 var _intensity: float = 0.0
+
+## Follow state (Etapa 16): tracks a target on X only, clamped around the home position.
+var _follow_target: Node2D = null
+var _follow_home: Vector2 = Vector2.ZERO
 
 
 ## Increases trauma by amount, clamped to 1.0.
@@ -49,6 +59,21 @@ func shake(intensity: float, duration: float) -> void:
 	_time_left = duration
 
 
+## Starts following target on X, clamped to follow_max_offset around the current position.
+## Y is never followed. Smoothing glides the camera toward the target.
+func begin_follow(target: Node2D) -> void:
+	_follow_target = target
+	_follow_home = position
+	position_smoothing_enabled = true
+	position_smoothing_speed = follow_smoothing_speed
+
+
+## Stops following and returns the camera to its home position.
+func end_follow() -> void:
+	_follow_target = null
+	position = _follow_home
+
+
 ## Instantly resets all shake offsets, rolls, and trauma.
 func reset_shake() -> void:
 	trauma = 0.0
@@ -60,6 +85,10 @@ func reset_shake() -> void:
 
 
 func _process(delta: float) -> void:
+	if is_instance_valid(_follow_target):
+		var drift: float = clampf(_follow_target.global_position.x - _follow_home.x, -follow_max_offset, follow_max_offset)
+		position = Vector2(_follow_home.x + drift, _follow_home.y)
+
 	var has_trauma: bool = trauma > 0.0
 	var has_legacy: bool = _time_left > 0.0
 
