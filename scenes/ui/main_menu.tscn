@@ -79,6 +79,22 @@ grow_vertical = 2
 color = Color(0.22, 0.9, 1.0, 0.55)
 mouse_filter = 2
 
+[node name="DificultadButton" type="Button" parent="Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -130.0
+offset_top = -72.0
+offset_right = 130.0
+offset_bottom = -40.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 16
+text = "DIFICULTAD: COMANDANTE"
+
 [node name="PlayButton" type="Button" parent="Control"]
 layout_mode = 1
 anchors_preset = 8
@@ -129,5 +145,6 @@ theme_override_colors/font_color = Color(0.62, 0.7, 0.82, 1.0)
 text = "Mejor puntaje: 0"
 horizontal_alignment = 1
 
+[connection signal="pressed" from="Control/DificultadButton" to="." method="_on_dificultad_button_pressed"]
 [connection signal="pressed" from="Control/PlayButton" to="." method="_on_play_button_pressed"]
 [connection signal="pressed" from="Control/QuitButton" to="." method="_on_quit_button_pressed"]

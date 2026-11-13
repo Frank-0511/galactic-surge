@@ -399,6 +399,10 @@ var difficulty_level: int = 1
 const DIFFICULTY_SPEED_STEP: float = 0.15
 const MAX_FORMATION_COLUMNS: int = 8
 
+## Session difficulty tier (Etapa 18). Scales formation speed and density; COMMANDER keeps the base values.
+const DS := preload("res://scripts/systems/difficulty_settings.gd")
+var session_difficulty: int = DS.Tier.COMMANDER
+
 
 ## wave_index is the local index (0-9); global_index (0-29, -1 = same as local) drives the
 ## difficulty ramp across chapters.
@@ -413,6 +417,8 @@ func start_wave(wave_index: int, global_index: int = -1) -> void:
 	rows = int(config["rows"])
 	columns = mini(int(config["columns"]) + level_offset, MAX_FORMATION_COLUMNS)
 	formation_speed = float(config["formation_speed"]) * (1.0 + DIFFICULTY_SPEED_STEP * level_offset)
+	formation_speed *= DS.speed_multiplier(session_difficulty)
+	columns = clampi(columns + DS.density_offset(session_difficulty), 1, MAX_FORMATION_COLUMNS)
 	_current_pattern_type = String(config.get("formation_type", "grid"))
 	_current_trajectory = String(config.get("fly_in_trajectory", "swoop_left"))
 	spawn_formation()

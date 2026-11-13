@@ -4,6 +4,8 @@
 
 extends Area2D
 
+const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+
 ## Emitted whenever the laser ticks damage on an enemy.
 signal enemy_hit(enemy: Area2D)
 
@@ -34,6 +36,7 @@ var _fractional_damage_buffer: float = 0.0
 var _time: float = 0.0
 var _active_length: float = 420.0
 var _current_target_enemy: Area2D = null
+var _hit_registered: bool = false
 
 @onready var _collision_shape: CollisionShape2D = $CollisionShape2D
 
@@ -85,6 +88,10 @@ func set_firing(firing: bool) -> void:
 	_update_firing_state()
 	_tick_timer = 0.0
 	_fractional_damage_buffer = 0.0
+	if is_firing:
+		# Each continuous beam activation is one projectile: one shot, one hit at most.
+		_hit_registered = false
+		SESSION_STATS.register_shot()
 
 	if is_firing:
 		_update_beam_geometry()
@@ -217,6 +224,7 @@ func _apply_damage_tick() -> void:
 	enemy_hit.emit(target)
 	if target.has_method(&"supports_fractional_damage"):
 		target.call(&"take_damage", amount)
+		_register_hit_once()
 	elif target.has_method(&"take_damage"):
 		# Integer-health targets (Boss): accumulate until a whole point is reached.
 		_fractional_damage_buffer += amount
@@ -224,8 +232,18 @@ func _apply_damage_tick() -> void:
 		if whole > 0:
 			_fractional_damage_buffer -= float(whole)
 			target.call(&"take_damage", whole)
+			_register_hit_once()
 	elif target.has_method(&"destroy"):
 		target.call(&"destroy")
+		_register_hit_once()
+
+
+## Counts the beam's single hit for this activation the first time it damages an enemy.
+func _register_hit_once() -> void:
+	if _hit_registered:
+		return
+	_hit_registered = true
+	SESSION_STATS.register_hit()
 
 
 func _on_area_entered(_area: Area2D) -> void:

@@ -43,9 +43,11 @@ const SCORE_LOOT_POINTS: int = 250
 const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
 const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss/boss.tscn")
 const HighScore: Script = preload("res://scripts/systems/high_score.gd")
+const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
 const EXTRA_LIFE_SCORE_THRESHOLD: int = 1_000_000
+const DS := preload("res://scripts/systems/difficulty_settings.gd")
 
 const _RADAR_PHRASES: Array[String] = [
 	"SEÑAL HOSTIL DETECTADA",
@@ -90,6 +92,12 @@ var _chapter: int = 1
 ## Best score ever reached, loaded on startup and persisted to disk.
 var _high_score: int = 0
 var _last_extra_life_threshold: int = 0
+
+## Post-session stats: kills per enemy variant. Shots and hits live in SessionStats.
+var kills_by_type: Dictionary = {}
+
+## Session difficulty tier (Etapa 18); COMMANDER keeps base score, speed, density and cooling.
+var session_difficulty: int = DS.Tier.COMMANDER
 
 ## Loot drop probabilities and weights.
 @export_range(0.0, 1.0, 0.01) var enemy_loot_drop_chance: float = 0.18
@@ -182,7 +190,7 @@ func _ready() -> void:
 	_game_over.main_menu_requested.connect(return_to_main_menu)
 	_hud.retry_mission_requested.connect(_on_hud_retry_mission_requested)
 	_hud.main_menu_requested.connect(return_to_main_menu)
-	_main_menu.play_requested.connect(start_session)
+	_main_menu.play_requested.connect(_on_main_menu_play_requested)
 	_main_menu.quit_requested.connect(_on_main_menu_quit_requested)
 	_pause_menu.resume_requested.connect(resume_session)
 	_pause_menu.main_menu_requested.connect(return_to_main_menu)
@@ -204,6 +212,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		return
 	get_viewport().set_input_as_handled()
+
+
+## Receives the difficulty picked in the main menu; only the menu sets session_difficulty.
+func _on_main_menu_play_requested() -> void:
+	if _session_state != SessionState.MAIN_MENU:
+		return
+	session_difficulty = _main_menu.selected_difficulty
+	start_session()
 
 
 func start_session() -> void:
@@ -341,6 +357,12 @@ func _spawn_recovery_capsule(spawn_pos: Vector2) -> void:
 	add_child(loot)
 
 
+## Adds points scaled by the session difficulty score multiplier, then checks extra-life milestones.
+func _add_score(points: int) -> void:
+	score += int(round(points * DS.score_multiplier(session_difficulty)))
+	_check_score_milestones()
+
+
 func _check_score_milestones() -> void:
 	if EXTRA_LIFE_SCORE_THRESHOLD <= 0:
 		return
@@ -368,12 +390,16 @@ func _on_player_shot_fired(is_double_shot: bool) -> void:
 func _on_enemy_destroyed(enemy: Area2D) -> void:
 	if not _session_active:
 		return
+	if enemy.has_method(&"get_variant_id"):
+		var variant_id: StringName = enemy.call(&"get_variant_id")
+		kills_by_type[variant_id] = int(kills_by_type.get(variant_id, 0)) + 1
 	var explosion_position: Vector2 = enemy.global_position
 	_visual_feedback.play_enemy_explosion(explosion_position)
+	if _visual_feedback.has_method(&"play_hull_fragments"):
+		_visual_feedback.play_hull_fragments(explosion_position)
 	var multiplier: int = _combo_system.register_kill() if (_combo_system != null and _combo_system.has_method(&"register_kill")) else 1
 	var points_earned: int = POINTS_PER_ENEMY * multiplier
-	score += points_earned
-	_check_score_milestones()
+	_add_score(points_earned)
 	_hud.set_score(score)
 	_visual_feedback.play_score_popup(explosion_position, points_earned, multiplier > 1)
 	_audio_feedback.play_enemy_explosion()
@@ -409,8 +435,7 @@ func _on_asteroid_destroyed(asteroid: Area2D, size_idx: int, pos: Vector2, _vel:
 
 	var mult: int = _combo_system.register_kill() if (_combo_system != null and _combo_system.has_method(&"register_kill")) else 1
 	var points_earned: int = base_pts * mult
-	score += points_earned
-	_check_score_milestones()
+	_add_score(points_earned)
 	_hud.set_score(score)
 	_visual_feedback.play_score_popup(pos, points_earned, mult > 1)
 	_visual_feedback.play_enemy_explosion(pos)
@@ -578,8 +603,7 @@ func _on_loot_collected(loot_type: int) -> void:
 		return
 	match loot_type:
 		LootDrop.Type.SCORE:
-			score += SCORE_LOOT_POINTS
-			_check_score_milestones()
+			_add_score(SCORE_LOOT_POINTS)
 			_hud.set_score(score)
 			_visual_feedback.play_score_popup(_player.global_position, SCORE_LOOT_POINTS)
 		LootDrop.Type.DOUBLE_SHOT:
@@ -642,8 +666,7 @@ func _on_wave_cleared(_wave_index: int) -> void:
 	if _starfield != null and _starfield.has_method(&"trigger_warp_boost"):
 		_starfield.trigger_warp_boost(3.0, 10.0)
 	if _wave_is_clean:
-		score += CLEAN_WAVE_BONUS
-		_check_score_milestones()
+		_add_score(CLEAN_WAVE_BONUS)
 		_hud.set_score(score)
 		_visual_feedback.play_score_popup(_player.global_position + Vector2(0, -50), CLEAN_WAVE_BONUS, true)
 	if _local_wave(wave) >= TOTAL_WAVES:
@@ -777,8 +800,7 @@ func _on_boss_defeated(boss: Area2D) -> void:
 	_visual_feedback.play_score_popup(explosion_pos, BOSS_POINTS, true)
 	_camera.shake(8.0, 0.35)
 	_audio_feedback.play_enemy_explosion()
-	score += BOSS_POINTS
-	_check_score_milestones()
+	_add_score(BOSS_POINTS)
 	_hud.set_score(score)
 
 	# Guaranteed alternative weapon medallion reward post-boss with high magnetism
@@ -908,6 +930,7 @@ func _end_session() -> void:
 	_audio_feedback.stop_boss_music()
 	_hud.hide_boss_health_bar()
 	var is_new_record: bool = _update_high_score_if_needed()
+	_game_over.show_session_stats(get_session_accuracy(), kills_by_type)
 	_game_over.show_game_over(score, is_new_record)
 
 
@@ -939,6 +962,8 @@ func is_session_active() -> bool:
 
 func reset_session() -> void:
 	get_tree().paused = false
+	SESSION_STATS.reset()
+	kills_by_type.clear()
 	_enemy_spawner.stop()
 	_enemy_spawner.clear_formation()
 	if _asteroid_spawner != null:
@@ -985,6 +1010,8 @@ func reset_session() -> void:
 	_mission_complete = false
 	_wave_is_clean = true
 	_session_state = SessionState.PLAYING
+	_enemy_spawner.session_difficulty = session_difficulty
+	_player.cooling_scale = DS.cooling_multiplier(session_difficulty)
 	_main_menu.visible = false
 	_game_over.visible = false
 	_pause_menu.visible = false
@@ -1047,6 +1074,11 @@ func _update_hud() -> void:
 			var ratio: float = _combo_system.get_time_ratio() if (_combo_system != null and _combo_system.has_method(&"get_time_ratio")) else 0.0
 			_hud.set_combo(mult, kills, ratio)
 
+
+
+## Shot accuracy of the current session as a percentage (0.0 to 100.0).
+func get_session_accuracy() -> float:
+	return SESSION_STATS.accuracy_percent(SESSION_STATS.hits, SESSION_STATS.shots)
 
 
 ## Returns true and persists the new best if this session's score beats

@@ -13,6 +13,8 @@ signal invulnerability_ended
 ## Emitted upon firing any weapon; receives true if double shot is engaged.
 signal shot_fired(is_double_shot: bool)
 
+const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+
 ## Emitted when active weapon changes (WeaponType enum value).
 signal weapon_changed(new_weapon: int)
 
@@ -82,6 +84,9 @@ var is_overheated: bool = false
 
 ## Passive cooling rate (% heat dissipated per second).
 var cooling_rate: float = 35.0
+
+## Session difficulty multiplier applied to passive cooling (Etapa 18). 1.0 keeps the base rate.
+var cooling_scale: float = 1.0
 
 ## Delay in seconds before passive cooling begins after the last shot.
 var cooling_delay: float = 0.25
@@ -324,7 +329,7 @@ func _process_overheat_and_cooling(delta: float) -> void:
 			_cooling_delay_timer = maxf(0.0, _cooling_delay_timer - delta)
 		elif heat > 0.0:
 			var prev_heat: float = heat
-			heat = maxf(0.0, heat - cooling_rate * delta)
+			heat = maxf(0.0, heat - cooling_rate * cooling_scale * delta)
 			if heat != prev_heat:
 				heat_changed.emit(heat, max_heat)
 
@@ -433,6 +438,7 @@ func _shoot_blaster() -> void:
 				bullet.set("direction", dir)
 			if "damage" in bullet:
 				bullet.set("damage", get_blaster_damage(weapon_level))
+			SESSION_STATS.register_shot()
 			_add_combat_transient(bullet)
 	add_heat(_get_heat_per_second(WeaponType.BLASTER) * 0.25)
 	_shoot_cooldown.start(0.25)
@@ -488,6 +494,7 @@ func _shoot_missile() -> void:
 				var target_assigned: Node2D = candidate_enemies[i % candidate_enemies.size()]
 				if missile.has_method(&"set_target"):
 					missile.call(&"set_target", target_assigned)
+			SESSION_STATS.register_shot()
 			_add_combat_transient(missile)
 
 	var cooldown: float = lerpf(0.55, 0.35, float(mini(weapon_level, LEGACY_MAX_LEVEL) - 1) / float(LEGACY_MAX_LEVEL - 1))

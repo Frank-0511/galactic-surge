@@ -5,6 +5,8 @@ extends Node2D
 
 const EXPLOSION_BURST_SCRIPT: Script = preload("res://scenes/effects/explosion_burst.gd")
 const SCORE_POPUP_SCRIPT: Script = preload("res://scenes/effects/score_popup.gd")
+const HULL_FRAGMENT_SCRIPT: Script = preload("res://scenes/effects/hull_fragment.gd")
+const HULL_FRAGMENT_COLOR: Color = Color(0.4, 1.0, 0.8)
 
 @onready var _explosion_layer: Node2D = $ExplosionLayer
 @onready var _flash: ColorRect = $DamageFlashLayer/Flash
@@ -19,6 +21,20 @@ func play_enemy_explosion(position: Vector2) -> void:
 	burst.name = "ExplosionBurst"
 	burst.global_position = position
 	_explosion_layer.add_child(burst)
+
+
+func play_hull_fragments(pos: Vector2, count: int = 6) -> void:
+	for fragment_index: int in count:
+		var fragment: Node2D = HULL_FRAGMENT_SCRIPT.new() as Node2D
+		if fragment == null:
+			continue
+		var direction: Vector2 = Vector2.from_angle(randf() * TAU)
+		var speed: float = randf_range(120.0, 260.0)
+		var lifetime: float = randf_range(0.5, 0.8)
+		fragment.name = "HullFragment"
+		fragment.call("configure", direction * speed, lifetime, HULL_FRAGMENT_COLOR)
+		_explosion_layer.add_child(fragment)
+		fragment.global_position = pos
 
 
 func play_score_popup(popup_position: Vector2, points: int, is_bonus: bool = false) -> void:

@@ -3,6 +3,8 @@
 
 extends Area2D
 
+const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+
 ## Emitted once when this projectile hits an enemy.
 signal enemy_hit(enemy: Area2D)
 
@@ -23,6 +25,8 @@ func _on_area_entered(area: Area2D) -> void:
 	if _has_hit or not area.is_in_group("enemies"):
 		return
 	_has_hit = true
+	if area.get("_destroyed") != true:
+		SESSION_STATS.register_hit()
 	enemy_hit.emit(area)
 	queue_free()
 

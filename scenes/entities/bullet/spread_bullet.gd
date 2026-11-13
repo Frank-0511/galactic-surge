@@ -4,6 +4,8 @@
 
 extends Area2D
 
+const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+
 ## Emitted once when this projectile hits an enemy.
 signal enemy_hit(enemy: Area2D)
 
@@ -52,10 +54,13 @@ func _on_area_entered(area: Area2D) -> void:
 		damage_applied = true
 		if area.has_method(&"take_damage_from"):
 			area.call(&"take_damage_from", float(damage), direction)
+			SESSION_STATS.register_hit()
 		elif area.has_method(&"take_damage"):
 			area.call(&"take_damage", damage)
+			SESSION_STATS.register_hit()
 		elif area.has_method(&"destroy"):
 			area.call(&"destroy")
+			SESSION_STATS.register_hit()
 
 	queue_free()
 
