@@ -48,6 +48,9 @@ signal formation_rejoined(enemy: Area2D)
 ## Number of enemies per row.
 @export var columns: int = 6
 
+## Rotation of the formation in radians around its origin (Etapa 17). 0 keeps the layout.
+@export var formation_rotation: float = 0.0
+
 ## Horizontal distance between enemy centers.
 @export var horizontal_spacing: float = 72.0
 
@@ -264,7 +267,7 @@ func spawn_formation() -> void:
 	var pattern: int = FormationPatterns.pattern_from_string(_current_pattern_type)
 	var slots: Array[Vector2] = FormationPatterns.calculate_slots(
 		pattern, rows, columns, horizontal_spacing, vertical_spacing,
-		origin
+		origin, formation_rotation
 	)
 
 	var should_fly_in: bool = fly_in_enabled and fly_in_duration > 0.0

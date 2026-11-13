@@ -26,6 +26,8 @@ static func pattern_from_string(name: String) -> PatternType:
 
 
 ## Calculates formation slot positions for given geometry parameters.
+## Slots are built in local space (origin at zero) and placed with a Transform2D
+## that rotates them by `rotation` radians around `origin`. Rotation 0 is identity.
 ## Returns an array of Vector2 positions of size (rows * columns).
 static func calculate_slots(
 	pattern: PatternType,
@@ -33,7 +35,8 @@ static func calculate_slots(
 	columns: int,
 	h_spacing: float,
 	v_spacing: float,
-	origin: Vector2
+	origin: Vector2,
+	rotation: float = 0.0
 ) -> Array[Vector2]:
 	var slots: Array[Vector2] = []
 	if rows <= 0 or columns <= 0:
@@ -41,15 +44,16 @@ static func calculate_slots(
 
 	slots.resize(rows * columns)
 	var center_col: float = (float(columns) - 1.0) / 2.0
+	var placement: Transform2D = Transform2D(rotation, origin)
 
 	for row: int in range(rows):
 		var row_f: float = float(row)
-		var base_y: float = origin.y + row_f * v_spacing
+		var base_y: float = row_f * v_spacing
 
 		for col: int in range(columns):
 			var col_f: float = float(col)
 			var col_delta: float = col_f - center_col
-			var x: float = origin.x + col_delta * h_spacing
+			var x: float = col_delta * h_spacing
 			var y: float = base_y
 
 			match pattern:
@@ -67,6 +71,6 @@ static func calculate_slots(
 					y += col_delta * (v_spacing * 0.25)
 
 			var index: int = row * columns + col
-			slots[index] = Vector2(x, y)
+			slots[index] = placement * Vector2(x, y)
 
 	return slots
