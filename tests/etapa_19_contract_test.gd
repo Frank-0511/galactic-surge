@@ -26,6 +26,7 @@ func _run_contracts() -> void:
 	passed = _assert_round_trip() and passed
 	passed = _assert_sections() and passed
 	passed = _assert_audio_buses() and passed
+	passed = _assert_display_mapping() and passed
 	_cleanup()
 
 	if passed:
@@ -115,6 +116,19 @@ func _assert_audio_buses() -> bool:
 	scene.free()
 	if ok:
 		print("✓ Contrato 5: Buses Master/Music/SFX y ruteo de reproductores")
+	return ok
+
+
+# 6. Display mapping: fullscreen and vsync booleans map to DisplayServer modes
+func _assert_display_mapping() -> bool:
+	var ok: bool = SETTINGS.window_mode_for(true) == DisplayServer.WINDOW_MODE_FULLSCREEN \
+		and SETTINGS.window_mode_for(false) == DisplayServer.WINDOW_MODE_WINDOWED \
+		and SETTINGS.vsync_mode_for(true) == DisplayServer.VSYNC_ENABLED \
+		and SETTINGS.vsync_mode_for(false) == DisplayServer.VSYNC_DISABLED
+	if ok:
+		print("✓ Contrato 6: Mapeo fullscreen/vsync a DisplayServer")
+	else:
+		push_error("Mapeo de display incorrecto")
 	return ok
 
 

@@ -32,6 +32,20 @@ static func load_settings(path: String = DEFAULT_PATH) -> Dictionary:
 	return values
 
 
+static func window_mode_for(fullscreen: bool) -> DisplayServer.WindowMode:
+	return DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
+
+
+static func vsync_mode_for(vsync: bool) -> DisplayServer.VSyncMode:
+	return DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED
+
+
+# Applies display options to the running window. Called once at startup.
+static func apply_display(values: Dictionary) -> void:
+	DisplayServer.window_set_mode(window_mode_for(values["fullscreen"]))
+	DisplayServer.window_set_vsync_mode(vsync_mode_for(values["vsync"]))
+
+
 static func save_settings(values: Dictionary, path: String = DEFAULT_PATH) -> Error:
 	var config := ConfigFile.new()
 	config.load(path)

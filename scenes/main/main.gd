@@ -43,6 +43,7 @@ const SCORE_LOOT_POINTS: int = 250
 const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
 const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss/boss.tscn")
 const HighScore: Script = preload("res://scripts/systems/high_score.gd")
+const Settings: Script = preload("res://scripts/systems/settings.gd")
 const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
@@ -197,6 +198,7 @@ func _ready() -> void:
 	_wave_announcement.announcement_finished.connect(_on_wave_announcement_finished)
 	child_entered_tree.connect(_on_child_entered_tree)
 	_high_score = HighScore.load_value()
+	Settings.apply_display(Settings.load_settings())
 	_configure_game_layout()
 	_update_hud()
 	_enter_main_menu()
