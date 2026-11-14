@@ -88,16 +88,16 @@ text = "Pantalla completa: No"
 [node name="VsyncToggle" type="Button" parent="Control"]
 layout_mode = 0
 offset_left = 340.0
-offset_top = 592.0
+offset_top = 560.0
 offset_right = 740.0
-offset_bottom = 632.0
+offset_bottom = 600.0
 text = "VSync: Sí"
 
 [node name="BackButton" type="Button" parent="Control"]
 layout_mode = 0
 offset_left = 440.0
-offset_top = 690.0
+offset_top = 640.0
 offset_right = 640.0
-offset_bottom = 740.0
+offset_bottom = 690.0
 text = "Volver"
 
