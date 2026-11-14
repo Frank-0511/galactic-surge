@@ -25,6 +25,17 @@ grow_vertical = 2
 color = Color(0.015, 0.02, 0.07, 0.6)
 mouse_filter = 2
 
+[node name="Vignette" type="TextureRect" parent="Control"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 0
+mouse_filter = 2
+
 [node name="KickerLabel" type="Label" parent="Control"]
 layout_mode = 1
 anchors_preset = 8
@@ -33,15 +44,16 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -195.0
+offset_top = -194.0
 offset_right = 200.0
-offset_bottom = -165.0
+offset_bottom = -168.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(1.0, 0.24, 0.72, 0.85)
 text = "DEFEND THE GALAXY"
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="TitleLabel" type="Label" parent="Control"]
 layout_mode = 1
@@ -50,18 +62,15 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -220.0
-offset_top = -160.0
-offset_right = 220.0
-offset_bottom = -100.0
+offset_left = -300.0
+offset_top = -164.0
+offset_right = 300.0
+offset_bottom = -92.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 40
-theme_override_colors/font_color = Color(0.35, 0.92, 1.0, 1.0)
-theme_override_constants/outline_size = 5
-theme_override_colors/font_outline_color = Color(0.02, 0.05, 0.09, 0.9)
 text = "GALACTIC SURGE"
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Divider" type="ColorRect" parent="Control"]
 layout_mode = 1
@@ -70,14 +79,66 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -70.0
-offset_top = -78.0
-offset_right = 70.0
-offset_bottom = -76.0
+offset_left = -76.0
+offset_top = -75.0
+offset_right = -16.0
+offset_bottom = -73.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.22, 0.9, 1.0, 0.55)
 mouse_filter = 2
+
+[node name="DividerRight" type="ColorRect" parent="Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 16.0
+offset_top = -75.0
+offset_right = 76.0
+offset_bottom = -73.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.22, 0.9, 1.0, 0.55)
+mouse_filter = 2
+
+[node name="DividerDiamond" type="ColorRect" parent="Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -4.0
+offset_top = -78.0
+offset_right = 4.0
+offset_bottom = -70.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 0.785398
+pivot_offset = Vector2(4, 4)
+color = Color(1.0, 0.24, 0.72, 0.85)
+mouse_filter = 2
+
+[node name="DifficultyCaption" type="Label" parent="Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = 26.0
+offset_right = 100.0
+offset_bottom = 46.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.62, 0.7, 0.82, 1.0)
+text = "DIFICULTAD"
+horizontal_alignment = 1
 
 [node name="DificultadButton" type="Button" parent="Control"]
 layout_mode = 1
@@ -86,14 +147,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -130.0
-offset_top = -72.0
-offset_right = 130.0
-offset_bottom = -40.0
+offset_left = -100.0
+offset_top = 50.0
+offset_right = 100.0
+offset_bottom = 84.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 16
-text = "DIFICULTAD: COMANDANTE"
+text = "COMANDANTE"
 
 [node name="PlayButton" type="Button" parent="Control"]
 layout_mode = 1
@@ -102,13 +162,12 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -100.0
-offset_top = -35.0
-offset_right = 100.0
-offset_bottom = 20.0
+offset_left = -120.0
+offset_top = -52.0
+offset_right = 120.0
+offset_bottom = 8.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 24
 text = "Jugar"
 
 [node name="QuitButton" type="Button" parent="Control"]
@@ -119,12 +178,11 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -100.0
-offset_top = 40.0
+offset_top = 102.0
 offset_right = 100.0
-offset_bottom = 95.0
+offset_bottom = 148.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 24
 text = "Salir"
 
 [node name="HighScoreLabel" type="Label" parent="Control"]
@@ -134,16 +192,16 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = 130.0
-offset_right = 200.0
-offset_bottom = 160.0
+offset_left = -110.0
+offset_top = 166.0
+offset_right = 110.0
+offset_bottom = 196.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(0.62, 0.7, 0.82, 1.0)
 text = "Mejor puntaje: 0"
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [connection signal="pressed" from="Control/DificultadButton" to="." method="_on_dificultad_button_pressed"]
 [connection signal="pressed" from="Control/PlayButton" to="." method="_on_play_button_pressed"]
