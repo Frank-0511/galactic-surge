@@ -5,6 +5,7 @@
 # 2. Missing file: load_settings() returns the defaults and does not create a file.
 # 3. Round trip: save_settings() then load_settings() returns the same values.
 # 4. Sections: values are written under [audio] and [display] in the ConfigFile.
+# 12. Rebind Kit: addon classes, Controles button, InputRemap saving to user://rebind_kit.json.
 # Uses an explicit temporary path so the user's real settings file is never touched.
 
 extends SceneTree
@@ -32,6 +33,7 @@ func _run_contracts() -> void:
 	passed = _assert_toggles_share_style() and passed
 	passed = _assert_settings_focus_on_open() and passed
 	passed = _assert_settings_layout() and passed
+	passed = _assert_rebind_kit_contract() and passed
 	_cleanup()
 
 	if passed:
@@ -265,6 +267,39 @@ func _assert_settings_layout() -> bool:
 		print("✓ Contrato 11: Contenedor centrado, separaciones 18/24 px, variaciones de Theme sin overrides")
 	else:
 		push_error("Layout de Ajustes fuera del contrato")
+	return ok
+
+
+# 12. Rebind Kit: the addon's classes load, the menu has a Controles button, and the menu owns an InputRemap that
+# saves to user://rebind_kit.json.
+const REBIND_DIR := "res://addons/rebind_kit/"
+const REBIND_SAVE_PATH := "user://rebind_kit.json"
+
+func _assert_rebind_kit_contract() -> bool:
+	var ok: bool = true
+	for class_file: String in ["InputRemap", "RemapPanel"]:
+		var script: Script = load(REBIND_DIR + class_file + ".gd") as Script
+		if script == null or script.get_global_name() != StringName(class_file):
+			push_error("Falta la clase %s de Rebind Kit en %s" % [class_file, REBIND_DIR])
+			ok = false
+	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	if menu.get_node_or_null("Control/Center/Content/ControlsButton") == null:
+		push_error("settings_menu.tscn debe tener Control/Center/Content/ControlsButton")
+		ok = false
+	root.add_child(menu)
+	var remap = menu.get("remap")
+	if remap == null or not remap.is_inside_tree():
+		push_error("El menu de Ajustes debe tener un InputRemap en su arbol (propiedad remap)")
+		ok = false
+	elif remap.adapter.save_path != REBIND_SAVE_PATH:
+		push_error("El InputRemap debe guardar en %s, guarda en %s" % [REBIND_SAVE_PATH, remap.adapter.save_path])
+		ok = false
+	root.remove_child(menu)
+	menu.free()
+	if ok:
+		print("✓ Contrato 12: Rebind Kit cargado, botón Controles e InputRemap guardando en user://rebind_kit.json")
+	else:
+		push_error("Contrato Rebind Kit fuera de contrato")
 	return ok
 
 

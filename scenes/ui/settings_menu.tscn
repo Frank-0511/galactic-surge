@@ -89,6 +89,12 @@ layout_mode = 2
 theme_type_variation = &"ToggleButton"
 text = "VSync: Sí"
 
+[node name="ControlsButton" type="Button" parent="Control/Center/Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"ToggleButton"
+text = "Controles"
+
 [node name="BackButton" type="Button" parent="Control/Center/Content"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
