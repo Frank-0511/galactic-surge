@@ -42,6 +42,8 @@ const REMAP_PANEL_FILL := Color(0.02, 0.03, 0.08, 0.96)
 ## Taller table (addon default 440) and a wider host, so fewer rows need scrolling.
 const REMAP_TABLE_HEIGHT := 540.0
 const REMAP_MIN_WIDTH := 900
+const REMAP_FOCUS_FILL := Color(0.02, 0.1, 0.16, 1.0)
+const REMAP_FOCUS_BORDER := 3
 ## Colors of the Rebind Kit panel, from this menu's palette: light text, cyan accent, dark background.
 const REMAP_COLORS := {
 	"text": Color(0.72, 0.97, 1.0), "dim": Color(0.72, 0.92, 1.0, 0.65), "off": Color(0.72, 0.92, 1.0, 0.35),
@@ -103,6 +105,7 @@ func _ready() -> void:
 	remap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_remap_column.add_child(remap_title)
 	_remap_host.add_child(_remap_column)
+	_remap_host.theme = _build_remap_theme()
 	_content.get_parent().add_child(_remap_host)
 	_controls_button.pressed.connect(_on_controls_pressed)
 	_values = SETTINGS.load_settings()
@@ -214,6 +217,18 @@ func _build_settings_theme() -> Theme:
 	_theme_plain_control(settings_theme, &"OptionButton")
 	_theme_slider(settings_theme)
 	return settings_theme
+
+
+# Theme only for the Rebind Kit panel (its host): the focused key cell is a dark fill with a
+# thick cyan border, so the key text stays readable. The rest of the menu keeps the solid cyan focus.
+func _build_remap_theme() -> Theme:
+	var remap_theme: Theme = _root.theme.duplicate()
+	var focus_box: StyleBoxFlat = _make_box(REMAP_FOCUS_FILL, FOCUS_FILL, REMAP_FOCUS_BORDER)
+	remap_theme.set_stylebox(&"hover", &"Button", focus_box)
+	remap_theme.set_stylebox(&"focus", &"Button", focus_box)
+	remap_theme.set_color(&"font_hover_color", &"Button", TEXT_SOFT)
+	remap_theme.set_color(&"font_focus_color", &"Button", TEXT_SOFT)
+	return remap_theme
 
 
 func _theme_plain_control(settings_theme: Theme, type: StringName) -> void:
