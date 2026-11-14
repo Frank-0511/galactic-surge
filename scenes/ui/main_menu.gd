@@ -14,6 +14,8 @@ const REDUCED_MOTION := false
 const ENTRANCE_DURATION := 0.35
 const PULSE_HALF_PERIOD := 1.6
 const CORNER_RADIUS := 10
+const BUTTON_PADDING_X := 14.0
+const BUTTON_PADDING_Y := 6.0
 const BORDER_WIDTH := 2
 const FOCUS_BORDER_WIDTH := 3
 const CYAN := Color(0.22, 0.9, 1.0)
@@ -35,6 +37,7 @@ var selected_difficulty: int = DS.Tier.COMMANDER
 @onready var _difficulty_button: Button = $Control/DificultadButton
 @onready var _play_button: Button = $Control/PlayButton
 @onready var _quit_button: Button = $Control/QuitButton
+@onready var _ajustes_button: Button = $Control/AjustesButton
 
 var _entrance_tween: Tween
 var _pulse_tween: Tween
@@ -135,6 +138,7 @@ func _apply_chip_style() -> void:
 func _style_buttons() -> void:
 	_style_button(_play_button, 26, true)
 	_style_button(_quit_button, 20, false)
+	_style_button(_ajustes_button, 20, false)
 	_style_button(_difficulty_button, 16, false)
 
 
@@ -172,6 +176,10 @@ func _make_box(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:
 	box.border_color = border
 	box.set_border_width_all(border_width)
 	box.set_corner_radius_all(CORNER_RADIUS)
+	box.content_margin_left = BUTTON_PADDING_X
+	box.content_margin_right = BUTTON_PADDING_X
+	box.content_margin_top = BUTTON_PADDING_Y
+	box.content_margin_bottom = BUTTON_PADDING_Y
 	box.anti_aliasing = true
 	return box
 

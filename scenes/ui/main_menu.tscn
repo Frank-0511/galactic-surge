@@ -36,25 +36,6 @@ expand_mode = 1
 stretch_mode = 0
 mouse_filter = 2
 
-[node name="KickerLabel" type="Label" parent="Control"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -194.0
-offset_right = 200.0
-offset_bottom = -168.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(1.0, 0.24, 0.72, 0.85)
-text = "DEFEND THE GALAXY"
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="TitleLabel" type="Label" parent="Control"]
 layout_mode = 1
 anchors_preset = 8
@@ -122,6 +103,39 @@ pivot_offset = Vector2(4, 4)
 color = Color(1.0, 0.24, 0.72, 0.85)
 mouse_filter = 2
 
+[node name="HighScoreLabel" type="Label" parent="Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -110.0
+offset_top = -60.0
+offset_right = 110.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.62, 0.7, 0.82, 1.0)
+text = "Mejor puntaje: 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlayButton" type="Button" parent="Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -14.0
+offset_right = 120.0
+offset_bottom = 46.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Jugar"
+
 [node name="DifficultyCaption" type="Label" parent="Control"]
 layout_mode = 1
 anchors_preset = 8
@@ -130,9 +144,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -100.0
-offset_top = 26.0
+offset_top = 64.0
 offset_right = 100.0
-offset_bottom = 46.0
+offset_bottom = 84.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 13
@@ -148,42 +162,12 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -100.0
-offset_top = 50.0
+offset_top = 86.0
 offset_right = 100.0
-offset_bottom = 84.0
+offset_bottom = 120.0
 grow_horizontal = 2
 grow_vertical = 2
 text = "COMANDANTE"
-
-[node name="PlayButton" type="Button" parent="Control"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -120.0
-offset_top = -52.0
-offset_right = 120.0
-offset_bottom = 8.0
-grow_horizontal = 2
-grow_vertical = 2
-text = "Jugar"
-
-[node name="QuitButton" type="Button" parent="Control"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -100.0
-offset_top = 102.0
-offset_right = 100.0
-offset_bottom = 148.0
-grow_horizontal = 2
-grow_vertical = 2
-text = "Salir"
 
 [node name="AjustesButton" type="Button" parent="Control"]
 layout_mode = 1
@@ -193,30 +177,27 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -100.0
-offset_top = 158.0
+offset_top = 136.0
 offset_right = 100.0
-offset_bottom = 192.0
+offset_bottom = 174.0
 grow_horizontal = 2
 grow_vertical = 2
 text = "Ajustes"
 
-[node name="HighScoreLabel" type="Label" parent="Control"]
+[node name="QuitButton" type="Button" parent="Control"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -110.0
-offset_top = 212.0
-offset_right = 110.0
-offset_bottom = 242.0
+offset_left = -100.0
+offset_top = 190.0
+offset_right = 100.0
+offset_bottom = 236.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(0.62, 0.7, 0.82, 1.0)
-text = "Mejor puntaje: 0"
-horizontal_alignment = 1
-vertical_alignment = 1
+text = "Salir"
 
 [connection signal="pressed" from="Control/AjustesButton" to="." method="_on_ajustes_button_pressed"]
 [connection signal="pressed" from="Control/DificultadButton" to="." method="_on_dificultad_button_pressed"]

@@ -5,6 +5,8 @@
 #    normal, hover, pressed and focus states.
 # 2. TitleLabel has an outline size > 0 and a non-zero drop shadow.
 # 3. Node names and public texts of the menu still exist (no structural renames).
+# 4. Order: high score above Jugar, Dificultad, Ajustes above Salir (no kicker label).
+# 5. Ajustes is styled like the other menu buttons.
 # Uses the instantiated scene only; no real-time dependencies.
 
 extends SceneTree
@@ -14,11 +16,11 @@ const BUTTON_PATHS: Array[String] = [
 	"Control/PlayButton",
 	"Control/QuitButton",
 	"Control/DificultadButton",
+	"Control/AjustesButton",
 ]
 const STATES: Array[String] = ["normal", "hover", "pressed", "focus"]
 const REQUIRED_NODES: Array[String] = [
 	"Control/Panel",
-	"Control/KickerLabel",
 	"Control/TitleLabel",
 	"Control/Divider",
 	"Control/DifficultyCaption",
@@ -46,10 +48,11 @@ func _run_contracts() -> void:
 	var t1: bool = _assert_button_stylebox_overrides(menu)
 	var t2: bool = _assert_title_outline_and_shadow(menu)
 	var t3: bool = _assert_node_names_kept(menu)
+	var t4: bool = _assert_menu_order(menu)
 	root.remove_child(menu)
 	menu.free()
 
-	var all_passed: bool = t1 and t2 and t3
+	var all_passed: bool = t1 and t2 and t3 and t4
 	if all_passed:
 		print("MENU STYLE CONTRACT TESTS: ALL PASSED")
 	else:
@@ -101,6 +104,28 @@ func _assert_title_outline_and_shadow(menu: CanvasLayer) -> bool:
 		push_error("TitleLabel must declare an explicit non-zero drop shadow")
 		return false
 	print("✓ Contrato 2: Título con outline y sombra")
+	return true
+
+
+# ---------------------------------------------------------------------------
+# 4. Vertical order: high score, Jugar, Dificultad, Ajustes, Salir
+# ---------------------------------------------------------------------------
+func _assert_menu_order(menu: CanvasLayer) -> bool:
+	var order: Array[String] = ["Control/HighScoreLabel", "Control/PlayButton", "Control/DificultadButton", "Control/AjustesButton", "Control/QuitButton"]
+	var previous_top: float = -INF
+	for path: String in order:
+		var node: Control = menu.get_node_or_null(path) as Control
+		if node == null:
+			push_error("Missing %s for order check" % path)
+			return false
+		if node.offset_top <= previous_top:
+			push_error("%s must sit below the previous entry of the menu order" % path)
+			return false
+		previous_top = node.offset_top
+	if menu.get_node_or_null("Control/KickerLabel") != null:
+		push_error("KickerLabel must be removed from the menu")
+		return false
+	print("✓ Contrato 4: Orden del menú (puntaje, Jugar, Dificultad, Ajustes, Salir)")
 	return true
 
 
