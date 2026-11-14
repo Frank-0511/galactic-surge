@@ -42,6 +42,12 @@ func _ready() -> void:
 	_refresh_toggle_texts()
 
 
+# Shows the screen and gives focus to the first control, so pad and keyboard work at once.
+func show_menu() -> void:
+	visible = true
+	_master_slider.grab_focus()
+
+
 func _on_master_changed(value: float) -> void:
 	_update("master_db", value)
 

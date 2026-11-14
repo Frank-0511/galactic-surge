@@ -30,6 +30,7 @@ func _run_contracts() -> void:
 	passed = _assert_apply_audio() and passed
 	passed = _assert_settings_menu_scene() and passed
 	passed = _assert_toggles_share_style() and passed
+	passed = _assert_settings_focus_on_open() and passed
 	_cleanup()
 
 	if passed:
@@ -180,6 +181,22 @@ func _assert_toggles_share_style() -> bool:
 		print("✓ Contrato 9: Toggles de pantalla completa y VSync con el mismo estilo")
 	else:
 		push_error("Pantalla completa y VSync deben compartir font_size y font_color")
+	return ok
+
+
+# 10. Focus on open: show_menu() gives focus to the first control so gamepad navigation works
+func _assert_settings_focus_on_open() -> bool:
+	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	root.add_child(menu)
+	menu.show_menu()
+	var owner: Control = root.get_viewport().gui_get_focus_owner()
+	var ok: bool = owner != null and owner == menu.get_node("Control/MasterSlider")
+	root.remove_child(menu)
+	menu.free()
+	if ok:
+		print("✓ Contrato 10: Ajustes toma foco al abrirse")
+	else:
+		push_error("show_menu() debe dar foco a MasterSlider")
 	return ok
 
 

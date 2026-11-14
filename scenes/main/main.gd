@@ -1115,7 +1115,7 @@ func _on_main_menu_quit_requested() -> void:
 
 func _on_main_menu_settings_requested() -> void:
 	_main_menu.visible = false
-	_settings_menu.visible = true
+	_settings_menu.show_menu()
 
 
 func _on_settings_back_requested() -> void:
