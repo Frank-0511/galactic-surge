@@ -170,8 +170,8 @@ func _assert_settings_menu_scene() -> bool:
 func _assert_toggles_share_style() -> bool:
 	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
 	root.add_child(menu)
-	var fullscreen: CheckButton = menu.get_node("Control/FullscreenToggle")
-	var vsync: CheckButton = menu.get_node("Control/VsyncToggle")
+	var fullscreen: Button = menu.get_node("Control/FullscreenToggle")
+	var vsync: Button = menu.get_node("Control/VsyncToggle")
 	var ok: bool = fullscreen.get_theme_font_size("font_size") == vsync.get_theme_font_size("font_size") \
 		and fullscreen.get_theme_color("font_color") == vsync.get_theme_color("font_color")
 	root.remove_child(menu)

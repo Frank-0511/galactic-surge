@@ -77,21 +77,21 @@ min_value = -40.0
 max_value = 0.0
 step = 0.5
 
-[node name="FullscreenToggle" type="CheckButton" parent="Control"]
+[node name="FullscreenToggle" type="Button" parent="Control"]
 layout_mode = 0
 offset_left = 340.0
 offset_top = 496.0
 offset_right = 740.0
 offset_bottom = 536.0
-text = "Pantalla completa"
+text = "Pantalla completa: No"
 
-[node name="VsyncToggle" type="CheckButton" parent="Control"]
+[node name="VsyncToggle" type="Button" parent="Control"]
 layout_mode = 0
 offset_left = 340.0
 offset_top = 592.0
 offset_right = 740.0
 offset_bottom = 632.0
-text = "VSync"
+text = "VSync: Sí"
 
 [node name="BackButton" type="Button" parent="Control"]
 layout_mode = 0
