@@ -39,12 +39,10 @@ func _ready() -> void:
 	_style_toggle(_vsync_toggle)
 
 
-# Both display toggles always render with the unchecked (off) look: the checked
-# icon is replaced by the unchecked one, so the on/off state does not change colors.
+# Both display toggles use the same theme overrides, so they always render alike.
 func _style_toggle(toggle: CheckButton) -> void:
 	toggle.add_theme_font_size_override("font_size", TOGGLE_FONT_SIZE)
 	toggle.add_theme_color_override("font_color", TOGGLE_FONT_COLOR)
-	toggle.add_theme_icon_override("checked", toggle.get_theme_icon("unchecked"))
 
 
 func _on_master_changed(value: float) -> void:
