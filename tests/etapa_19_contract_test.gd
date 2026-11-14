@@ -173,7 +173,9 @@ func _assert_toggles_share_style() -> bool:
 	var fullscreen: CheckButton = menu.get_node("Control/FullscreenToggle")
 	var vsync: CheckButton = menu.get_node("Control/VsyncToggle")
 	var ok: bool = fullscreen.get_theme_font_size("font_size") == vsync.get_theme_font_size("font_size") \
-		and fullscreen.get_theme_color("font_color") == vsync.get_theme_color("font_color")
+		and fullscreen.get_theme_color("font_color") == vsync.get_theme_color("font_color") \
+		and fullscreen.get_theme_icon("checked") == fullscreen.get_theme_icon("unchecked") \
+		and vsync.get_theme_icon("checked") == vsync.get_theme_icon("unchecked")
 	root.remove_child(menu)
 	menu.free()
 	if ok:
