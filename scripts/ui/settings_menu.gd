@@ -39,6 +39,9 @@ const TITLE_FILL := Color(0.72, 0.97, 1.0)
 const TEXT_SOFT := Color(0.72, 0.92, 1.0)
 const REMAP_SAVE_PATH := "user://rebind_kit.json"
 const REMAP_PANEL_FILL := Color(0.02, 0.03, 0.08, 0.96)
+## Taller table (addon default 440) and a wider host, so fewer rows need scrolling.
+const REMAP_TABLE_HEIGHT := 540.0
+const REMAP_MIN_WIDTH := 900
 ## Colors of the Rebind Kit panel, from this menu's palette: light text, cyan accent, dark background.
 const REMAP_COLORS := {
 	"text": Color(0.72, 0.97, 1.0), "dim": Color(0.72, 0.92, 1.0, 0.65), "off": Color(0.72, 0.92, 1.0, 0.35),
@@ -65,6 +68,7 @@ var _values: Dictionary = {}
 var remap: InputRemap
 var _remap_panel: RemapPanel
 var _remap_host: PanelContainer
+var _remap_column: VBoxContainer
 
 @onready var _root: Control = $Control
 @onready var _content: VBoxContainer = $Control/Center/Content
@@ -89,7 +93,16 @@ func _ready() -> void:
 	host_style.content_margin_top = 16.0
 	host_style.content_margin_bottom = 16.0
 	_remap_host.add_theme_stylebox_override("panel", host_style)
+	_remap_host.custom_minimum_size = Vector2(REMAP_MIN_WIDTH, 0)
 	_remap_host.visible = false
+	_remap_column = VBoxContainer.new()
+	_remap_column.add_theme_constant_override("separation", 12)
+	var remap_title := Label.new()
+	remap_title.text = "CONTROLES"
+	remap_title.theme_type_variation = TITLE_VARIATION
+	remap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_remap_column.add_child(remap_title)
+	_remap_host.add_child(_remap_column)
 	_content.get_parent().add_child(_remap_host)
 	_controls_button.pressed.connect(_on_controls_pressed)
 	_values = SETTINGS.load_settings()
@@ -141,9 +154,9 @@ func _on_back_pressed() -> void:
 func _on_controls_pressed() -> void:
 	_content.visible = false
 	_remap_host.visible = true
-	_remap_panel = RemapPanel.new(remap, REMAP_COLORS)
+	_remap_panel = RemapPanel.new(remap, REMAP_COLORS, &"", REMAP_TABLE_HEIGHT)
 	_remap_panel.closed.connect(_on_remap_closed)
-	_remap_host.add_child(_remap_panel)
+	_remap_column.add_child(_remap_panel)
 	_remap_panel.focus_first()
 
 
@@ -195,9 +208,23 @@ func _build_settings_theme() -> Theme:
 	# Rebind Kit's panel: its listening and save buttons, and its small captions.
 	_theme_button_variation(settings_theme, &"ActionButton", TOGGLE_FONT_SIZE)
 	settings_theme.set_type_variation(&"CaptionLabel", &"Label")
-	settings_theme.set_font_size(&"font_size", &"CaptionLabel", 14)
+	settings_theme.set_font_size(&"font_size", &"CaptionLabel", 16)
+	# Plain Buttons and the scheme OptionButton of the panel share the same cyan look.
+	_theme_plain_control(settings_theme, &"Button")
+	_theme_plain_control(settings_theme, &"OptionButton")
 	_theme_slider(settings_theme)
 	return settings_theme
+
+
+func _theme_plain_control(settings_theme: Theme, type: StringName) -> void:
+	settings_theme.set_stylebox(&"normal", type, _make_box(Color(0.04, 0.07, 0.16, 0.92), Color(CYAN, 0.8), BORDER_WIDTH))
+	settings_theme.set_stylebox(&"hover", type, _make_box(FOCUS_FILL, FOCUS_FILL, BORDER_WIDTH))
+	settings_theme.set_stylebox(&"pressed", type, _make_box(Color(0.02, 0.04, 0.1, 1.0), Color(CYAN, 0.5), BORDER_WIDTH))
+	settings_theme.set_stylebox(&"focus", type, _make_box(FOCUS_FILL, FOCUS_FILL, BORDER_WIDTH))
+	settings_theme.set_font_size(&"font_size", type, 16)
+	settings_theme.set_color(&"font_color", type, TEXT_SOFT)
+	settings_theme.set_color(&"font_hover_color", type, FOCUS_TEXT)
+	settings_theme.set_color(&"font_focus_color", type, FOCUS_TEXT)
 
 
 func _theme_button_variation(settings_theme: Theme, variation: StringName, font_size: int) -> void:
