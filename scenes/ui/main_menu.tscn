@@ -121,7 +121,7 @@ text = "Mejor puntaje: 0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="PlayButton" type="Button" parent="Control"]
+[node name="Menu" type="VBoxContainer" parent="Control"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -131,75 +131,43 @@ anchor_bottom = 0.5
 offset_left = -120.0
 offset_top = -14.0
 offset_right = 120.0
-offset_bottom = 46.0
+offset_bottom = 240.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="PlayButton" type="Button" parent="Control/Menu"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
 text = "Jugar"
 
-[node name="DifficultyCaption" type="Label" parent="Control"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -100.0
-offset_top = 64.0
-offset_right = 100.0
-offset_bottom = 84.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="DifficultyCaption" type="Label" parent="Control/Menu"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.62, 0.7, 0.82, 1.0)
 text = "DIFICULTAD"
 horizontal_alignment = 1
 
-[node name="DificultadButton" type="Button" parent="Control"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -100.0
-offset_top = 86.0
-offset_right = 100.0
-offset_bottom = 120.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="DificultadButton" type="Button" parent="Control/Menu"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
 text = "COMANDANTE"
 
-[node name="AjustesButton" type="Button" parent="Control"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -100.0
-offset_top = 136.0
-offset_right = 100.0
-offset_bottom = 174.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="AjustesButton" type="Button" parent="Control/Menu"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
 text = "Ajustes"
 
-[node name="QuitButton" type="Button" parent="Control"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -100.0
-offset_top = 190.0
-offset_right = 100.0
-offset_bottom = 236.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="QuitButton" type="Button" parent="Control/Menu"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
 text = "Salir"
 
-[connection signal="pressed" from="Control/AjustesButton" to="." method="_on_ajustes_button_pressed"]
-[connection signal="pressed" from="Control/DificultadButton" to="." method="_on_dificultad_button_pressed"]
-[connection signal="pressed" from="Control/PlayButton" to="." method="_on_play_button_pressed"]
-[connection signal="pressed" from="Control/QuitButton" to="." method="_on_quit_button_pressed"]
+[connection signal="pressed" from="Control/Menu/AjustesButton" to="." method="_on_ajustes_button_pressed"]
+[connection signal="pressed" from="Control/Menu/DificultadButton" to="." method="_on_dificultad_button_pressed"]
+[connection signal="pressed" from="Control/Menu/PlayButton" to="." method="_on_play_button_pressed"]
+[connection signal="pressed" from="Control/Menu/QuitButton" to="." method="_on_quit_button_pressed"]

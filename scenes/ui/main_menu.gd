@@ -1,8 +1,10 @@
 # main_menu.gd
 # Presents the initial navigation options and emits user intent to Main.
 # Lets the player pick the session difficulty (Etapa 18) before play.
-# Layout lives in main_menu.tscn; all visual styling (buttons, title, chip,
-# vignette, entrance fade, title pulse) is applied here in code.
+# Layout lives in main_menu.tscn: title, divider and high score are anchored to
+# the center; the four buttons sit in the Menu VBoxContainer.
+# All button styling comes from one Theme built in code (_build_menu_theme) and
+# assigned to the root Control; buttons pick PrimaryButton or SecondaryButton variations.
 # REDUCED_MOTION is a switch to flip: true skips the title pulse and the entrance fade.
 
 extends CanvasLayer
@@ -17,9 +19,16 @@ const CORNER_RADIUS := 10
 const BUTTON_PADDING_X := 14.0
 const BUTTON_PADDING_Y := 6.0
 const BORDER_WIDTH := 2
-const FOCUS_BORDER_WIDTH := 3
+const MENU_SEPARATION := 14
+const PRIMARY_VARIATION := &"PrimaryButton"
+## "MenuButton" is a built-in Godot class name and cannot be a theme variation.
+const SECONDARY_VARIATION := &"SecondaryButton"
+const PRIMARY_FONT_SIZE := 26
+const MENU_FONT_SIZE := 20
 const CYAN := Color(0.22, 0.9, 1.0)
-const MAGENTA := Color(1.0, 0.24, 0.72)
+## Solid focus/hover fill (#38E6FF) and its dark text (#050A14).
+const FOCUS_FILL := Color(0.22, 0.9, 1.0)
+const FOCUS_TEXT := Color(0.02, 0.04, 0.08)
 const TITLE_FILL := Color(0.72, 0.97, 1.0)
 const TEXT_SOFT := Color(0.72, 0.92, 1.0)
 
@@ -34,20 +43,20 @@ var selected_difficulty: int = DS.Tier.COMMANDER
 @onready var _vignette: TextureRect = $Control/Vignette
 @onready var _high_score_label: Label = $Control/HighScoreLabel
 @onready var _title_label: Label = $Control/TitleLabel
-@onready var _difficulty_button: Button = $Control/DificultadButton
-@onready var _play_button: Button = $Control/PlayButton
-@onready var _quit_button: Button = $Control/QuitButton
-@onready var _ajustes_button: Button = $Control/AjustesButton
+@onready var _difficulty_button: Button = $Control/Menu/DificultadButton
+@onready var _play_button: Button = $Control/Menu/PlayButton
+@onready var _quit_button: Button = $Control/Menu/QuitButton
+@onready var _ajustes_button: Button = $Control/Menu/AjustesButton
 
 var _entrance_tween: Tween
 var _pulse_tween: Tween
 
 
 func _ready() -> void:
+	_content.theme = _build_menu_theme()
 	_apply_vignette()
 	_apply_title_style()
 	_apply_chip_style()
-	_style_buttons()
 	_start_title_pulse()
 	_refresh_difficulty_text()
 
@@ -55,7 +64,7 @@ func _ready() -> void:
 func show_menu() -> void:
 	visible = true
 	_play_entrance()
-	$Control/PlayButton.grab_focus()
+	_play_button.grab_focus()
 
 
 func set_high_score(value: int) -> void:
@@ -130,44 +139,47 @@ func _apply_chip_style() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Buttons: one StyleBoxFlat per state. Jugar is the primary action (magenta
-# tinted fill); Salir and the difficulty control stay cyan-outlined.
-# Focus is a 3 px magenta border with a transparent fill, so it stays distinct
-# from hover (brighter fill, 2 px cyan border).
+# Theme: one Theme for the whole menu, assigned to the root Control.
+# PrimaryButton (Jugar) and SecondaryButton (Dificultad, Ajustes, Salir) carry the
+# button looks. Hover and focus share a solid cyan fill with dark text, so the
+# focused button is the highest-contrast element on screen. Pressed keeps the
+# dark fill. The Menu VBoxContainer separation is a theme constant too.
 # ---------------------------------------------------------------------------
-func _style_buttons() -> void:
-	_style_button(_play_button, 26, true)
-	_style_button(_quit_button, 20, false)
-	_style_button(_ajustes_button, 20, false)
-	_style_button(_difficulty_button, 16, false)
+func _build_menu_theme() -> Theme:
+	var menu_theme := Theme.new()
+	menu_theme.set_type_variation(PRIMARY_VARIATION, &"Button")
+	menu_theme.set_type_variation(SECONDARY_VARIATION, &"Button")
+	menu_theme.set_constant(&"separation", &"VBoxContainer", MENU_SEPARATION)
+	_theme_button_variation(menu_theme, PRIMARY_VARIATION, PRIMARY_FONT_SIZE, true)
+	_theme_button_variation(menu_theme, SECONDARY_VARIATION, MENU_FONT_SIZE, false)
+	return menu_theme
 
 
-func _style_button(button: Button, font_size: int, primary: bool) -> void:
+func _theme_button_variation(menu_theme: Theme, variation: StringName, font_size: int, primary: bool) -> void:
 	var normal_box: StyleBoxFlat
-	var hover_box: StyleBoxFlat
 	var pressed_box: StyleBoxFlat
+	var text_normal: Color
+	var text_pressed: Color
 	if primary:
 		normal_box = _make_box(Color(0.2, 0.04, 0.19, 0.95), Color(CYAN, 0.8), BORDER_WIDTH)
-		hover_box = _make_box(Color(0.34, 0.08, 0.3, 1.0), Color(CYAN, 1.0), BORDER_WIDTH)
 		pressed_box = _make_box(Color(0.1, 0.02, 0.1, 1.0), Color(CYAN, 0.6), BORDER_WIDTH)
+		text_normal = Color(1.0, 0.93, 0.98)
+		text_pressed = Color(0.85, 0.75, 0.82)
 	else:
 		normal_box = _make_box(Color(0.04, 0.07, 0.16, 0.92), Color(CYAN, 0.8), BORDER_WIDTH)
-		hover_box = _make_box(Color(0.1, 0.2, 0.3, 0.98), Color(CYAN, 1.0), BORDER_WIDTH)
 		pressed_box = _make_box(Color(0.02, 0.04, 0.1, 1.0), Color(CYAN, 0.5), BORDER_WIDTH)
-	var focus_box: StyleBoxFlat = _make_box(Color(0.0, 0.0, 0.0, 0.0), MAGENTA, FOCUS_BORDER_WIDTH)
+		text_normal = TEXT_SOFT
+		text_pressed = Color(0.6, 0.8, 0.9)
 
-	button.add_theme_stylebox_override("normal", normal_box)
-	button.add_theme_stylebox_override("hover", hover_box)
-	button.add_theme_stylebox_override("pressed", pressed_box)
-	button.add_theme_stylebox_override("focus", focus_box)
-	button.add_theme_font_size_override("font_size", font_size)
-
-	var text_normal: Color = Color(1.0, 0.93, 0.98) if primary else TEXT_SOFT
-	var text_pressed: Color = Color(0.85, 0.75, 0.82) if primary else Color(0.6, 0.8, 0.9)
-	button.add_theme_color_override("font_color", text_normal)
-	button.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 1.0))
-	button.add_theme_color_override("font_pressed_color", text_pressed)
-	button.add_theme_color_override("font_focus_color", Color(1.0, 1.0, 1.0))
+	menu_theme.set_stylebox(&"normal", variation, normal_box)
+	menu_theme.set_stylebox(&"hover", variation, _make_box(FOCUS_FILL, FOCUS_FILL, BORDER_WIDTH))
+	menu_theme.set_stylebox(&"pressed", variation, pressed_box)
+	menu_theme.set_stylebox(&"focus", variation, _make_box(FOCUS_FILL, FOCUS_FILL, BORDER_WIDTH))
+	menu_theme.set_font_size(&"font_size", variation, font_size)
+	menu_theme.set_color(&"font_color", variation, text_normal)
+	menu_theme.set_color(&"font_pressed_color", variation, text_pressed)
+	menu_theme.set_color(&"font_hover_color", variation, FOCUS_TEXT)
+	menu_theme.set_color(&"font_focus_color", variation, FOCUS_TEXT)
 
 
 func _make_box(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:

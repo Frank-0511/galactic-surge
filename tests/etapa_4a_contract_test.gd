@@ -49,24 +49,24 @@ func _assert_main_menu_contract() -> bool:
 	root.add_child(main_menu)
 	var passed: bool = true
 	passed = _assert_menu_button_contract(
-		main_menu, "Control/PlayButton", &"play_requested", &"_on_play_button_pressed", "MainMenu"
+		main_menu, "Control/Menu/PlayButton", &"play_requested", &"_on_play_button_pressed", "MainMenu"
 	) and passed
 	passed = _assert_menu_button_contract(
-		main_menu, "Control/QuitButton", &"quit_requested", &"_on_quit_button_pressed", "MainMenu"
+		main_menu, "Control/Menu/QuitButton", &"quit_requested", &"_on_quit_button_pressed", "MainMenu"
 	) and passed
 	if main_menu.has_method("show_menu"):
 		main_menu.call("show_menu")
 		if not main_menu.visible:
 			push_error("MainMenu show_menu() must make the menu visible")
 			passed = false
-		var play_button: Control = main_menu.get_node_or_null("Control/PlayButton") as Control
+		var play_button: Control = main_menu.get_node_or_null("Control/Menu/PlayButton") as Control
 		if play_button != null and not play_button.has_focus():
 			push_error("MainMenu show_menu() must focus PlayButton")
 			passed = false
 		if play_button is Button and play_button.text != "Jugar":
 			push_error("MainMenu PlayButton must display Jugar")
 			passed = false
-		var quit_button: Button = main_menu.get_node_or_null("Control/QuitButton") as Button
+		var quit_button: Button = main_menu.get_node_or_null("Control/Menu/QuitButton") as Button
 		if quit_button != null and quit_button.text != "Salir":
 			push_error("MainMenu QuitButton must display Salir")
 			passed = false
@@ -134,20 +134,20 @@ func _assert_game_over_menu_contract() -> bool:
 		return false
 	root.add_child(game_over)
 	var passed: bool = true
-	if game_over.get_node_or_null("Control/RetryButton") == null:
-		push_error("GameOver missing Control/RetryButton")
+	if game_over.get_node_or_null("Control/Content/RetryButton") == null:
+		push_error("GameOver missing Control/Content/RetryButton")
 		passed = false
-	if game_over.get_node_or_null("Control/FinalScoreLabel") == null:
-		push_error("GameOver missing Control/FinalScoreLabel")
+	if game_over.get_node_or_null("Control/Content/FinalScoreLabel") == null:
+		push_error("GameOver missing Control/Content/FinalScoreLabel")
 		passed = false
 	passed = _assert_menu_button_contract(
 		game_over,
-		"Control/MainMenuButton",
+		"Control/Content/MainMenuButton",
 		&"main_menu_requested",
 		&"_on_main_menu_button_pressed",
 		"GameOver"
 	) and passed
-	var main_menu_button: Button = game_over.get_node_or_null("Control/MainMenuButton") as Button
+	var main_menu_button: Button = game_over.get_node_or_null("Control/Content/MainMenuButton") as Button
 	if main_menu_button != null and main_menu_button.text != "Menú principal":
 		push_error("GameOver MainMenuButton must display Menú principal")
 		passed = false
