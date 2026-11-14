@@ -300,9 +300,9 @@ func _assert_game_over_score_contract() -> bool:
 		if not game_over.visible:
 			push_error("GameOver must become visible after show_game_over")
 			passed = false
-		var score_label: Node = game_over.get_node_or_null("Control/FinalScoreLabel")
+		var score_label: Node = game_over.get_node_or_null("Control/Content/FinalScoreLabel")
 		if score_label == null:
-			push_error("GameOver missing Control/FinalScoreLabel")
+			push_error("GameOver missing Control/Content/FinalScoreLabel")
 			passed = false
 		elif score_label is Label and not score_label.text.contains("12345"):
 			push_error("GameOver FinalScoreLabel must contain the final score")

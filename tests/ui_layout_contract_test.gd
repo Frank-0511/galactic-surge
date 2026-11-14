@@ -106,8 +106,11 @@ func _assert_game_over_uses_center_anchors() -> bool:
 		push_error("GameOver RetryButton must not use absolute offsets from 600×800")
 		passed = false
 	var center_anchor_count: int = source.count("anchor_left = 0.5")
-	if center_anchor_count < 4:
-		push_error("GameOver must use center anchors for 4 elements, got %d" % center_anchor_count)
+	if not source.contains("name=\"Content\" type=\"VBoxContainer\""):
+		push_error("GameOver must center its content in a VBoxContainer named Content")
+		passed = false
+	if center_anchor_count < 1:
+		push_error("GameOver must use a center anchor for its Content column, got %d" % center_anchor_count)
 		passed = false
 	return passed
 

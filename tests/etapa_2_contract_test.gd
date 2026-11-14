@@ -74,8 +74,8 @@ func _assert_game_over_contract() -> bool:
 	if game_over.visible:
 		push_error("GameOver must start hidden")
 		passed = false
-	if game_over.get_node_or_null("Control/RetryButton") == null:
-		push_error("GameOver missing Control/RetryButton")
+	if game_over.get_node_or_null("Control/Content/RetryButton") == null:
+		push_error("GameOver missing Control/Content/RetryButton")
 		passed = false
 	if not game_over.has_signal("retry_requested"):
 		push_error("GameOver missing signal: retry_requested")

@@ -262,18 +262,22 @@ func _assert_session_stats_contract() -> bool:
 		return false
 	get_root().add_child(game_over)
 	game_over.call("show_session_stats", 75.0, {&"standard": 2, &"assault_frigate": 1})
-	var stats_label: Label = game_over.get_node_or_null("Control/StatsLabel") as Label
-	var found: bool = stats_label != null
-	var text: String = stats_label.text if found else ""
+	var kills_grid: GridContainer = game_over.get_node_or_null("Control/Content/StatsCard/StatsMargin/StatsBox/KillsGrid") as GridContainer
+	var accuracy_label: Label = game_over.get_node_or_null("Control/Content/StatsCard/StatsMargin/StatsBox/AccuracyLabel") as Label
+	var found: bool = kills_grid != null and accuracy_label != null
+	var text: String = accuracy_label.text if found else ""
+	if found:
+		for child: Node in kills_grid.get_children():
+			text += " | " + (child as Label).text
 	get_root().remove_child(game_over)
 	game_over.free()
 
 	if not found:
-		push_error("game_over.tscn must contain Control/StatsLabel")
+		push_error("game_over.tscn must contain the stats card with AccuracyLabel and KillsGrid")
 		return false
-	for expected: String in ["75%", "Caza: 2", "Fragata de asalto: 1", "Interceptor suicida: 0"]:
+	for expected: String in ["75%", "Caza | 2", "Fragata de asalto | 1", "Interceptor suicida | 0"]:
 		if not text.contains(expected):
-			push_error("StatsLabel must contain '%s', got '%s'" % [expected, text])
+			push_error("Stats card must contain '%s', got '%s'" % [expected, text])
 			return false
 
 	print("✓ Contrato 5: Estadísticas de sesión (precisión y bajas por tipo) superadas")
