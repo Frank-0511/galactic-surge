@@ -40,6 +40,13 @@ static func vsync_mode_for(vsync: bool) -> DisplayServer.VSyncMode:
 	return DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED
 
 
+# Applies the dB levels to the Master, Music and SFX buses (buses come from default_bus_layout.tres).
+static func apply_audio(values: Dictionary) -> void:
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), values["master_db"])
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), values["music_db"])
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("SFX"), values["sfx_db"])
+
+
 # Applies display options to the running window. Called once at startup.
 static func apply_display(values: Dictionary) -> void:
 	DisplayServer.window_set_mode(window_mode_for(values["fullscreen"]))

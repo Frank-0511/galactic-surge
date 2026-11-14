@@ -44,6 +44,7 @@ const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn
 const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss/boss.tscn")
 const HighScore: Script = preload("res://scripts/systems/high_score.gd")
 const Settings: Script = preload("res://scripts/systems/settings.gd")
+const SETTINGS_MENU_SCENE: PackedScene = preload("res://scenes/ui/settings_menu.tscn")
 const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
@@ -74,6 +75,7 @@ var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tsc
 @onready var _game_over: CanvasLayer = $GameOver
 @onready var _hud: CanvasLayer = $HUD
 @onready var _main_menu: CanvasLayer = $MainMenu
+var _settings_menu: CanvasLayer
 @onready var _pause_menu: CanvasLayer = $PauseMenu
 @onready var _starfield: Node2D = $Starfield
 @onready var _visual_feedback: Node2D = $VisualFeedback
@@ -193,6 +195,11 @@ func _ready() -> void:
 	_hud.main_menu_requested.connect(return_to_main_menu)
 	_main_menu.play_requested.connect(_on_main_menu_play_requested)
 	_main_menu.quit_requested.connect(_on_main_menu_quit_requested)
+	_main_menu.settings_requested.connect(_on_main_menu_settings_requested)
+	_settings_menu = SETTINGS_MENU_SCENE.instantiate()
+	add_child(_settings_menu)
+	_settings_menu.visible = false
+	_settings_menu.back_requested.connect(_on_settings_back_requested)
 	_pause_menu.resume_requested.connect(resume_session)
 	_pause_menu.main_menu_requested.connect(return_to_main_menu)
 	_wave_announcement.announcement_finished.connect(_on_wave_announcement_finished)
@@ -1104,6 +1111,16 @@ func _on_hud_retry_mission_requested() -> void:
 func _on_main_menu_quit_requested() -> void:
 	return_to_main_menu()
 	get_tree().quit()
+
+
+func _on_main_menu_settings_requested() -> void:
+	_main_menu.visible = false
+	_settings_menu.visible = true
+
+
+func _on_settings_back_requested() -> void:
+	_settings_menu.visible = false
+	_main_menu.show_menu()
 
 
 ## Etapa 16: the camera follows the ship only while the asteroid belt runs.

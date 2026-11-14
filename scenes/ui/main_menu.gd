@@ -23,6 +23,7 @@ const TEXT_SOFT := Color(0.72, 0.92, 1.0)
 
 signal play_requested
 signal quit_requested
+signal settings_requested
 
 ## Tier chosen in the menu; read by Main when play_requested fires and fixed for the session.
 var selected_difficulty: int = DS.Tier.COMMANDER
@@ -74,6 +75,10 @@ func _refresh_difficulty_text() -> void:
 
 func _on_quit_button_pressed() -> void:
 	quit_requested.emit()
+
+
+func _on_ajustes_button_pressed() -> void:
+	settings_requested.emit()
 
 
 # ---------------------------------------------------------------------------

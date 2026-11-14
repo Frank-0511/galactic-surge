@@ -27,6 +27,8 @@ func _run_contracts() -> void:
 	passed = _assert_sections() and passed
 	passed = _assert_audio_buses() and passed
 	passed = _assert_display_mapping() and passed
+	passed = _assert_apply_audio() and passed
+	passed = _assert_settings_menu_scene() and passed
 	_cleanup()
 
 	if passed:
@@ -129,6 +131,37 @@ func _assert_display_mapping() -> bool:
 		print("✓ Contrato 6: Mapeo fullscreen/vsync a DisplayServer")
 	else:
 		push_error("Mapeo de display incorrecto")
+	return ok
+
+
+# 7. Audio apply: apply_audio sets the dB of the Master, Music and SFX buses
+func _assert_apply_audio() -> bool:
+	SETTINGS.apply_audio({"master_db": -6.0, "music_db": -12.0, "sfx_db": -3.0})
+	var ok: bool = is_equal_approx(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master")), -6.0) \
+		and is_equal_approx(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Music")), -12.0) \
+		and is_equal_approx(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX")), -3.0)
+	SETTINGS.apply_audio(SETTINGS.default_values())
+	if ok:
+		print("✓ Contrato 7: apply_audio fija volumen dB de Master, Music y SFX")
+	else:
+		push_error("apply_audio no fijó los dB esperados")
+	return ok
+
+
+# 8. Settings menu scene exposes its controls and emits back_requested
+func _assert_settings_menu_scene() -> bool:
+	var scene: Node = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	var ok: bool = true
+	for path: String in ["Control/MasterSlider", "Control/MusicSlider", "Control/SfxSlider", "Control/FullscreenToggle", "Control/VsyncToggle", "Control/BackButton"]:
+		if scene.get_node_or_null(path) == null:
+			push_error("settings_menu.tscn missing %s" % path)
+			ok = false
+	if not scene.has_signal("back_requested"):
+		push_error("settings_menu must declare back_requested")
+		ok = false
+	scene.free()
+	if ok:
+		print("✓ Contrato 8: Escena de Settings con controles y back_requested")
 	return ok
 
 
