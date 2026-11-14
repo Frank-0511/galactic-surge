@@ -29,6 +29,7 @@ func _run_contracts() -> void:
 	passed = _assert_display_mapping() and passed
 	passed = _assert_apply_audio() and passed
 	passed = _assert_settings_menu_scene() and passed
+	passed = _assert_toggles_share_style() and passed
 	_cleanup()
 
 	if passed:
@@ -162,6 +163,23 @@ func _assert_settings_menu_scene() -> bool:
 	scene.free()
 	if ok:
 		print("✓ Contrato 8: Escena de Settings con controles y back_requested")
+	return ok
+
+
+# 9. Both display toggles share the same theme overrides (font size and color)
+func _assert_toggles_share_style() -> bool:
+	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	root.add_child(menu)
+	var fullscreen: CheckButton = menu.get_node("Control/FullscreenToggle")
+	var vsync: CheckButton = menu.get_node("Control/VsyncToggle")
+	var ok: bool = fullscreen.get_theme_font_size("font_size") == vsync.get_theme_font_size("font_size") \
+		and fullscreen.get_theme_color("font_color") == vsync.get_theme_color("font_color")
+	root.remove_child(menu)
+	menu.free()
+	if ok:
+		print("✓ Contrato 9: Toggles de pantalla completa y VSync con el mismo estilo")
+	else:
+		push_error("Pantalla completa y VSync deben compartir font_size y font_color")
 	return ok
 
 

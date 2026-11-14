@@ -9,6 +9,9 @@ const SETTINGS := preload("res://scripts/systems/settings.gd")
 
 signal back_requested
 
+const TOGGLE_FONT_SIZE := 18
+const TOGGLE_FONT_COLOR := Color(0.72, 0.92, 1.0)
+
 var _values: Dictionary = {}
 
 @onready var _master_slider: HSlider = $Control/MasterSlider
@@ -32,6 +35,14 @@ func _ready() -> void:
 	_fullscreen_toggle.toggled.connect(_on_fullscreen_toggled)
 	_vsync_toggle.toggled.connect(_on_vsync_toggled)
 	_back_button.pressed.connect(_on_back_pressed)
+	_style_toggle(_fullscreen_toggle)
+	_style_toggle(_vsync_toggle)
+
+
+# Both display toggles use the same theme overrides, so they always render alike.
+func _style_toggle(toggle: CheckButton) -> void:
+	toggle.add_theme_font_size_override("font_size", TOGGLE_FONT_SIZE)
+	toggle.add_theme_color_override("font_color", TOGGLE_FONT_COLOR)
 
 
 func _on_master_changed(value: float) -> void:

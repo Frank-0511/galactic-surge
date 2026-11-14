@@ -101,4 +101,3 @@ offset_right = 640.0
 offset_bottom = 740.0
 text = "Volver"
 
-[connection signal="pressed" from="Control/BackButton" to="." method="_on_back_pressed"]
