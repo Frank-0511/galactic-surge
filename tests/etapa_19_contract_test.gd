@@ -31,6 +31,7 @@ func _run_contracts() -> void:
 	passed = _assert_settings_menu_scene() and passed
 	passed = _assert_toggles_share_style() and passed
 	passed = _assert_settings_focus_on_open() and passed
+	passed = _assert_settings_layout() and passed
 	_cleanup()
 
 	if passed:
@@ -154,7 +155,7 @@ func _assert_apply_audio() -> bool:
 func _assert_settings_menu_scene() -> bool:
 	var scene: Node = load("res://scenes/ui/settings_menu.tscn").instantiate()
 	var ok: bool = true
-	for path: String in ["Control/MasterSlider", "Control/MusicSlider", "Control/SfxSlider", "Control/FullscreenToggle", "Control/VsyncToggle", "Control/BackButton"]:
+	for path: String in ["Control/Center/Content/MasterBlock/MasterSlider", "Control/Center/Content/MusicBlock/MusicSlider", "Control/Center/Content/SfxBlock/SfxSlider", "Control/Center/Content/DisplayOptions/FullscreenToggle", "Control/Center/Content/DisplayOptions/VsyncToggle", "Control/Center/Content/BackButton"]:
 		if scene.get_node_or_null(path) == null:
 			push_error("settings_menu.tscn missing %s" % path)
 			ok = false
@@ -171,10 +172,11 @@ func _assert_settings_menu_scene() -> bool:
 func _assert_toggles_share_style() -> bool:
 	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
 	root.add_child(menu)
-	var fullscreen: Button = menu.get_node("Control/FullscreenToggle")
-	var vsync: Button = menu.get_node("Control/VsyncToggle")
+	var fullscreen: Button = menu.get_node("Control/Center/Content/DisplayOptions/FullscreenToggle")
+	var vsync: Button = menu.get_node("Control/Center/Content/DisplayOptions/VsyncToggle")
 	var ok: bool = fullscreen.get_theme_font_size("font_size") == vsync.get_theme_font_size("font_size") \
-		and fullscreen.get_theme_color("font_color") == vsync.get_theme_color("font_color")
+		and fullscreen.get_theme_color("font_color") == vsync.get_theme_color("font_color") \
+		and fullscreen.theme_type_variation == &"ToggleButton" and vsync.theme_type_variation == &"ToggleButton"
 	root.remove_child(menu)
 	menu.free()
 	if ok:
@@ -190,13 +192,79 @@ func _assert_settings_focus_on_open() -> bool:
 	root.add_child(menu)
 	menu.show_menu()
 	var owner: Control = root.get_viewport().gui_get_focus_owner()
-	var ok: bool = owner != null and owner == menu.get_node("Control/MasterSlider")
+	var ok: bool = owner != null and owner == menu.get_node("Control/Center/Content/MasterBlock/MasterSlider")
 	root.remove_child(menu)
 	menu.free()
 	if ok:
 		print("✓ Contrato 10: Ajustes toma foco al abrirse")
 	else:
 		push_error("show_menu() debe dar foco a MasterSlider")
+	return ok
+
+
+# 11. Layout: centered container, constant separations, label above slider, Theme variations
+# and no per-node style or font overrides on the buttons and labels.
+func _assert_settings_layout() -> bool:
+	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	root.add_child(menu)
+	var ok: bool = true
+	var control: Control = menu.get_node_or_null("Control") as Control
+	if control == null or control.theme == null:
+		push_error("Root Control must have a Theme assigned")
+		ok = false
+	if menu.get_node_or_null("Control/Center") is not CenterContainer:
+		push_error("Control/Center must be a CenterContainer")
+		ok = false
+	var content: VBoxContainer = menu.get_node_or_null("Control/Center/Content") as VBoxContainer
+	var display: VBoxContainer = menu.get_node_or_null("Control/Center/Content/DisplayOptions") as VBoxContainer
+	if content == null or display == null:
+		push_error("Content and DisplayOptions must be VBoxContainer")
+		ok = false
+	else:
+		if content.get_theme_constant("separation") != 18:
+			push_error("Blocks of sliders must be separated by 18 px")
+			ok = false
+		if display.get_theme_constant("separation") != 24:
+			push_error("Display toggles must be separated by 24 px")
+			ok = false
+	for pair: Array in [["MasterBlock/MasterLabel", "MasterBlock/MasterSlider"], ["MusicBlock/MusicLabel", "MusicBlock/MusicSlider"], ["SfxBlock/SfxLabel", "SfxBlock/SfxSlider"]]:
+		var label: Node = menu.get_node_or_null("Control/Center/Content/" + pair[0])
+		var slider: Node = menu.get_node_or_null("Control/Center/Content/" + pair[1])
+		if label == null or slider == null or label.get_index() > slider.get_index():
+			push_error("%s must sit above %s" % [pair[0], pair[1]])
+			ok = false
+	var variations: Dictionary = {
+		"Control/Center/Content/DisplayOptions/FullscreenToggle": "ToggleButton",
+		"Control/Center/Content/DisplayOptions/VsyncToggle": "ToggleButton",
+		"Control/Center/Content/BackButton": "PrimaryButton",
+	}
+	for path: String in variations.keys():
+		var button: Button = menu.get_node_or_null(path) as Button
+		if button == null or String(button.theme_type_variation) != variations[path]:
+			push_error("%s must use theme variation %s" % [path, variations[path]])
+			ok = false
+			continue
+		for state: String in ["normal", "hover", "pressed", "focus"]:
+			if button.has_theme_stylebox_override(state):
+				push_error("%s must not override StyleBox '%s' per node" % [path, state])
+				ok = false
+		if button.has_theme_font_size_override("font_size") or button.has_theme_color_override("font_color"):
+			push_error("%s must take font size and color from the Theme" % path)
+			ok = false
+	for path: String in ["Control/Center/Content/Title", "Control/Center/Content/MasterBlock/MasterLabel", "Control/Center/Content/MusicBlock/MusicLabel", "Control/Center/Content/SfxBlock/SfxLabel"]:
+		var label: Label = menu.get_node_or_null(path) as Label
+		if label == null or label.has_theme_font_size_override("font_size") or label.has_theme_color_override("font_color"):
+			push_error("%s must take font size and color from the Theme" % path)
+			ok = false
+	if menu.get_node_or_null("Control/Center/Content/Title") is Label and String(menu.get_node("Control/Center/Content/Title").theme_type_variation) != "TitleLabel":
+		push_error("Title must use theme variation TitleLabel")
+		ok = false
+	root.remove_child(menu)
+	menu.free()
+	if ok:
+		print("✓ Contrato 11: Contenedor centrado, separaciones 18/24 px, variaciones de Theme sin overrides")
+	else:
+		push_error("Layout de Ajustes fuera del contrato")
 	return ok
 
 
