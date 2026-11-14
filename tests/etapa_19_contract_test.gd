@@ -25,6 +25,7 @@ func _run_contracts() -> void:
 	passed = _assert_missing_file_returns_defaults() and passed
 	passed = _assert_round_trip() and passed
 	passed = _assert_sections() and passed
+	passed = _assert_audio_buses() and passed
 	_cleanup()
 
 	if passed:
@@ -86,6 +87,34 @@ func _assert_round_trip() -> bool:
 		print("✓ Contrato 3: Ida y vuelta de save/load")
 	else:
 		push_error("Round trip fallido: %s" % str(loaded))
+	return ok
+
+
+# 5. Audio buses: layout has Master, Music, SFX; music players route to Music, the rest to SFX
+func _assert_audio_buses() -> bool:
+	var layout: AudioBusLayout = load("res://default_bus_layout.tres") as AudioBusLayout
+	if layout == null:
+		push_error("default_bus_layout.tres must exist and load as AudioBusLayout")
+		return false
+	AudioServer.set_bus_layout(layout)
+	var names: Array[String] = []
+	for i: int in range(AudioServer.get_bus_count()):
+		names.append(AudioServer.get_bus_name(i))
+	if not ("Master" in names and "Music" in names and "SFX" in names):
+		push_error("Bus layout must contain Master, Music and SFX, got %s" % str(names))
+		return false
+	var scene: Node = load("res://scenes/audio/audio_feedback.tscn").instantiate()
+	var ok: bool = true
+	for child: Node in scene.get_children():
+		if not child is AudioStreamPlayer:
+			continue
+		var expected: String = "Music" if child.name in ["CombatMusic", "BossMusic"] else "SFX"
+		if child.bus != expected:
+			push_error("%s must route to %s, got %s" % [child.name, expected, child.bus])
+			ok = false
+	scene.free()
+	if ok:
+		print("✓ Contrato 5: Buses Master/Music/SFX y ruteo de reproductores")
 	return ok
 
 
