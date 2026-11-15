@@ -21,6 +21,7 @@ func _run_contracts() -> void:
 	_check_second_ship_lives()
 	_check_hud_lives_p2()
 	_check_coop_menu_button()
+	_check_menu_does_not_cover_high_score()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -118,6 +119,18 @@ func _check_coop_menu_button() -> void:
 		var play_idx: int = (menu.get_node("Control/Menu/PlayButton") as Control).get_index()
 		var dif_idx: int = (menu.get_node("Control/Menu/DificultadButton") as Control).get_index()
 		_expect(coop.get_index() > play_idx and coop.get_index() < dif_idx, "Contrato 6b: Coop local entre Jugar y Dificultad")
+	menu.free()
+
+
+# ---------------------------------------------------------------------------
+# 7. Menú principal: el menú no tapa "Mejor puntaje" (crece solo hacia abajo y su alto cubre el contenido)
+# ---------------------------------------------------------------------------
+func _check_menu_does_not_cover_high_score() -> void:
+	var menu: Node = (load("res://scenes/ui/main_menu.tscn") as PackedScene).instantiate()
+	var box: Control = menu.get_node("Control/Menu") as Control
+	_expect(box.grow_vertical == Control.GROW_DIRECTION_END, "Contrato 7a: el menú crece solo hacia abajo (no tapa el puntaje)")
+	var height: float = box.offset_bottom - box.offset_top
+	_expect(height >= box.get_combined_minimum_size().y, "Contrato 7b: el alto del menú cubre su contenido mínimo")
 	menu.free()
 
 
