@@ -42,6 +42,7 @@ func _run_contracts() -> void:
 	_check_missile_propagates_shooter()
 	_check_laser_declares_shooter()
 	_check_legacy_bullet_kill_attribution()
+	_check_hud_icons_and_wave_out()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -124,7 +125,7 @@ func _check_hud_lives_p2() -> void:
 	_expect(not hud.call("is_lives_p2_visible") if hud.has_method("is_lives_p2_visible") else false, "Contrato 5b: indicador de J2 oculto en singleplayer")
 	if hud.has_method("set_lives_p2"):
 		hud.call("set_lives_p2", 2)
-		_expect(hud.call("is_lives_p2_visible") == true and hud.call("get_lives_p2_text") == "Vidas: 2", "Contrato 5c: J2 muestra \"Vidas: 2\" como J1")
+		_expect(hud.call("is_lives_p2_visible") == true and hud.call("get_lives_p2_text") == "♥ 2", "Contrato 5c: J2 muestra \"♥ 2\" como J1")
 	hud.queue_free()
 
 
@@ -418,8 +419,8 @@ func _check_hud_weapon_level_bottom() -> void:
 	var bottom_p2: Control = hud.get_node_or_null("P2BottomPanel") as Control
 	var level_p1: Label = hud.get("_weapon_level_label") as Label
 	var level_p2: Label = hud.get("_weapon_level_p2_label") as Label
-	_expect(level_p1 != null and bottom_p1 != null and level_p1.get_parent() == bottom_p1 and level_p1.text == "Nivel: 3", "Contrato 20a: nivel del arma de J1 abajo a la izquierda (\"Nivel: 3\")")
-	_expect(level_p2 != null and bottom_p2 != null and level_p2.get_parent() == bottom_p2 and level_p2.text == "Nivel: 2", "Contrato 20b: nivel del arma de J2 abajo a la derecha (\"Nivel: 2\")")
+	_expect(level_p1 != null and bottom_p1 != null and level_p1.get_parent() == bottom_p1 and level_p1.text == "▲ 3", "Contrato 20a: nivel del arma de J1 abajo a la izquierda (\"▲ 3\")")
+	_expect(level_p2 != null and bottom_p2 != null and level_p2.get_parent() == bottom_p2 and level_p2.text == "▲ 2", "Contrato 20b: nivel del arma de J2 abajo a la derecha (\"▲ 2\")")
 	hud.queue_free()
 
 
@@ -564,6 +565,25 @@ func _check_legacy_bullet_kill_attribution() -> void:
 	bullet.free()
 	enemy.queue_free()
 	shooter.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 28. HUD: iconos para vidas y arma, y la oleada sale del HUD (la muestra el anuncio)
+# ---------------------------------------------------------------------------
+func _check_hud_icons_and_wave_out() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_lives", 3)
+	_expect(hud.get("_lives_label").text == "♥ 3", "Contrato 28a: vidas de J1 con icono \"♥ 3\"")
+	hud.call("set_lives_p2", 2)
+	_expect(hud.call("get_lives_p2_text") == "♥ 2", "Contrato 28b: vidas de J2 con icono \"♥ 2\"")
+	hud.call("set_weapon_level", 3, 0)
+	_expect(hud.get("_weapon_level_label").text == "▲ 3", "Contrato 28c: nivel del arma de J1 con icono \"▲ 3\"")
+	hud.call("set_weapon_level_p2", 2)
+	_expect(hud.get("_weapon_level_p2_label").text == "▲ 2", "Contrato 28d: nivel del arma de J2 con icono \"▲ 2\"")
+	hud.call("set_wave", 4)
+	_expect(not hud.get("_wave_label").visible, "Contrato 28e: la oleada no se muestra en el HUD (la muestra el anuncio)")
+	hud.queue_free()
 
 
 # ---------------------------------------------------------------------------

@@ -169,7 +169,7 @@ func _update_weapon_level_label() -> void:
 			panel.add_child(_weapon_level_label)
 		else:
 			return
-	_weapon_level_label.text = "Nivel: %d" % _current_weapon_level
+	_weapon_level_label.text = "▲ %d" % _current_weapon_level
 
 
 ## Weapon level of J2, shown in the bottom-right corner (spec S7, Etapa 20).
@@ -185,7 +185,7 @@ func set_weapon_level_p2(level: int) -> void:
 		_weapon_level_p2_label.add_theme_font_size_override("font_size", 20)
 		_weapon_level_p2_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0, 1.0))
 		_ensure_p2_bottom_panel().add_child(_weapon_level_p2_label)
-	_weapon_level_p2_label.text = "Nivel: %d" % clampi(level, 1, 15)
+	_weapon_level_p2_label.text = "▲ %d" % clampi(level, 1, 15)
 
 
 
@@ -256,7 +256,7 @@ func hide_boss_health_bar() -> void:
 
 
 func set_lives(lives: int) -> void:
-	_lives_label.text = "Vidas: %d" % lives
+	_lives_label.text = "♥ %d" % lives
 	lives_changed.emit(lives)
 
 
@@ -378,7 +378,7 @@ func set_lives_p2(lives: int) -> void:
 		_lives_p2_label.add_theme_font_size_override("font_size", 20)
 		_lives_p2_label.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
 		_ensure_p2_bottom_panel().add_child(_lives_p2_label)
-	_lives_p2_label.text = "Vidas: %d" % lives
+	_lives_p2_label.text = "♥ %d" % lives
 	_lives_p2_label.visible = true
 
 
@@ -450,6 +450,8 @@ func set_score(score: int) -> void:
 
 func set_wave(wave: int) -> void:
 	_wave_label.text = "Oleada %d" % wave
+	# The wave number is shown by the between-waves announcement, not in the HUD (Etapa 20).
+	_wave_label.visible = false
 	wave_changed.emit(wave)
 
 
