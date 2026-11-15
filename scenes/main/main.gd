@@ -1228,6 +1228,9 @@ func _on_settings_back_requested() -> void:
 func _begin_belt_camera_follow() -> void:
 	if _camera != null and _player != null and _camera.has_method(&"begin_follow"):
 		_camera.begin_follow(_player)
+		# Coop: follow the living ship, or the one moving sideways when both live (Etapa 20).
+		if _camera.has_method(&"set_follow_candidates"):
+			_camera.set_follow_candidates([_player, _player_two])
 
 
 func _end_belt_camera_follow() -> void:

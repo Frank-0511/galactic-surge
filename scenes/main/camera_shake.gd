@@ -71,7 +71,31 @@ func begin_follow(target: Node2D) -> void:
 ## Stops following and returns the camera to its home position.
 func end_follow() -> void:
 	_follow_target = null
+	_follow_candidates = []
 	position = _follow_home
+
+
+## Ships the belt camera may follow; the target is re-picked every frame (Etapa 20).
+var _follow_candidates: Array = []
+
+
+func set_follow_candidates(nodes: Array) -> void:
+	_follow_candidates = nodes
+
+
+## Living ship to follow: the only visible one, or when both live, the one moving more sideways.
+static func pick_follow_target(candidates: Array) -> Node2D:
+	var best: Node2D = null
+	var best_speed: float = -1.0
+	for candidate: Variant in candidates:
+		var ship: Node2D = candidate as Node2D
+		if ship == null or not ship.visible:
+			continue
+		var speed: float = absf(ship.get("velocity").x) if "velocity" in ship else 0.0
+		if speed > best_speed:
+			best_speed = speed
+			best = ship
+	return best
 
 
 ## Instantly resets all shake offsets, rolls, and trauma.
@@ -85,6 +109,8 @@ func reset_shake() -> void:
 
 
 func _process(delta: float) -> void:
+	if not _follow_candidates.is_empty():
+		_follow_target = pick_follow_target(_follow_candidates)
 	if is_instance_valid(_follow_target):
 		var drift: float = clampf(_follow_target.global_position.x - _follow_home.x, -follow_max_offset, follow_max_offset)
 		position = Vector2(_follow_home.x + drift, _follow_home.y)

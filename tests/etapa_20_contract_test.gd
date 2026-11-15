@@ -49,6 +49,7 @@ func _run_contracts() -> void:
 	_check_p2_panels_follow_session()
 	_check_weapon_icon_is_drop_medallion()
 	_check_weapon_icon_size()
+	_check_camera_follow_pick()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -682,6 +683,29 @@ func _check_weapon_icon_size() -> void:
 	var icon: Control = hud.get("_weapon_icon") as Control
 	_expect(icon != null and icon.custom_minimum_size.y <= 22.0, "Contrato 34a: el icono del arma mide como maximo 22 px (acorde al texto de 20 px)")
 	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 35. Camara del cinturon: sigue a la nave viva; si ambas viven, a la que se mueve de costado
+# ---------------------------------------------------------------------------
+func _check_camera_follow_pick() -> void:
+	var cam_script: Script = load("res://scenes/main/camera_shake.gd")
+	_expect(cam_script.has_method("pick_follow_target"), "Contrato 35a: la camara expone pick_follow_target()")
+	if not cam_script.has_method("pick_follow_target"):
+		return
+	var p1: CharacterBody2D = CharacterBody2D.new()
+	var p2: CharacterBody2D = CharacterBody2D.new()
+	p1.visible = false
+	p2.visible = true
+	_expect(cam_script.pick_follow_target([p1, p2]) == p2, "Contrato 35b: si J1 muere la camara sigue a J2")
+	p1.visible = true
+	p1.velocity = Vector2(0.0, 0.0)
+	p2.velocity = Vector2(300.0, 0.0)
+	_expect(cam_script.pick_follow_target([p1, p2]) == p2, "Contrato 35c: con ambas vivas sigue a la que se mueve de costado")
+	p1.velocity = Vector2(-400.0, 0.0)
+	_expect(cam_script.pick_follow_target([p1, p2]) == p1, "Contrato 35d: cambia a la otra si esa se mueve mas de costado")
+	p1.free()
+	p2.free()
 
 
 # ---------------------------------------------------------------------------
