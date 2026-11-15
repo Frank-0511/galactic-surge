@@ -29,6 +29,7 @@ func _run_contracts() -> void:
 	_check_p2_overheat_wiring()
 	_check_hud_two_player_layout()
 	_check_score_per_player()
+	_check_hud_score_p2()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -308,6 +309,22 @@ func _check_score_per_player() -> void:
 	_expect(main.get("score") == 50, "Contrato 14b: sin nave indicada, los puntos son de J1")
 	_expect(main.call("_ship_for", p2) == p2 and main.call("_ship_for", null) == main.get("_player"), "Contrato 14c: _ship_for resuelve la nave del atacante")
 	main.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 15. HUD: score de J2 en su panel, con el mismo estilo que las vidas de J2
+# ---------------------------------------------------------------------------
+func _check_hud_score_p2() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	_expect(hud.has_method("set_score_p2"), "Contrato 15a: HUD expone set_score_p2()")
+	if hud.has_method("set_score_p2"):
+		hud.call("set_score_p2", 300)
+		var label: Label = hud.get("_score_p2_label") as Label
+		_expect(label != null and label.text == "Score J2: 300", "Contrato 15b: J2 muestra \"Score J2: 300\"")
+		_expect(label != null and label.get_parent() == hud.get("_p2_panel"), "Contrato 15c: score de J2 vive en el panel de J2")
+		_expect(label != null and label.has_theme_font_size_override("font_size") and label.get_theme_font_size("font_size") == 20, "Contrato 15d: score de J2 con tamaño 20 (como J1)")
+	hud.queue_free()
 
 
 # ---------------------------------------------------------------------------

@@ -369,6 +369,7 @@ func _set_player_two_active(active: bool) -> void:
 	if active:
 		_player_two_lives = STARTING_LIVES
 		_hud.set_lives_p2(_player_two_lives)
+		_hud.set_score_p2(score_p2)
 		_player_two.cooling_scale = _player.cooling_scale
 		_hud.set_heat_p2(0.0, _player_two.max_heat, false)
 		_player_two.respawn(_game_layout.get_player_spawn_position() + Vector2(80.0, 0.0))
@@ -449,6 +450,7 @@ func _add_score(points: int, ship: Node2D = null) -> void:
 	var gained: int = int(round(points * DS.score_multiplier(session_difficulty)))
 	if _ship_for(ship) == _player_two and _player_two != null:
 		score_p2 += gained
+		_hud.set_score_p2(score_p2)
 	else:
 		score += gained
 	_check_score_milestones()

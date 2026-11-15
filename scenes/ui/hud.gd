@@ -270,6 +270,22 @@ func get_lives_p2_text() -> String:
 	return _lives_p2_label.text if _lives_p2_label != null else ""
 
 
+## Coop local (Etapa 20): J2 score label, in J2's panel with the same style as its lives.
+var _score_p2_label: Label = null
+
+
+func set_score_p2(points: int) -> void:
+	if _score_p2_label == null:
+		_score_p2_label = Label.new()
+		_score_p2_label.name = "ScoreP2Label"
+		_score_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_score_p2_label.add_theme_font_size_override("font_size", 20)
+		_score_p2_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.15, 1.0))
+		_ensure_p2_panel().add_child(_score_p2_label)
+	_score_p2_label.text = "Score J2: %d" % points
+	_score_p2_label.visible = true
+
+
 ## Coop local (Etapa 20): J2 heat indicator, separate from J1's HeatContainer.
 var _heat_p2_label: Label = null
 
