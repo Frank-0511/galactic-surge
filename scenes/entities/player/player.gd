@@ -42,6 +42,9 @@ const LEGACY_MAX_LEVEL: int = 10
 ## Power level of the current weapon system (1 to 15).
 @export_range(1, 15) var weapon_level: int = 1
 
+## Player slot: 1 uses the default actions, 2 uses the p2_ actions (coop local).
+@export_range(1, 2) var player_index: int = 1
+
 ## Horizontal movement speed in pixels per second.
 @export var speed: float = 480.0
 
@@ -123,6 +126,11 @@ var _horizontal_limits: Vector2 = Vector2.ZERO
 var _time: float = 0.0
 
 
+## Input action name for a player slot: J1 keeps the base name, J2 uses the p2_ prefix.
+static func input_action_name(base: String, player_index: int) -> String:
+	return base if player_index == 1 else "p2_" + base
+
+
 func _ready() -> void:
 	if bullet_scene == null:
 		bullet_scene = load("res://scenes/entities/bullet/bullet.tscn") as PackedScene
@@ -166,7 +174,7 @@ func _process(delta: float) -> void:
 		return
 
 	# Horizontal movement
-	var direction: float = Input.get_axis("move_left", "move_right")
+	var direction: float = Input.get_axis(input_action_name("move_left", player_index), input_action_name("move_right", player_index))
 	velocity = Vector2(direction * speed, 0.0)
 	move_and_slide()
 
@@ -361,8 +369,8 @@ func get_heat_per_second(weapon: int) -> float:
 
 func _handle_shooting(delta: float) -> void:
 	if current_weapon == WeaponType.LASER:
-		if Input.is_action_pressed("shoot") and not is_overheated:
-			if Input.is_action_just_pressed("shoot"):
+		if Input.is_action_pressed(input_action_name("shoot", player_index)) and not is_overheated:
+			if Input.is_action_just_pressed(input_action_name("shoot", player_index)):
 				shot_fired.emit(false)
 			_set_laser_active(true)
 			add_heat(_get_heat_per_second(WeaponType.LASER) * delta)
@@ -370,7 +378,7 @@ func _handle_shooting(delta: float) -> void:
 			_set_laser_active(false)
 	else:
 		_set_laser_active(false)
-		if Input.is_action_pressed("shoot") and _shoot_cooldown.is_stopped() and not is_overheated:
+		if Input.is_action_pressed(input_action_name("shoot", player_index)) and _shoot_cooldown.is_stopped() and not is_overheated:
 			_shoot()
 
 
