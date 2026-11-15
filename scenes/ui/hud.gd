@@ -241,6 +241,26 @@ func get_lives_p2_text() -> String:
 	return _lives_p2_label.text if _lives_p2_label != null else ""
 
 
+## Coop local (Etapa 20): J2 heat indicator, separate from J1's HeatContainer.
+var _heat_p2_label: Label = null
+
+
+func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
+	if _heat_p2_label == null:
+		_heat_p2_label = Label.new()
+		_heat_p2_label.name = "HeatP2Label"
+		_lives_label.get_parent().add_child(_heat_p2_label)
+	var percent: int = int(round(current / maximum * 100.0)) if maximum > 0.0 else 0
+	_heat_p2_label.text = "Calor J2: %d%%" % percent
+	if overheated:
+		_heat_p2_label.text += " SOBRECARGA"
+	_heat_p2_label.visible = true
+
+
+func get_heat_p2_text() -> String:
+	return _heat_p2_label.text if _heat_p2_label != null else ""
+
+
 func set_score(score: int) -> void:
 	_score_label.text = "Score: %d" % score
 	score_changed.emit(score)

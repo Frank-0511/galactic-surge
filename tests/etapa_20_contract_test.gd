@@ -26,6 +26,7 @@ func _run_contracts() -> void:
 	_check_loot_nearest_ship()
 	_check_loot_collector_routing()
 	_check_j1_ignores_arrows_in_coop()
+	_check_p2_overheat_wiring()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -226,6 +227,31 @@ func _check_j1_ignores_arrows_in_coop() -> void:
 	_expect(PLAYER_SCRIPT.ignores_arrow_keys(1, true), "Contrato 11a: en coop J1 ignora las flechas")
 	_expect(not PLAYER_SCRIPT.ignores_arrow_keys(1, false), "Contrato 11b: singleplayer conserva las flechas de J1")
 	_expect(not PLAYER_SCRIPT.ignores_arrow_keys(2, true), "Contrato 11c: J2 siempre usa sus flechas")
+
+
+# ---------------------------------------------------------------------------
+# 12. Sobrecarga de J2: HUD propio, mismo enfriamiento que J1, reset al cerrar la sesión
+# ---------------------------------------------------------------------------
+func _check_p2_overheat_wiring() -> void:
+	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var main: Node = packed.instantiate()
+	get_root().add_child(main)
+	main.set("_session_active", true)
+	main.call("enable_coop_local")
+	var p2: CharacterBody2D = main.get("_player_two") as CharacterBody2D
+	var hud: Node = main.get("_hud")
+	_expect(hud != null and hud.has_method("set_heat_p2"), "Contrato 12a: HUD tiene barra de calor de J2 (set_heat_p2)")
+	if p2 != null:
+		main.get("_player").set("cooling_scale", 0.8)
+		p2.cooling_scale = 1.0
+		main.call("_set_player_two_active", true)
+		_expect(p2.cooling_scale == 0.8, "Contrato 12b: J2 usa el mismo enfriamiento que J1 al empezar")
+		p2.heat_changed.emit(60.0, 100.0)
+		_expect(hud != null and hud.has_method("get_heat_p2_text") and str(hud.call("get_heat_p2_text")).contains("60"), "Contrato 12c: el calor de J2 llega al HUD propio")
+		p2.set("heat", 50.0)
+		main.call("_set_player_two_active", false)
+		_expect(p2.get("heat") == 0.0, "Contrato 12d: al cerrar la sesión se resetea el calor de J2")
+	main.queue_free()
 
 
 # ---------------------------------------------------------------------------
