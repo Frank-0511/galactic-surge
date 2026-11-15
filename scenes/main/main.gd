@@ -117,6 +117,10 @@ var session_difficulty: int = DS.Tier.COMMANDER
 var _session_state: SessionState = SessionState.MAIN_MENU
 var _state_before_pause: SessionState = SessionState.PLAYING
 var _session_active: bool = false
+
+## Coop local (Etapa 20): second ship and its own lives; null/unused in singleplayer.
+var _player_two: CharacterBody2D = null
+var _player_two_lives: int = STARTING_LIVES
 var _mission_complete: bool = false
 var _wave_is_clean: bool = true
 var _pending_wave_index: int = 0
@@ -326,14 +330,34 @@ func _on_enemy_bullet_player_hit(player: Node2D) -> void:
 	_request_player_damage(player)
 
 
-func _request_player_damage(player: Node2D) -> void:
-	if not _session_active or player != _player:
+## Coop local (Etapa 20): creates the second ship with its own lives. Singleplayer never calls it.
+func enable_coop_local() -> void:
+	if _player_two != null:
 		return
-	_player.take_damage()
+	var packed: PackedScene = load("res://scenes/entities/player/player.tscn") as PackedScene
+	_player_two = packed.instantiate() as CharacterBody2D
+	_player_two.player_index = 2
+	_player_two.bullet_scene = bullet_scene
+	_player_two.position = _game_layout.get_player_spawn_position() + Vector2(80.0, 0.0)
+	add_child(_player_two)
+	_player_two.damage_requested.connect(_on_player_damage_requested)
+	_player_two.set_gameplay_enabled(true)
+	_player_two_lives = STARTING_LIVES
 
 
-func _on_player_damage_requested() -> void:
+func _request_player_damage(player: Node2D) -> void:
 	if not _session_active:
+		return
+	if player == _player or (player != null and player == _player_two):
+		player.take_damage()
+
+
+## ship: the ship that requested damage; null means J1 (keeps the singleplayer path).
+func _on_player_damage_requested(ship: Node2D = null) -> void:
+	if not _session_active:
+		return
+	if ship != null and ship == _player_two:
+		_on_player_two_damage_requested()
 		return
 	if _combo_system != null and _combo_system.has_method(&"reset_combo"):
 		_combo_system.reset_combo()
@@ -352,7 +376,24 @@ func _on_player_damage_requested() -> void:
 	if lives > 0:
 		_player.respawn(_game_layout.get_player_spawn_position())
 		return
+	if _player_two != null and _player_two_lives > 0:
+		# J1 sin vidas: sale de la partida, J2 sigue (vidas por nave).
+		_player.set_gameplay_enabled(false)
+		_player.visible = false
+		return
 	_end_session()
+
+
+## J2 loses a life; the session ends only when both ships are out of lives.
+func _on_player_two_damage_requested() -> void:
+	_player_two_lives -= 1
+	if _player_two_lives > 0:
+		_player_two.respawn(_game_layout.get_player_spawn_position() + Vector2(80.0, 0.0))
+		return
+	_player_two.set_gameplay_enabled(false)
+	_player_two.visible = false
+	if lives <= 0:
+		_end_session()
 
 
 func _spawn_recovery_capsule(spawn_pos: Vector2) -> void:

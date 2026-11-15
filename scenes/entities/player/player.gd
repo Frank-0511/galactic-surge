@@ -4,8 +4,8 @@
 
 extends CharacterBody2D
 
-## Emitted when the ship requests life loss from valid hostile contact.
-signal damage_requested
+## Emitted when the ship requests life loss from valid hostile contact; carries the requesting ship.
+signal damage_requested(ship: Node2D)
 
 ## Emitted when the post-respawn invulnerability blink window expires.
 signal invulnerability_ended
@@ -585,7 +585,7 @@ func take_damage() -> bool:
 		return false
 	if _shield_active:
 		return false
-	damage_requested.emit()
+	damage_requested.emit(self)
 	return true
 
 
