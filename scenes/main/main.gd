@@ -354,6 +354,8 @@ func enable_coop_local() -> void:
 	_player_two.position = _game_layout.get_player_spawn_position() + Vector2(80.0, 0.0)
 	add_child(_player_two)
 	_player_two.damage_requested.connect(_on_player_damage_requested)
+	_player_two.weapon_level_changed.connect(func(lvl: int) -> void:
+		_hud.set_weapon_level_p2(lvl))
 	_player_two.heat_changed.connect(func(cur: float, m: float) -> void:
 		_hud.set_heat_p2(cur, m, _player_two.is_weapon_overheated()))
 	_player_two.visible = false
@@ -370,6 +372,7 @@ func _set_player_two_active(active: bool) -> void:
 		_player_two_lives = STARTING_LIVES
 		_hud.set_lives_p2(_player_two_lives)
 		_hud.set_score_p2(score_p2)
+		_hud.set_weapon_level_p2(_player_two.get_weapon_level())
 		_player_two.cooling_scale = _player.cooling_scale
 		_hud.set_heat_p2(0.0, _player_two.max_heat, false)
 		_player_two.respawn(_game_layout.get_player_spawn_position() + Vector2(80.0, 0.0))
