@@ -614,6 +614,7 @@ func _set_laser_active(active: bool) -> void:
 func _spawn_bullet(offset_x: float) -> void:
 	var bullet: Node2D = bullet_scene.instantiate() as Node2D
 	bullet.global_position = global_position + Vector2(offset_x, -20.0)
+	bullet.set("shooter", self)
 	_add_combat_transient(bullet)
 
 

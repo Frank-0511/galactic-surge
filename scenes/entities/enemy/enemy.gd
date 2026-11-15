@@ -597,6 +597,8 @@ func _on_area_entered(area: Area2D) -> void:
 		return
 	# Legacy linear bullet: one hit (travels along its direction, upward by default).
 	var travel: Vector2 = area.get("direction") if "direction" in area else Vector2.UP
+	if "shooter" in area and area.get("shooter") != null:
+		last_attacker = area.get("shooter")
 	take_damage_from(1.0, travel)
 
 

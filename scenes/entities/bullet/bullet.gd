@@ -11,6 +11,9 @@ signal enemy_hit(enemy: Area2D)
 ## Movement speed in pixels per second.
 @export var speed: float = 600.0
 
+## Ship that fired this bullet; the enemy records it for kill attribution (Etapa 20).
+var shooter: Node = null
+
 var _has_hit: bool = false
 
 

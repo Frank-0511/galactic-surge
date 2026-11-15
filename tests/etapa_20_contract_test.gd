@@ -41,6 +41,7 @@ func _run_contracts() -> void:
 	_check_bullet_propagates_shooter()
 	_check_missile_propagates_shooter()
 	_check_laser_declares_shooter()
+	_check_legacy_bullet_kill_attribution()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -539,6 +540,30 @@ func _check_laser_declares_shooter() -> void:
 	var beam: Node = (load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene).instantiate()
 	_expect("shooter" in beam, "Contrato 26a: el láser declara su nave (shooter)")
 	beam.free()
+
+
+# ---------------------------------------------------------------------------
+# 27. Blaster base (bala legacy): el impacto marca al enemigo con la nave que disparó
+# ---------------------------------------------------------------------------
+func _check_legacy_bullet_kill_attribution() -> void:
+	var bullet: Area2D = (load("res://scenes/entities/bullet/bullet.tscn") as PackedScene).instantiate() as Area2D
+	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
+	var shooter: Node2D = Node2D.new()
+	get_root().add_child(enemy)
+	get_root().add_child(shooter)
+	bullet.collision_layer = 2
+	_expect("shooter" in bullet, "Contrato 27a: la bala legacy declara su nave (shooter)")
+	if not ("shooter" in bullet):
+		bullet.free()
+		enemy.queue_free()
+		shooter.queue_free()
+		return
+	bullet.set("shooter", shooter)
+	enemy.call("_on_area_entered", bullet)
+	_expect(enemy.get("last_attacker") == shooter, "Contrato 27b: el impacto del blaster base marca al enemigo con su nave")
+	bullet.free()
+	enemy.queue_free()
+	shooter.queue_free()
 
 
 # ---------------------------------------------------------------------------
