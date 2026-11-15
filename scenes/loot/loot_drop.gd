@@ -18,7 +18,7 @@ enum Type {
 	RECOVERY_CAPSULE,
 }
 
-signal collected(loot_type: Type)
+signal collected(loot_type: Type, collector: Node2D)
 
 @export var fall_speed: float = 120.0
 @export var wave_amplitude: float = 26.0
@@ -128,7 +128,7 @@ func _on_body_entered(body: Node2D) -> void:
 		return
 	if body.is_in_group(&"player") or body is CharacterBody2D:
 		_collected = true
-		collected.emit(_type)
+		collected.emit(_type, body)
 		queue_free()
 
 

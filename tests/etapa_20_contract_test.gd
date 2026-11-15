@@ -24,6 +24,7 @@ func _run_contracts() -> void:
 	_check_menu_does_not_cover_high_score()
 	_check_p2_input_actions()
 	_check_loot_nearest_ship()
+	_check_loot_collector_routing()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -193,6 +194,28 @@ func _check_loot_nearest_ship() -> void:
 	_expect(loot_script.nearest_ship(origin, []) == null, "Contrato 9c: sin naves visibles no hay objetivo")
 	near.queue_free()
 	far.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 10. Recogida: el efecto se aplica a la nave que recogió el drop (Etapa 20)
+# ---------------------------------------------------------------------------
+func _check_loot_collector_routing() -> void:
+	var loot_script: Script = load("res://scenes/loot/loot_drop.gd")
+	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var main: Node = packed.instantiate()
+	get_root().add_child(main)
+	main.set("_session_active", true)
+	main.call("enable_coop_local")
+	var p2: CharacterBody2D = main.get("_player_two") as CharacterBody2D
+	main.call("_set_player_two_active", true)
+	main.set("lives", 1)
+	main.set("_player_two_lives", 1)
+	main.call("_on_loot_collected", loot_script.Type.EXTRA_LIFE, p2)
+	_expect(main.get("_player_two_lives") == 2, "Contrato 10a: vida extra recogida por J2 suma a J2")
+	_expect(main.get("lives") == 1, "Contrato 10b: vida extra recogida por J2 no suma a J1")
+	main.call("_on_loot_collected", loot_script.Type.EXTRA_LIFE)
+	_expect(main.get("lives") == 2, "Contrato 10c: sin recolector, la vida extra es de J1 (singleplayer)")
+	main.queue_free()
 
 
 # ---------------------------------------------------------------------------

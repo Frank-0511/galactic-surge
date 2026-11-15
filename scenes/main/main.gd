@@ -674,30 +674,36 @@ func _spawn_loot(loot_type: int, spawn_position: Vector2) -> void:
 	add_child(loot)
 
 
-func _on_loot_collected(loot_type: int) -> void:
+## collector: the ship that picked the drop up (Etapa 20); null means J1 (singleplayer).
+func _on_loot_collected(loot_type: int, collector: Node2D = null) -> void:
 	if not _session_active and not _mission_complete:
 		return
+	var ship: CharacterBody2D = _player_two if collector != null and collector == _player_two else _player
 	match loot_type:
 		LootDrop.Type.SCORE:
 			_add_score(SCORE_LOOT_POINTS)
 			_hud.set_score(score)
-			_visual_feedback.play_score_popup(_player.global_position, SCORE_LOOT_POINTS)
+			_visual_feedback.play_score_popup(ship.global_position, SCORE_LOOT_POINTS)
 		LootDrop.Type.DOUBLE_SHOT:
-			_player.enable_double_shot()
+			ship.enable_double_shot()
 			_audio_feedback.play_power_up_collected(0)
 		LootDrop.Type.SHIELD:
-			_player.activate_shield(SHIELD_DURATION)
+			ship.activate_shield(SHIELD_DURATION)
 			_audio_feedback.play_power_up_collected(1)
 		LootDrop.Type.EXTRA_LIFE:
-			lives = mini(lives + 1, STARTING_LIVES)
-			_hud.set_lives(lives)
+			if ship == _player_two:
+				_player_two_lives = mini(_player_two_lives + 1, STARTING_LIVES)
+				_hud.set_lives_p2(_player_two_lives)
+			else:
+				lives = mini(lives + 1, STARTING_LIVES)
+				_hud.set_lives(lives)
 		LootDrop.Type.BOMB:
 			_clear_enemy_bullets()
 		LootDrop.Type.MEDALLION_BLASTER, LootDrop.Type.MEDALLION_MISSILE, LootDrop.Type.MEDALLION_LASER:
 			var target_w: int = loot_type - LootDrop.Type.MEDALLION_BLASTER
-			var prev_w: int = _player.get_weapon() if _player.has_method(&"get_weapon") else -1
-			if _player.has_method(&"apply_medallion"):
-				_player.apply_medallion(target_w)
+			var prev_w: int = ship.get_weapon() if ship.has_method(&"get_weapon") else -1
+			if ship.has_method(&"apply_medallion"):
+				ship.apply_medallion(target_w)
 			if target_w != prev_w:
 				var weapon_names: Array[String] = ["BLASTER", "MISIL", "LÁSER"]
 				var weapon_colors: Array[Color] = [
@@ -708,21 +714,21 @@ func _on_loot_collected(loot_type: int) -> void:
 				var w_name: String = weapon_names[target_w] if target_w >= 0 and target_w < weapon_names.size() else "ARMA"
 				var w_color: Color = weapon_colors[target_w] if target_w >= 0 and target_w < weapon_colors.size() else Color.WHITE
 				if _visual_feedback != null and _visual_feedback.has_method(&"play_weapon_switched"):
-					_visual_feedback.play_weapon_switched(_player.global_position, w_name, w_color)
+					_visual_feedback.play_weapon_switched(ship.global_position, w_name, w_color)
 				if _audio_feedback != null and _audio_feedback.has_method(&"play_weapon_switched"):
 					_audio_feedback.play_weapon_switched(target_w)
 			else:
 				if _visual_feedback != null and _visual_feedback.has_method(&"play_level_up"):
-					_visual_feedback.play_level_up(_player.global_position, _player.get_weapon_level() if _player.has_method(&"get_weapon_level") else 1)
+					_visual_feedback.play_level_up(ship.global_position, ship.get_weapon_level() if ship.has_method(&"get_weapon_level") else 1)
 				if _audio_feedback != null and _audio_feedback.has_method(&"play_medallion_collected"):
 					_audio_feedback.play_medallion_collected(target_w)
 		LootDrop.Type.POWER_ATOM, LootDrop.Type.RECOVERY_CAPSULE:
-			if _player.has_method(&"apply_power_atom"):
-				_player.apply_power_atom()
+			if ship.has_method(&"apply_power_atom"):
+				ship.apply_power_atom()
 			if _audio_feedback != null and _audio_feedback.has_method(&"play_power_atom_collected"):
 				_audio_feedback.play_power_atom_collected()
 			if _visual_feedback != null and _visual_feedback.has_method(&"play_level_up"):
-				_visual_feedback.play_level_up(_player.global_position, _player.get_weapon_level() if _player.has_method(&"get_weapon_level") else 1)
+				_visual_feedback.play_level_up(ship.global_position, ship.get_weapon_level() if ship.has_method(&"get_weapon_level") else 1)
 
 
 
