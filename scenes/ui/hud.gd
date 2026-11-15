@@ -252,6 +252,29 @@ func _ensure_p2_panel() -> VBoxContainer:
 	return _p2_panel
 
 
+## Bottom-right panel for J2 lives and weapon level (spec S7, Etapa 20).
+var _p2_bottom_panel: VBoxContainer = null
+
+
+func _ensure_p2_bottom_panel() -> VBoxContainer:
+	if _p2_bottom_panel == null:
+		_p2_bottom_panel = VBoxContainer.new()
+		_p2_bottom_panel.name = "P2BottomPanel"
+		_p2_bottom_panel.anchor_left = 1.0
+		_p2_bottom_panel.anchor_top = 1.0
+		_p2_bottom_panel.anchor_right = 1.0
+		_p2_bottom_panel.anchor_bottom = 1.0
+		_p2_bottom_panel.offset_left = -260.0
+		_p2_bottom_panel.offset_top = -80.0
+		_p2_bottom_panel.offset_right = -16.0
+		_p2_bottom_panel.offset_bottom = -16.0
+		_p2_bottom_panel.grow_horizontal = 0
+		_p2_bottom_panel.grow_vertical = 0
+		_p2_bottom_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_p2_bottom_panel)
+	return _p2_bottom_panel
+
+
 func get_lives_p2_parent() -> Node:
 	return _lives_p2_label.get_parent() if _lives_p2_label != null else null
 
@@ -268,7 +291,7 @@ func set_lives_p2(lives: int) -> void:
 		_lives_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_lives_p2_label.add_theme_font_size_override("font_size", 20)
 		_lives_p2_label.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
-		_ensure_p2_panel().add_child(_lives_p2_label)
+		_ensure_p2_bottom_panel().add_child(_lives_p2_label)
 	_lives_p2_label.text = "Vidas: %d" % lives
 	_lives_p2_label.visible = true
 

@@ -32,6 +32,7 @@ func _run_contracts() -> void:
 	_check_hud_score_p2()
 	_check_hud_is_passive()
 	_check_hud_p2_matches_p1_style()
+	_check_hud_p2_lives_bottom_right()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -272,7 +273,7 @@ func _check_hud_two_player_layout() -> void:
 	var panel: Control = hud.get_node_or_null("P2Panel") as Control
 	_expect(panel != null and panel.anchor_left == 1.0 and panel.anchor_right == 1.0, "Contrato 13b: panel de J2 a la derecha")
 	if panel != null:
-		_expect(hud.call("get_lives_p2_parent") == panel and hud.call("get_heat_p2_parent") == panel, "Contrato 13c: vidas y calor de J2 viven en el panel de J2")
+		_expect(hud.call("get_heat_p2_parent") == panel and hud.call("get_lives_p2_parent") == hud.get_node_or_null("P2BottomPanel"), "Contrato 13c: calor de J2 arriba en su panel, vidas de J2 abajo (spec S7-S8)")
 		var view_w: float = get_root().get_visible_rect().size.x
 		var boss_right: float = view_w * 0.5 + 200.0
 		var panel_left: float = view_w - 260.0
@@ -339,7 +340,8 @@ func _check_hud_is_passive() -> void:
 	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_lives_p2", 2)
-	var wrappers: Array[String] = ["BossContainer", "Margin", "HeatContainer", "ComboContainer", "P2Panel"]
+	hud.call("set_score_p2", 0)
+	var wrappers: Array[String] = ["BossContainer", "Margin", "HeatContainer", "ComboContainer", "P2Panel", "P2BottomPanel"]
 	for path: String in wrappers:
 		var node: Control = hud.get_node_or_null(path) as Control
 		_expect(node != null and node.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Contrato 16: %s no captura el mouse" % path)
@@ -361,6 +363,20 @@ func _check_hud_p2_matches_p1_style() -> void:
 	var score_p2: Label = hud.get("_score_p2_label") as Label
 	_expect(lives_p2 != null and lives_p2.get_theme_color("font_color") == lives_p1.get_theme_color("font_color"), "Contrato 17a: color de vidas de J2 igual al de J1")
 	_expect(score_p2 != null and score_p2.get_theme_color("font_color") == score_p1.get_theme_color("font_color"), "Contrato 17b: color de score de J2 igual al de J1")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 18. HUD (spec S7): vidas de J2 abajo a la derecha
+# ---------------------------------------------------------------------------
+func _check_hud_p2_lives_bottom_right() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_lives_p2", 2)
+	var lives_p2: Label = hud.get("_lives_p2_label") as Label
+	var bottom: Control = hud.get_node_or_null("P2BottomPanel") as Control
+	_expect(bottom != null and bottom.anchor_top == 1.0 and bottom.anchor_right == 1.0, "Contrato 18a: panel inferior de J2 anclado abajo a la derecha")
+	_expect(lives_p2 != null and bottom != null and lives_p2.get_parent() == bottom, "Contrato 18b: vidas de J2 viven en el panel inferior")
 	hud.queue_free()
 
 
