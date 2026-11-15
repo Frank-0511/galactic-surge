@@ -156,6 +156,23 @@ func set_weapon_level(level: int, weapon_type: int = -1) -> void:
 
 
 ## Weapon level of J1, shown in the bottom-left corner (spec S7).
+## Draws the falling medallion of a weapon, so the HUD icon matches the drop (Etapa 20).
+class WeaponIcon extends Control:
+	var weapon_type: int = 0:
+		set(value):
+			weapon_type = value
+			queue_redraw()
+
+	func _ready() -> void:
+		custom_minimum_size = Vector2(26.0, 26.0)
+
+	func _draw() -> void:
+		draw_set_transform(size * 0.5, 0.0, Vector2(1.6, 1.6))
+		LootDrop.paint_medallion(self, weapon_type)
+
+
+var _weapon_icon: Control = null
+var _weapon_icon_p2: Control = null
 var _weapon_level_label: Label = null
 
 
@@ -168,10 +185,16 @@ func _update_weapon_level_label() -> void:
 		_weapon_level_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0, 1.0))
 		var panel: Node = get_node_or_null("P1BottomPanel")
 		if panel != null:
-			panel.add_child(_weapon_level_label)
+			_weapon_icon = WeaponIcon.new()
+			var row_p1: HBoxContainer = HBoxContainer.new()
+			row_p1.name = "WeaponRowP1"
+			panel.add_child(row_p1)
+			row_p1.add_child(_weapon_icon)
+			row_p1.add_child(_weapon_level_label)
 		else:
 			return
-	_weapon_level_label.text = "%s %d" % [weapon_glyph(_current_weapon_type), _current_weapon_level]
+	_weapon_icon.set("weapon_type", _current_weapon_type)
+	_weapon_level_label.text = str(_current_weapon_level)
 
 
 ## Weapon level of J2, shown in the bottom-right corner (spec S7, Etapa 20).
@@ -202,8 +225,15 @@ func set_weapon_level_p2(level: int, weapon_type: int = -1) -> void:
 		_weapon_level_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
 		_weapon_level_p2_label.add_theme_font_size_override("font_size", 20)
 		_weapon_level_p2_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0, 1.0))
-		_ensure_p2_bottom_panel().add_child(_weapon_level_p2_label)
-	_weapon_level_p2_label.text = "%s %d" % [weapon_glyph(_weapon_type_p2), clampi(level, 1, 15)]
+		_weapon_icon_p2 = WeaponIcon.new()
+		var row_p2: HBoxContainer = HBoxContainer.new()
+		row_p2.name = "WeaponRowP2"
+		row_p2.alignment = BoxContainer.ALIGNMENT_END
+		_ensure_p2_bottom_panel().add_child(row_p2)
+		row_p2.add_child(_weapon_icon_p2)
+		row_p2.add_child(_weapon_level_p2_label)
+	_weapon_icon_p2.set("weapon_type", _weapon_type_p2)
+	_weapon_level_p2_label.text = str(clampi(level, 1, 15))
 
 
 

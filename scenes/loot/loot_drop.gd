@@ -258,32 +258,56 @@ func _draw_bomb() -> void:
 
 
 func _draw_medallion_blaster() -> void:
+	paint_medallion(self, 0)
+
+
+func _draw_medallion_missile() -> void:
+	paint_medallion(self, 1)
+
+
+func _draw_medallion_laser() -> void:
+	paint_medallion(self, 2)
+
+
+## Paints the medallion of a weapon (0 blaster, 1 misil, 2 laser) on any CanvasItem.
+## Shared by the falling drops and the HUD weapon icon, so both look the same (Etapa 20).
+static func paint_medallion(canvas: CanvasItem, weapon_type: int) -> void:
+	match weapon_type:
+		1:
+			_paint_missile(canvas)
+		2:
+			_paint_laser(canvas)
+		_:
+			_paint_blaster(canvas)
+
+
+static func _paint_blaster(canvas: CanvasItem) -> void:
 	var blue: Color = Color(0.2, 0.6, 1.0)
 	var chevron: PackedVector2Array = PackedVector2Array([
 		Vector2(0, -7), Vector2(6, 4), Vector2(0, 1), Vector2(-6, 4)
 	])
-	draw_colored_polygon(chevron, blue)
-	draw_line(Vector2(0, -8), Vector2(0, 0), Color.WHITE, 1.8, true)
-	draw_circle(Vector2(0, -6), 1.5, Color.WHITE)
+	canvas.draw_colored_polygon(chevron, blue)
+	canvas.draw_line(Vector2(0, -8), Vector2(0, 0), Color.WHITE, 1.8, true)
+	canvas.draw_circle(Vector2(0, -6), 1.5, Color.WHITE)
 
 
-func _draw_medallion_missile() -> void:
+static func _paint_missile(canvas: CanvasItem) -> void:
 	var orange: Color = Color(1.0, 0.55, 0.1)
 	var missile_shape: PackedVector2Array = PackedVector2Array([
 		Vector2(0, -8), Vector2(3, -2), Vector2(3, 5), Vector2(6, 8),
 		Vector2(-6, 8), Vector2(-3, 5), Vector2(-3, -2)
 	])
-	draw_colored_polygon(missile_shape, orange)
-	draw_line(Vector2(0, -6), Vector2(0, 4), Color.WHITE, 1.4, true)
-	draw_circle(Vector2(0, 7), 1.6, Color(1.0, 0.9, 0.4))
+	canvas.draw_colored_polygon(missile_shape, orange)
+	canvas.draw_line(Vector2(0, -6), Vector2(0, 4), Color.WHITE, 1.4, true)
+	canvas.draw_circle(Vector2(0, 7), 1.6, Color(1.0, 0.9, 0.4))
 
 
-func _draw_medallion_laser() -> void:
+static func _paint_laser(canvas: CanvasItem) -> void:
 	var red: Color = Color(1.0, 0.2, 0.25)
-	draw_line(Vector2(0, -8), Vector2(0, 8), red, 4.0, true)
-	draw_line(Vector2(0, -8), Vector2(0, 8), Color.WHITE, 1.6, true)
-	draw_arc(Vector2.ZERO, 5.0, 0.0, TAU, 16, red, 1.4, true)
-	draw_circle(Vector2.ZERO, 2.0, Color.WHITE)
+	canvas.draw_line(Vector2(0, -8), Vector2(0, 8), red, 4.0, true)
+	canvas.draw_line(Vector2(0, -8), Vector2(0, 8), Color.WHITE, 1.6, true)
+	canvas.draw_arc(Vector2.ZERO, 5.0, 0.0, TAU, 16, red, 1.4, true)
+	canvas.draw_circle(Vector2.ZERO, 2.0, Color.WHITE)
 
 
 func _draw_power_atom() -> void:

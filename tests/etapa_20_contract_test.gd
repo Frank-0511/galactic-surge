@@ -47,6 +47,7 @@ func _run_contracts() -> void:
 	_check_weapon_icon_by_type()
 	_check_active_weapon_text_hidden()
 	_check_p2_panels_follow_session()
+	_check_weapon_icon_is_drop_medallion()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -423,8 +424,8 @@ func _check_hud_weapon_level_bottom() -> void:
 	var bottom_p2: Control = hud.get_node_or_null("P2BottomPanel") as Control
 	var level_p1: Label = hud.get("_weapon_level_label") as Label
 	var level_p2: Label = hud.get("_weapon_level_p2_label") as Label
-	_expect(level_p1 != null and bottom_p1 != null and level_p1.get_parent() == bottom_p1 and level_p1.text == "▲ 3", "Contrato 20a: nivel del arma de J1 abajo a la izquierda (\"▲ 3\")")
-	_expect(level_p2 != null and bottom_p2 != null and level_p2.get_parent() == bottom_p2 and level_p2.text == "▲ 2", "Contrato 20b: nivel del arma de J2 abajo a la derecha (\"▲ 2\")")
+	_expect(level_p1 != null and bottom_p1 != null and level_p1.get_parent().get_parent() == bottom_p1 and level_p1.text == "3", "Contrato 20a: nivel del arma de J1 abajo a la izquierda (\"3\")")
+	_expect(level_p2 != null and bottom_p2 != null and level_p2.get_parent().get_parent() == bottom_p2 and level_p2.text == "2", "Contrato 20b: nivel del arma de J2 abajo a la derecha (\"2\")")
 	hud.queue_free()
 
 
@@ -582,9 +583,9 @@ func _check_hud_icons_and_wave_out() -> void:
 	hud.call("set_lives_p2", 2)
 	_expect(hud.call("get_lives_p2_text") == "♥ 2", "Contrato 28b: vidas de J2 con icono \"♥ 2\"")
 	hud.call("set_weapon_level", 3, 0)
-	_expect(hud.get("_weapon_level_label").text == "▲ 3", "Contrato 28c: nivel del arma de J1 con icono \"▲ 3\"")
+	_expect(hud.get("_weapon_level_label").text == "3", "Contrato 28c: nivel del arma de J1 como numero")
 	hud.call("set_weapon_level_p2", 2)
-	_expect(hud.get("_weapon_level_p2_label").text == "▲ 2", "Contrato 28d: nivel del arma de J2 con icono \"▲ 2\"")
+	_expect(hud.get("_weapon_level_p2_label").text == "2", "Contrato 28d: nivel del arma de J2 como numero")
 	hud.call("set_wave", 4)
 	_expect(not hud.get("_wave_label").visible, "Contrato 28e: la oleada no se muestra en el HUD (la muestra el anuncio)")
 	hud.queue_free()
@@ -613,11 +614,11 @@ func _check_weapon_icon_by_type() -> void:
 	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_weapon_level", 3, 1)
-	_expect(hud.get("_weapon_level_label").text == "◆ 3", "Contrato 30a: arma misil de J1 con icono \"◆ 3\"")
+	_expect(hud.get("_weapon_icon").get("weapon_type") == 1, "Contrato 30a: arma misil de J1 con medallon de misil")
 	hud.call("set_weapon_level", 2, 2)
-	_expect(hud.get("_weapon_level_label").text == "● 2", "Contrato 30b: arma laser de J1 con icono \"● 2\"")
+	_expect(hud.get("_weapon_icon").get("weapon_type") == 2, "Contrato 30b: arma laser de J1 con medallon de laser")
 	hud.call("set_weapon_level_p2", 2, 1)
-	_expect(hud.get("_weapon_level_p2_label").text == "◆ 2", "Contrato 30c: arma misil de J2 con icono \"◆ 2\"")
+	_expect(hud.get("_weapon_icon_p2").get("weapon_type") == 1, "Contrato 30c: arma misil de J2 con medallon de misil")
 	hud.queue_free()
 
 
@@ -649,6 +650,24 @@ func _check_p2_panels_follow_session() -> void:
 		_expect(not panel.visible and not bottom.visible, "Contrato 32b: fuera de coop los paneles de J2 no se ven")
 		hud.call("set_p2_visible", true)
 		_expect(panel.visible and bottom.visible, "Contrato 32c: en coop los paneles de J2 se ven")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 33. Icono del arma: el mismo dibujo del medallon que cae (LootDrop.paint_medallion)
+# ---------------------------------------------------------------------------
+func _check_weapon_icon_is_drop_medallion() -> void:
+	var loot_script: Script = load("res://scenes/loot/loot_drop.gd")
+	_expect(loot_script.has_method("paint_medallion"), "Contrato 33a: LootDrop expone paint_medallion() para reutilizar el dibujo")
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_weapon_level", 3, 1)
+	var icon_p1: Control = hud.get("_weapon_icon") as Control
+	_expect(icon_p1 != null and icon_p1.get("weapon_type") == 1, "Contrato 33b: el icono de J1 muestra el medallon del arma (misil)")
+	hud.call("set_weapon_level_p2", 2, 2)
+	var icon_p2: Control = hud.get("_weapon_icon_p2") as Control
+	_expect(icon_p2 != null and icon_p2.get("weapon_type") == 2, "Contrato 33c: el icono de J2 muestra el medallon del arma (laser)")
+	_expect(hud.get("_weapon_level_label").text == "3", "Contrato 33d: el label del arma muestra solo el nivel")
 	hud.queue_free()
 
 
