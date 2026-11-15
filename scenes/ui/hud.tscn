@@ -184,9 +184,9 @@ anchors_preset = 1
 anchor_left = 0.0
 anchor_right = 0.0
 offset_left = 16.0
-offset_top = 130.0
+offset_top = 146.0
 offset_right = 320.0
-offset_bottom = 168.0
+offset_bottom = 184.0
 grow_horizontal = 1
 
 [node name="HeatLabel" type="Label" parent="HeatContainer"]

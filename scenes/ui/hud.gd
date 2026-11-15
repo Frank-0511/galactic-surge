@@ -279,7 +279,7 @@ func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
 		_heat_p2_label = Label.new()
 		_heat_p2_label.name = "HeatP2Label"
 		_heat_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_heat_p2_label.add_theme_font_size_override("font_size", 20)
+		_heat_p2_label.add_theme_font_size_override("font_size", 12)
 		_heat_p2_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.15, 1.0))
 		_ensure_p2_panel().add_child(_heat_p2_label)
 	var percent: int = int(round(current / maximum * 100.0)) if maximum > 0.0 else 0
@@ -287,6 +287,15 @@ func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
 	if overheated:
 		_heat_p2_label.text += " SOBRECARGA"
 	_heat_p2_label.visible = true
+	var bar: ProgressBar = _ensure_p2_panel().get_node_or_null("HeatP2Bar") as ProgressBar
+	if bar == null:
+		bar = ProgressBar.new()
+		bar.name = "HeatP2Bar"
+		bar.custom_minimum_size = Vector2(240.0, 14.0)
+		bar.max_value = 100.0
+		bar.show_percentage = false
+		_ensure_p2_panel().add_child(bar)
+	bar.value = percent
 
 
 func get_heat_p2_text() -> String:

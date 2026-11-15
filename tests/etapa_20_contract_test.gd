@@ -273,6 +273,13 @@ func _check_hud_two_player_layout() -> void:
 		var lives_p2: Label = hud.get("_lives_p2_label") as Label
 		_expect(lives_p2 != null and lives_p2.has_theme_font_size_override("font_size") and lives_p2.get_theme_font_size("font_size") == 20, "Contrato 13e: etiqueta de vidas de J2 con override de tamaño 20 (como J1)")
 		_expect(lives_p2 != null and lives_p2.has_theme_color_override("font_color"), "Contrato 13f: etiqueta de vidas de J2 con color propio (como J1)")
+		hud.call("set_heat_p2", 60.0, 100.0, false)
+		var bar_p2: ProgressBar = panel.get_node_or_null("HeatP2Bar") as ProgressBar
+		_expect(bar_p2 != null and bar_p2.value == 60.0, "Contrato 13g: J2 tiene barra de calor propia, como J1")
+		var heat_p2: Label = hud.get("_heat_p2_label") as Label
+		_expect(heat_p2 != null and heat_p2.get_theme_font_size("font_size") == 12, "Contrato 13i: etiqueta de calor de J2 con tamaño 12 (como J1)")
+	var heat_container: Control = hud.get_node("HeatContainer") as Control
+	_expect(heat_container.offset_top >= 140.0, "Contrato 13h: el calor de J1 queda debajo de la línea de ARMA (no se pisan)")
 	hud.queue_free()
 
 
