@@ -169,14 +169,30 @@ func _update_weapon_level_label() -> void:
 			panel.add_child(_weapon_level_label)
 		else:
 			return
-	_weapon_level_label.text = "▲ %d" % _current_weapon_level
+	_weapon_level_label.text = "%s %d" % [weapon_glyph(_current_weapon_type), _current_weapon_level]
 
 
 ## Weapon level of J2, shown in the bottom-right corner (spec S7, Etapa 20).
 var _weapon_level_p2_label: Label = null
 
 
-func set_weapon_level_p2(level: int) -> void:
+## Icon per weapon type (0 blaster, 1 misil, 2 laser); the icon follows the weapon (Etapa 20).
+func weapon_glyph(weapon_type: int) -> String:
+	match weapon_type:
+		1:
+			return "◆"
+		2:
+			return "●"
+		_:
+			return "▲"
+
+
+var _weapon_type_p2: int = 0
+
+
+func set_weapon_level_p2(level: int, weapon_type: int = -1) -> void:
+	if weapon_type >= 0:
+		_weapon_type_p2 = weapon_type
 	if _weapon_level_p2_label == null:
 		_weapon_level_p2_label = Label.new()
 		_weapon_level_p2_label.name = "WeaponLevelP2Label"
@@ -185,7 +201,7 @@ func set_weapon_level_p2(level: int) -> void:
 		_weapon_level_p2_label.add_theme_font_size_override("font_size", 20)
 		_weapon_level_p2_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0, 1.0))
 		_ensure_p2_bottom_panel().add_child(_weapon_level_p2_label)
-	_weapon_level_p2_label.text = "▲ %d" % clampi(level, 1, 15)
+	_weapon_level_p2_label.text = "%s %d" % [weapon_glyph(_weapon_type_p2), clampi(level, 1, 15)]
 
 
 

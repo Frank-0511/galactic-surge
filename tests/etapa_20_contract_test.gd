@@ -44,6 +44,7 @@ func _run_contracts() -> void:
 	_check_legacy_bullet_kill_attribution()
 	_check_hud_icons_and_wave_out()
 	_check_eliminated_ship_stays_hidden()
+	_check_weapon_icon_by_type()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -601,6 +602,21 @@ func _check_eliminated_ship_stays_hidden() -> void:
 	ship.call("_on_blink_timer_timeout")
 	_expect(not ship.visible, "Contrato 29b: el parpadeo no muestra una nave eliminada")
 	ship.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 30. Icono del arma: cambia segun el tipo de arma (0 blaster, 1 misil, 2 laser)
+# ---------------------------------------------------------------------------
+func _check_weapon_icon_by_type() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_weapon_level", 3, 1)
+	_expect(hud.get("_weapon_level_label").text == "◆ 3", "Contrato 30a: arma misil de J1 con icono \"◆ 3\"")
+	hud.call("set_weapon_level", 2, 2)
+	_expect(hud.get("_weapon_level_label").text == "● 2", "Contrato 30b: arma laser de J1 con icono \"● 2\"")
+	hud.call("set_weapon_level_p2", 2, 1)
+	_expect(hud.get("_weapon_level_p2_label").text == "◆ 2", "Contrato 30c: arma misil de J2 con icono \"◆ 2\"")
+	hud.queue_free()
 
 
 # ---------------------------------------------------------------------------
