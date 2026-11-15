@@ -59,7 +59,8 @@ func _assert_hud_contract() -> bool:
 			push_error("HUD missing signal: %s" % signal_name)
 			passed = false
 	for node_path: String in ["Margin/LivesLabel", "Margin/ScoreLabel", "Margin/WaveLabel", "VictoryLabel", "VictoryScoreLabel", "RetryButton", "MainMenuButton"]:
-		if hud.get_node_or_null(node_path) == null:
+		# Labels may live in the HUD panels (Etapa 20); look them up by name anywhere in the HUD.
+		if hud.find_child(node_path.get_file(), true, false) == null:
 			push_error("HUD missing node: %s" % node_path)
 			passed = false
 	# Victory labels must start hidden.

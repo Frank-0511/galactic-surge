@@ -164,7 +164,7 @@ func _assert_loot_drop_contract() -> bool:
 		var collect_count: Array[int] = [0]
 		var collected_type: Array[int] = [-1]
 		if loot_collect.has_signal(&"collected"):
-			loot_collect.connect(&"collected", func(t: int) -> void:
+			loot_collect.connect(&"collected", func(t: int, _collector: Node2D) -> void:
 				collect_count[0] += 1
 				collected_type[0] = t
 			)

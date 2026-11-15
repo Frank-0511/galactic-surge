@@ -497,16 +497,16 @@ func _assert_hud_contract() -> bool:
 		hud.set_active_weapon(2)
 
 	# Essential combat HUD elements must remain active
-	if hud.get_node_or_null("Margin/LivesLabel") == null:
-		push_error("HUD missing Margin/LivesLabel")
+	if hud.find_child("LivesLabel", true, false) == null:
+		push_error("HUD missing LivesLabel")
 		passed = false
-	if hud.get_node_or_null("Margin/ScoreLabel") == null:
-		push_error("HUD missing Margin/ScoreLabel")
+	if hud.find_child("ScoreLabel", true, false) == null:
+		push_error("HUD missing ScoreLabel")
 		passed = false
-	if hud.get_node_or_null("Margin/WaveLabel") == null:
-		push_error("HUD missing Margin/WaveLabel")
+	if hud.find_child("WaveLabel", true, false) == null:
+		push_error("HUD missing WaveLabel")
 		passed = false
-	if hud.get_node_or_null("HeatContainer") == null:
+	if hud.find_child("HeatContainer", true, false) == null:
 		push_error("HUD missing HeatContainer")
 		passed = false
 

@@ -500,7 +500,7 @@ func _on_enemy_destroyed(enemy: Area2D) -> void:
 		_visual_feedback.play_hull_fragments(explosion_position)
 	var multiplier: int = _combo_system.register_kill() if (_combo_system != null and _combo_system.has_method(&"register_kill")) else 1
 	var points_earned: int = POINTS_PER_ENEMY * multiplier
-	_add_score(points_earned, enemy.get("last_attacker") as Node2D)
+	_add_score(points_earned, enemy.get("last_attacker") as Node2D if enemy != null else null)
 	_hud.set_score(score)
 	_visual_feedback.play_score_popup(explosion_position, points_earned, multiplier > 1)
 	_audio_feedback.play_enemy_explosion()
@@ -536,7 +536,7 @@ func _on_asteroid_destroyed(asteroid: Area2D, size_idx: int, pos: Vector2, _vel:
 
 	var mult: int = _combo_system.register_kill() if (_combo_system != null and _combo_system.has_method(&"register_kill")) else 1
 	var points_earned: int = base_pts * mult
-	_add_score(points_earned, asteroid.get("last_attacker") as Node2D)
+	_add_score(points_earned, asteroid.get("last_attacker") as Node2D if asteroid != null else null)
 	_hud.set_score(score)
 	_visual_feedback.play_score_popup(pos, points_earned, mult > 1)
 	_visual_feedback.play_enemy_explosion(pos)

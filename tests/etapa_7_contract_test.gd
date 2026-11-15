@@ -618,7 +618,7 @@ func _assert_hud_contract() -> bool:
 		passed = false
 
 	# Check required node hierarchy (Heat and Combo must be present; WeaponSelectorContainer is deprecated)
-	var heat_container: Control = hud.get_node_or_null("HeatContainer") as Control
+	var heat_container: Control = hud.find_child("HeatContainer", true, false) as Control
 	if heat_container == null:
 		push_error("HUD missing HeatContainer")
 		passed = false
