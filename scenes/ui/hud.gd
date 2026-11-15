@@ -164,10 +164,10 @@ class WeaponIcon extends Control:
 			queue_redraw()
 
 	func _ready() -> void:
-		custom_minimum_size = Vector2(26.0, 26.0)
+		custom_minimum_size = Vector2(20.0, 20.0)
 
 	func _draw() -> void:
-		draw_set_transform(size * 0.5, 0.0, Vector2(1.6, 1.6))
+		draw_set_transform(size * 0.5, 0.0, Vector2(1.0, 1.0))
 		LootDrop.paint_medallion(self, weapon_type)
 
 

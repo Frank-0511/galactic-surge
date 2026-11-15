@@ -48,6 +48,7 @@ func _run_contracts() -> void:
 	_check_active_weapon_text_hidden()
 	_check_p2_panels_follow_session()
 	_check_weapon_icon_is_drop_medallion()
+	_check_weapon_icon_size()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -668,6 +669,18 @@ func _check_weapon_icon_is_drop_medallion() -> void:
 	var icon_p2: Control = hud.get("_weapon_icon_p2") as Control
 	_expect(icon_p2 != null and icon_p2.get("weapon_type") == 2, "Contrato 33c: el icono de J2 muestra el medallon del arma (laser)")
 	_expect(hud.get("_weapon_level_label").text == "3", "Contrato 33d: el label del arma muestra solo el nivel")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 34. Icono del arma: tamano acorde al texto del nivel (no mas alto que una linea de 20 px)
+# ---------------------------------------------------------------------------
+func _check_weapon_icon_size() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_weapon_level", 3, 0)
+	var icon: Control = hud.get("_weapon_icon") as Control
+	_expect(icon != null and icon.custom_minimum_size.y <= 22.0, "Contrato 34a: el icono del arma mide como maximo 22 px (acorde al texto de 20 px)")
 	hud.queue_free()
 
 
