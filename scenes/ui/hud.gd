@@ -51,6 +51,7 @@ var _wave_cleared_tween: Tween = null
 
 func _ready() -> void:
 	_make_passive()
+	_move_p1_lives_bottom_left()
 	_init_styles()
 	_init_wave_cleared_banner()
 	set_active_weapon(_current_weapon_type)
@@ -250,6 +251,27 @@ func _ensure_p2_panel() -> VBoxContainer:
 		_p2_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_p2_panel)
 	return _p2_panel
+
+
+## Bottom-left panel for J1 lives (spec S7, Etapa 20): J1 lives move out of the top stack.
+func _move_p1_lives_bottom_left() -> void:
+	if _lives_label == null:
+		return
+	var panel: VBoxContainer = VBoxContainer.new()
+	panel.name = "P1BottomPanel"
+	panel.anchor_left = 0.0
+	panel.anchor_top = 1.0
+	panel.anchor_right = 0.0
+	panel.anchor_bottom = 1.0
+	panel.offset_left = 16.0
+	panel.offset_top = -80.0
+	panel.offset_right = 260.0
+	panel.offset_bottom = -16.0
+	panel.grow_horizontal = 1
+	panel.grow_vertical = 0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(panel)
+	_lives_label.reparent(panel)
 
 
 ## Bottom-right panel for J2 lives and weapon level (spec S7, Etapa 20).

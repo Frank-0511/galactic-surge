@@ -33,6 +33,7 @@ func _run_contracts() -> void:
 	_check_hud_is_passive()
 	_check_hud_p2_matches_p1_style()
 	_check_hud_p2_lives_bottom_right()
+	_check_hud_p1_lives_bottom_left()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -357,8 +358,8 @@ func _check_hud_p2_matches_p1_style() -> void:
 	hud.call("set_lives_p2", 2)
 	hud.call("set_score_p2", 10)
 	hud.call("set_heat_p2", 10.0, 100.0, false)
-	var lives_p1: Label = hud.get_node("Margin/LivesLabel") as Label
-	var score_p1: Label = hud.get_node("Margin/ScoreLabel") as Label
+	var lives_p1: Label = hud.get("_lives_label") as Label
+	var score_p1: Label = hud.get("_score_label") as Label
 	var lives_p2: Label = hud.get("_lives_p2_label") as Label
 	var score_p2: Label = hud.get("_score_p2_label") as Label
 	_expect(lives_p2 != null and lives_p2.get_theme_color("font_color") == lives_p1.get_theme_color("font_color"), "Contrato 17a: color de vidas de J2 igual al de J1")
@@ -377,6 +378,19 @@ func _check_hud_p2_lives_bottom_right() -> void:
 	var bottom: Control = hud.get_node_or_null("P2BottomPanel") as Control
 	_expect(bottom != null and bottom.anchor_top == 1.0 and bottom.anchor_right == 1.0, "Contrato 18a: panel inferior de J2 anclado abajo a la derecha")
 	_expect(lives_p2 != null and bottom != null and lives_p2.get_parent() == bottom, "Contrato 18b: vidas de J2 viven en el panel inferior")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 19. HUD (spec S7): vidas de J1 abajo a la izquierda
+# ---------------------------------------------------------------------------
+func _check_hud_p1_lives_bottom_left() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	var lives_p1: Label = hud.get("_lives_label") as Label
+	var bottom: Control = hud.get_node_or_null("P1BottomPanel") as Control
+	_expect(bottom != null and bottom.anchor_top == 1.0 and bottom.anchor_left == 0.0, "Contrato 19a: panel inferior de J1 anclado abajo a la izquierda")
+	_expect(lives_p1 != null and bottom != null and lives_p1.get_parent() == bottom, "Contrato 19b: vidas de J1 viven en el panel inferior izquierdo")
 	hud.queue_free()
 
 
