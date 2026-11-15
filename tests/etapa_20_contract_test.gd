@@ -36,6 +36,7 @@ func _run_contracts() -> void:
 	_check_hud_p1_lives_bottom_left()
 	_check_hud_weapon_level_bottom()
 	_check_hud_p1_score_heat_top_left()
+	_check_boss_bar_center_free()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -429,6 +430,26 @@ func _check_hud_p1_score_heat_top_left() -> void:
 	_expect(top != null and top.anchor_left == 0.0 and top.anchor_top == 0.0, "Contrato 21a: panel superior de J1 anclado arriba a la izquierda")
 	_expect(score_p1 != null and top != null and score_p1.get_parent() == top, "Contrato 21b: score de J1 en el panel superior izquierdo")
 	_expect(heat_p1 != null and top != null and heat_p1.get_parent() == top, "Contrato 21c: calor de J1 en el panel superior izquierdo")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 22. HUD (spec S9): la barra del jefe queda centrada y ningún panel la pisa
+# ---------------------------------------------------------------------------
+func _check_boss_bar_center_free() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_lives_p2", 2)
+	hud.call("set_score_p2", 0)
+	var w: float = get_root().get_visible_rect().size.x
+	var boss_left: float = w * 0.5 - 200.0
+	var boss_right: float = w * 0.5 + 200.0
+	var top_p1: Control = hud.get_node_or_null("P1TopPanel") as Control
+	var panel_p2: Control = hud.get_node_or_null("P2Panel") as Control
+	var boss: Control = hud.get_node_or_null("BossContainer") as Control
+	_expect(boss != null and boss.anchor_left == 0.5 and boss.anchor_right == 0.5, "Contrato 22a: barra del jefe centrada")
+	_expect(top_p1 != null and top_p1.offset_right <= boss_left, "Contrato 22b: panel de J1 no pisa la barra del jefe")
+	_expect(panel_p2 != null and w + panel_p2.offset_left >= boss_right, "Contrato 22c: panel de J2 no pisa la barra del jefe")
 	hud.queue_free()
 
 
