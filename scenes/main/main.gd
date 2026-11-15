@@ -123,6 +123,9 @@ var _session_active: bool = false
 var _player_two: CharacterBody2D = null
 var _player_two_lives: int = STARTING_LIVES
 
+## Score of J2 in coop local (Etapa 20); `score` is J1's.
+var score_p2: int = 0
+
 ## True when the session that started from the menu is coop local.
 var session_coop: bool = false
 var _mission_complete: bool = false
@@ -441,9 +444,19 @@ func _spawn_recovery_capsule(spawn_pos: Vector2) -> void:
 
 
 ## Adds points scaled by the session difficulty score multiplier, then checks extra-life milestones.
-func _add_score(points: int) -> void:
-	score += int(round(points * DS.score_multiplier(session_difficulty)))
+## ship: the ship that earned the points; null means J1 (singleplayer and unattributed bonuses).
+func _add_score(points: int, ship: Node2D = null) -> void:
+	var gained: int = int(round(points * DS.score_multiplier(session_difficulty)))
+	if _ship_for(ship) == _player_two and _player_two != null:
+		score_p2 += gained
+	else:
+		score += gained
 	_check_score_milestones()
+
+
+## Nave que corresponde a un atacante: J2 si es _player_two, si no J1.
+func _ship_for(attacker: Node) -> Node:
+	return _player_two if attacker != null and attacker == _player_two else _player
 
 
 func _check_score_milestones() -> void:

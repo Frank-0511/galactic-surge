@@ -28,6 +28,7 @@ func _run_contracts() -> void:
 	_check_j1_ignores_arrows_in_coop()
 	_check_p2_overheat_wiring()
 	_check_hud_two_player_layout()
+	_check_score_per_player()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -283,6 +284,30 @@ func _check_hud_two_player_layout() -> void:
 	var heat_container: Control = hud.get_node("HeatContainer") as Control
 	_expect(heat_container.offset_top >= 140.0, "Contrato 13h: el calor de J1 queda debajo de la línea de ARMA (no se pisan)")
 	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 14. Score por jugador (Etapa 20, decisión: "Score por jugador")
+# ---------------------------------------------------------------------------
+func _check_score_per_player() -> void:
+	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var main: Node = packed.instantiate()
+	get_root().add_child(main)
+	main.set("_session_active", true)
+	main.call("enable_coop_local")
+	var p2: CharacterBody2D = main.get("_player_two") as CharacterBody2D
+	main.set("score", 0)
+	main.set("score_p2", 0)
+	_expect(main.get("score_p2") != null and main.has_method("_ship_for"), "Contrato 14d: main expone score_p2 y _ship_for()")
+	if main.get("score_p2") == null or not main.has_method("_ship_for"):
+		main.queue_free()
+		return
+	main.call("_add_score", 100, p2)
+	_expect(main.get("score_p2") == 100 and main.get("score") == 0, "Contrato 14a: puntos de J2 suman a J2, no a J1")
+	main.call("_add_score", 50)
+	_expect(main.get("score") == 50, "Contrato 14b: sin nave indicada, los puntos son de J1")
+	_expect(main.call("_ship_for", p2) == p2 and main.call("_ship_for", null) == main.get("_player"), "Contrato 14c: _ship_for resuelve la nave del atacante")
+	main.queue_free()
 
 
 # ---------------------------------------------------------------------------
