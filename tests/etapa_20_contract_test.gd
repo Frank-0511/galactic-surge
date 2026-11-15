@@ -35,6 +35,7 @@ func _run_contracts() -> void:
 	_check_hud_p2_lives_bottom_right()
 	_check_hud_p1_lives_bottom_left()
 	_check_hud_weapon_level_bottom()
+	_check_hud_p1_score_heat_top_left()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -268,7 +269,7 @@ func _check_p2_overheat_wiring() -> void:
 func _check_hud_two_player_layout() -> void:
 	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
-	var heat_p1: Control = hud.get_node("HeatContainer") as Control
+	var heat_p1: Control = hud.get("_heat_container") as Control
 	_expect(heat_p1.anchor_left == 0.0 and heat_p1.anchor_right == 0.0, "Contrato 13a: calor de J1 a la izquierda")
 	hud.call("set_lives_p2", 2)
 	hud.call("set_heat_p2", 10.0, 100.0, false)
@@ -290,8 +291,8 @@ func _check_hud_two_player_layout() -> void:
 		_expect(bar_p2 != null and bar_p1 != null and bar_p2.get_theme_stylebox("background") == bar_p1.get_theme_stylebox("background") and bar_p2.get_theme_stylebox("fill") == bar_p1.get_theme_stylebox("fill"), "Contrato 13j: la barra de J2 usa el mismo estilo que la de J1")
 		var heat_p2: Label = hud.get("_heat_p2_label") as Label
 		_expect(heat_p2 != null and heat_p2.get_theme_font_size("font_size") == 12, "Contrato 13i: etiqueta de calor de J2 con tamaño 12 (como J1)")
-	var heat_container: Control = hud.get_node("HeatContainer") as Control
-	_expect(heat_container.offset_top >= 140.0, "Contrato 13h: el calor de J1 queda debajo de la línea de ARMA (no se pisan)")
+	var heat_container: Control = hud.get("_heat_container") as Control
+	_expect(heat_container.get_parent() == hud.get_node_or_null("P1TopPanel"), "Contrato 13h: el calor de J1 vive en el panel superior izquierdo (spec S8)")
 	hud.queue_free()
 
 
@@ -343,7 +344,7 @@ func _check_hud_is_passive() -> void:
 	get_root().add_child(hud)
 	hud.call("set_lives_p2", 2)
 	hud.call("set_score_p2", 0)
-	var wrappers: Array[String] = ["BossContainer", "Margin", "HeatContainer", "ComboContainer", "P2Panel", "P2BottomPanel"]
+	var wrappers: Array[String] = ["BossContainer", "Margin", "ComboContainer", "P2Panel", "P2BottomPanel", "P1TopPanel", "P1BottomPanel"]
 	for path: String in wrappers:
 		var node: Control = hud.get_node_or_null(path) as Control
 		_expect(node != null and node.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Contrato 16: %s no captura el mouse" % path)
@@ -413,6 +414,21 @@ func _check_hud_weapon_level_bottom() -> void:
 	var level_p2: Label = hud.get("_weapon_level_p2_label") as Label
 	_expect(level_p1 != null and bottom_p1 != null and level_p1.get_parent() == bottom_p1 and level_p1.text == "Nivel: 3", "Contrato 20a: nivel del arma de J1 abajo a la izquierda (\"Nivel: 3\")")
 	_expect(level_p2 != null and bottom_p2 != null and level_p2.get_parent() == bottom_p2 and level_p2.text == "Nivel: 2", "Contrato 20b: nivel del arma de J2 abajo a la derecha (\"Nivel: 2\")")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 21. HUD (spec S8): score y calor de J1 arriba a la izquierda
+# ---------------------------------------------------------------------------
+func _check_hud_p1_score_heat_top_left() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	var top: Control = hud.get_node_or_null("P1TopPanel") as Control
+	var score_p1: Label = hud.get("_score_label") as Label
+	var heat_p1: Control = hud.get("_heat_container") as Control
+	_expect(top != null and top.anchor_left == 0.0 and top.anchor_top == 0.0, "Contrato 21a: panel superior de J1 anclado arriba a la izquierda")
+	_expect(score_p1 != null and top != null and score_p1.get_parent() == top, "Contrato 21b: score de J1 en el panel superior izquierdo")
+	_expect(heat_p1 != null and top != null and heat_p1.get_parent() == top, "Contrato 21c: calor de J1 en el panel superior izquierdo")
 	hud.queue_free()
 
 

@@ -52,6 +52,7 @@ var _wave_cleared_tween: Tween = null
 func _ready() -> void:
 	_make_passive()
 	_move_p1_lives_bottom_left()
+	_move_p1_top_left()
 	_update_weapon_level_label()
 	_init_styles()
 	_init_wave_cleared_banner()
@@ -288,6 +289,32 @@ func _ensure_p2_panel() -> VBoxContainer:
 		_p2_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_p2_panel)
 	return _p2_panel
+
+
+## Top-left panel for J1 (spec S8, Etapa 20): score and heat bar, then wave and weapon name.
+func _move_p1_top_left() -> void:
+	if _score_label == null or _heat_container == null:
+		return
+	var panel: VBoxContainer = VBoxContainer.new()
+	panel.name = "P1TopPanel"
+	panel.anchor_left = 0.0
+	panel.anchor_top = 0.0
+	panel.anchor_right = 0.0
+	panel.anchor_bottom = 0.0
+	panel.offset_left = 16.0
+	panel.offset_top = 16.0
+	panel.offset_right = 320.0
+	panel.grow_horizontal = 1
+	panel.grow_vertical = 1
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(panel)
+	_score_label.reparent(panel)
+	_heat_container.custom_minimum_size = Vector2(304.0, 38.0)
+	_heat_container.reparent(panel)
+	if _wave_label != null:
+		_wave_label.reparent(panel)
+	if _active_weapon_label != null:
+		_active_weapon_label.reparent(panel)
 
 
 ## Bottom-left panel for J1 lives (spec S7, Etapa 20): J1 lives move out of the top stack.
