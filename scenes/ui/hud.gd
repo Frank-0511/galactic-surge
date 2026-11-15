@@ -50,6 +50,7 @@ var _wave_cleared_tween: Tween = null
 
 
 func _ready() -> void:
+	_make_passive()
 	_init_styles()
 	_init_wave_cleared_banner()
 	set_active_weapon(_current_weapon_type)
@@ -224,6 +225,14 @@ func set_lives(lives: int) -> void:
 var _lives_p2_label: Label = null
 
 
+## HUD is passive (skill scenario-godot-ui, regla 7): wrappers must not capture the mouse.
+func _make_passive() -> void:
+	for path: String in ["BossContainer", "Margin", "HeatContainer", "ComboContainer"]:
+		var node: Control = get_node_or_null(path) as Control
+		if node != null:
+			node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
 ## Right-side panel for J2 (Etapa 20): stacks its labels so they never overlap J1's.
 var _p2_panel: VBoxContainer = null
 
@@ -238,6 +247,7 @@ func _ensure_p2_panel() -> VBoxContainer:
 		_p2_panel.offset_right = -16.0
 		_p2_panel.offset_top = 130.0
 		_p2_panel.grow_horizontal = 0
+		_p2_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_p2_panel)
 	return _p2_panel
 

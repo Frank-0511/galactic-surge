@@ -30,6 +30,7 @@ func _run_contracts() -> void:
 	_check_hud_two_player_layout()
 	_check_score_per_player()
 	_check_hud_score_p2()
+	_check_hud_is_passive()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -324,6 +325,20 @@ func _check_hud_score_p2() -> void:
 		_expect(label != null and label.text == "Score J2: 300", "Contrato 15b: J2 muestra \"Score J2: 300\"")
 		_expect(label != null and label.get_parent() == hud.get("_p2_panel"), "Contrato 15c: score de J2 vive en el panel de J2")
 		_expect(label != null and label.has_theme_font_size_override("font_size") and label.get_theme_font_size("font_size") == 20, "Contrato 15d: score de J2 con tamaño 20 (como J1)")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 16. HUD pasivo: los wrappers no capturan el mouse (skill scenario-godot-ui, regla 7)
+# ---------------------------------------------------------------------------
+func _check_hud_is_passive() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_lives_p2", 2)
+	var wrappers: Array[String] = ["BossContainer", "Margin", "HeatContainer", "ComboContainer", "P2Panel"]
+	for path: String in wrappers:
+		var node: Control = hud.get_node_or_null(path) as Control
+		_expect(node != null and node.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Contrato 16: %s no captura el mouse" % path)
 	hud.queue_free()
 
 
