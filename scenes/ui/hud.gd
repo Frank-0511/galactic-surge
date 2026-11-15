@@ -224,11 +224,38 @@ func set_lives(lives: int) -> void:
 var _lives_p2_label: Label = null
 
 
+## Right-side panel for J2 (Etapa 20): stacks its labels so they never overlap J1's.
+var _p2_panel: VBoxContainer = null
+
+
+func _ensure_p2_panel() -> VBoxContainer:
+	if _p2_panel == null:
+		_p2_panel = VBoxContainer.new()
+		_p2_panel.name = "P2Panel"
+		_p2_panel.anchor_left = 1.0
+		_p2_panel.anchor_right = 1.0
+		_p2_panel.offset_left = -260.0
+		_p2_panel.offset_right = -16.0
+		_p2_panel.offset_top = 16.0
+		_p2_panel.grow_horizontal = 0
+		add_child(_p2_panel)
+	return _p2_panel
+
+
+func get_lives_p2_parent() -> Node:
+	return _lives_p2_label.get_parent() if _lives_p2_label != null else null
+
+
+func get_heat_p2_parent() -> Node:
+	return _heat_p2_label.get_parent() if _heat_p2_label != null else null
+
+
 func set_lives_p2(lives: int) -> void:
 	if _lives_p2_label == null:
 		_lives_p2_label = Label.new()
 		_lives_p2_label.name = "LivesP2Label"
-		_lives_label.get_parent().add_child(_lives_p2_label)
+		_lives_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_ensure_p2_panel().add_child(_lives_p2_label)
 	_lives_p2_label.text = "Vidas J2: %d" % lives
 	_lives_p2_label.visible = true
 
@@ -249,7 +276,8 @@ func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
 	if _heat_p2_label == null:
 		_heat_p2_label = Label.new()
 		_heat_p2_label.name = "HeatP2Label"
-		_lives_label.get_parent().add_child(_heat_p2_label)
+		_heat_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_ensure_p2_panel().add_child(_heat_p2_label)
 	var percent: int = int(round(current / maximum * 100.0)) if maximum > 0.0 else 0
 	_heat_p2_label.text = "Calor J2: %d%%" % percent
 	if overheated:

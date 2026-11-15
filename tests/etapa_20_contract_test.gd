@@ -27,6 +27,7 @@ func _run_contracts() -> void:
 	_check_loot_collector_routing()
 	_check_j1_ignores_arrows_in_coop()
 	_check_p2_overheat_wiring()
+	_check_hud_two_player_layout()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -252,6 +253,23 @@ func _check_p2_overheat_wiring() -> void:
 		main.call("_set_player_two_active", false)
 		_expect(p2.get("heat") == 0.0, "Contrato 12d: al cerrar la sesión se resetea el calor de J2")
 	main.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 13. HUD de dos naves: J1 a la izquierda, J2 a la derecha, sin superponerse
+# ---------------------------------------------------------------------------
+func _check_hud_two_player_layout() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	var heat_p1: Control = hud.get_node("HeatContainer") as Control
+	_expect(heat_p1.anchor_left == 0.0 and heat_p1.anchor_right == 0.0, "Contrato 13a: calor de J1 a la izquierda")
+	hud.call("set_lives_p2", 2)
+	hud.call("set_heat_p2", 10.0, 100.0, false)
+	var panel: Control = hud.get_node_or_null("P2Panel") as Control
+	_expect(panel != null and panel.anchor_left == 1.0 and panel.anchor_right == 1.0, "Contrato 13b: panel de J2 a la derecha")
+	if panel != null:
+		_expect(hud.call("get_lives_p2_parent") == panel and hud.call("get_heat_p2_parent") == panel, "Contrato 13c: vidas y calor de J2 viven en el panel de J2")
+	hud.queue_free()
 
 
 # ---------------------------------------------------------------------------
