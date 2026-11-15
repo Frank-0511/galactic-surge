@@ -17,6 +17,7 @@ func _init() -> void:
 func _run_contracts() -> void:
 	_check_player_one_keeps_actions()
 	_check_player_two_uses_own_actions()
+	_check_hull_colors_per_player()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -41,6 +42,17 @@ func _check_player_one_keeps_actions() -> void:
 	_expect(PLAYER_SCRIPT.input_action_name("move_left", 1) == "move_left", "Contrato 1a: J1 mantiene move_left")
 	_expect(PLAYER_SCRIPT.input_action_name("move_right", 1) == "move_right", "Contrato 1b: J1 mantiene move_right")
 	_expect(PLAYER_SCRIPT.input_action_name("shoot", 1) == "shoot", "Contrato 1c: J1 mantiene shoot")
+
+
+# ---------------------------------------------------------------------------
+# 3. Hull outline color: J1 Azul Neón, J2 Naranja Neón (Etapa 20, S2)
+# ---------------------------------------------------------------------------
+func _check_hull_colors_per_player() -> void:
+	var p1: Color = PLAYER_SCRIPT.hull_outline_color(1)
+	var p2: Color = PLAYER_SCRIPT.hull_outline_color(2)
+	_expect(p1.b > p1.r and p1.b > 0.9, "Contrato 3a: J1 contorno azul neón")
+	_expect(p2.r > 0.9 and p2.g > 0.4 and p2.g < 0.7 and p2.b < 0.3, "Contrato 3b: J2 contorno naranja neón")
+	_expect(p1 != p2, "Contrato 3c: J1 y J2 tienen colores distintos")
 
 
 # ---------------------------------------------------------------------------

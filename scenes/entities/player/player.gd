@@ -131,6 +131,11 @@ static func input_action_name(base: String, player_index: int) -> String:
 	return base if player_index == 1 else "p2_" + base
 
 
+## Hull outline color per slot: J1 Azul Neón (default), J2 Naranja Neón (coop local).
+static func hull_outline_color(player_index: int) -> Color:
+	return Color(1.0, 0.6, 0.15) if player_index == 2 else Color(0.45, 0.95, 1.0)
+
+
 func _ready() -> void:
 	if bullet_scene == null:
 		bullet_scene = load("res://scenes/entities/bullet/bullet.tscn") as PackedScene
@@ -727,7 +732,7 @@ func _draw() -> void:
 	draw_colored_polygon(fuselage, Color(0.08, 0.10, 0.19))
 	var fuselage_outline: PackedVector2Array = fuselage.duplicate()
 	fuselage_outline.append(fuselage[0])
-	var outline_color: Color = Color(0.45, 0.95, 1.0).lerp(Color(1.0, 0.4, 0.2), heat_ratio * 0.7)
+	var outline_color: Color = hull_outline_color(player_index).lerp(Color(1.0, 0.4, 0.2), heat_ratio * 0.7)
 	draw_polyline(fuselage_outline, outline_color, 1.5)
 
 	# Delta wings
