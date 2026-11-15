@@ -19,6 +19,7 @@ func _run_contracts() -> void:
 	_check_player_two_uses_own_actions()
 	_check_hull_colors_per_player()
 	_check_second_ship_lives()
+	_check_hud_lives_p2()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -84,6 +85,20 @@ func _check_second_ship_lives() -> void:
 	_expect(main.get("_player_two_lives") == starting - 1, "Contrato 4c: daño a J2 le resta una vida a J2")
 	_expect(main.get("lives") == starting, "Contrato 4d: daño a J2 no toca las vidas de J1")
 	main.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 5. HUD: indicador de vidas de J2, oculto en singleplayer
+# ---------------------------------------------------------------------------
+func _check_hud_lives_p2() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	_expect(hud.has_method("set_lives_p2"), "Contrato 5a: HUD expone set_lives_p2()")
+	_expect(not hud.call("is_lives_p2_visible") if hud.has_method("is_lives_p2_visible") else false, "Contrato 5b: indicador de J2 oculto en singleplayer")
+	if hud.has_method("set_lives_p2"):
+		hud.call("set_lives_p2", 2)
+		_expect(hud.call("is_lives_p2_visible") == true and hud.call("get_lives_p2_text") == "Vidas J2: 2", "Contrato 5c: J2 muestra \"Vidas J2: 2\" al activarse")
+	hud.queue_free()
 
 
 # ---------------------------------------------------------------------------

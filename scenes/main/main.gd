@@ -343,6 +343,7 @@ func enable_coop_local() -> void:
 	_player_two.damage_requested.connect(_on_player_damage_requested)
 	_player_two.set_gameplay_enabled(true)
 	_player_two_lives = STARTING_LIVES
+	_hud.set_lives_p2(_player_two_lives)
 
 
 func _request_player_damage(player: Node2D) -> void:
@@ -387,6 +388,7 @@ func _on_player_damage_requested(ship: Node2D = null) -> void:
 ## J2 loses a life; the session ends only when both ships are out of lives.
 func _on_player_two_damage_requested() -> void:
 	_player_two_lives -= 1
+	_hud.set_lives_p2(_player_two_lives)
 	if _player_two_lives > 0:
 		_player_two.respawn(_game_layout.get_player_spawn_position() + Vector2(80.0, 0.0))
 		return

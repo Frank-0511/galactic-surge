@@ -220,6 +220,27 @@ func set_lives(lives: int) -> void:
 	lives_changed.emit(lives)
 
 
+## Coop local (Etapa 20): J2 lives indicator, hidden until set (singleplayer never sets it).
+var _lives_p2_label: Label = null
+
+
+func set_lives_p2(lives: int) -> void:
+	if _lives_p2_label == null:
+		_lives_p2_label = Label.new()
+		_lives_p2_label.name = "LivesP2Label"
+		_lives_label.get_parent().add_child(_lives_p2_label)
+	_lives_p2_label.text = "Vidas J2: %d" % lives
+	_lives_p2_label.visible = true
+
+
+func is_lives_p2_visible() -> bool:
+	return _lives_p2_label != null and _lives_p2_label.visible
+
+
+func get_lives_p2_text() -> String:
+	return _lives_p2_label.text if _lives_p2_label != null else ""
+
+
 func set_score(score: int) -> void:
 	_score_label.text = "Score: %d" % score
 	score_changed.emit(score)
