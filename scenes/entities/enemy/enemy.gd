@@ -24,6 +24,9 @@ enum State { FORMATION, FLY_IN, DIVING, RETURNING, CHARGING }
 ## Emitted once when the enemy has been destroyed.
 signal destroyed(enemy: Area2D)
 
+## Last ship that damaged this enemy; kill points go to it (Etapa 20, kill attribution).
+var last_attacker: Node = null
+
 ## Emitted whenever the enemy receives damage (current and max health).
 signal damaged(current_health: float, max_health: float)
 

@@ -37,6 +37,7 @@ func _run_contracts() -> void:
 	_check_hud_weapon_level_bottom()
 	_check_hud_p1_score_heat_top_left()
 	_check_boss_bar_center_free()
+	_check_kill_attribution()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -451,6 +452,31 @@ func _check_boss_bar_center_free() -> void:
 	_expect(top_p1 != null and top_p1.offset_right <= boss_left, "Contrato 22b: panel de J1 no pisa la barra del jefe")
 	_expect(panel_p2 != null and w + panel_p2.offset_left >= boss_right, "Contrato 22c: panel de J2 no pisa la barra del jefe")
 	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 23. Kills: el score de un enemigo destruido va a la nave que lo atacó (feature L13)
+# ---------------------------------------------------------------------------
+func _check_kill_attribution() -> void:
+	var enemy_packed: PackedScene = load("res://scenes/entities/enemy/enemy.tscn") as PackedScene
+	var enemy: Node = enemy_packed.instantiate()
+	_expect("last_attacker" in enemy, "Contrato 23a: el enemigo registra su último atacante (last_attacker)")
+	if not ("last_attacker" in enemy):
+		enemy.free()
+		return
+	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var main: Node = packed.instantiate()
+	get_root().add_child(main)
+	main.set("_session_active", true)
+	main.call("enable_coop_local")
+	var p2: CharacterBody2D = main.get("_player_two") as CharacterBody2D
+	main.set("score", 0)
+	main.set("score_p2", 0)
+	get_root().add_child(enemy)
+	enemy.set("last_attacker", p2)
+	main.call("_on_enemy_destroyed", enemy)
+	_expect(main.get("score_p2") > 0 and main.get("score") == 0, "Contrato 23b: kill de J2 suma a J2, no a J1")
+	main.queue_free()
 
 
 # ---------------------------------------------------------------------------

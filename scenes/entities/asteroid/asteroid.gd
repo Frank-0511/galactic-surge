@@ -44,6 +44,9 @@ const SIZES: Dictionary = {
 ## Emitted when destroyed by weapons or impact.
 signal destroyed(asteroid: Area2D, size: int, pos: Vector2, vel: Vector2)
 
+## Last ship that damaged this asteroid; kill points go to it (Etapa 20, kill attribution).
+var last_attacker: Node = null
+
 ## Emitted upon physical collision with the player ship.
 signal player_contacted(player: Node2D)
 
