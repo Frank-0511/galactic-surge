@@ -294,6 +294,9 @@ func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
 		bar.custom_minimum_size = Vector2(240.0, 14.0)
 		bar.max_value = 100.0
 		bar.show_percentage = false
+		if _heat_progress_bar != null:
+			bar.add_theme_stylebox_override("background", _heat_progress_bar.get_theme_stylebox("background"))
+			bar.add_theme_stylebox_override("fill", _heat_progress_bar.get_theme_stylebox("fill"))
 		_ensure_p2_panel().add_child(bar)
 	bar.value = percent
 

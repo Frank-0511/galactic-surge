@@ -276,6 +276,8 @@ func _check_hud_two_player_layout() -> void:
 		hud.call("set_heat_p2", 60.0, 100.0, false)
 		var bar_p2: ProgressBar = panel.get_node_or_null("HeatP2Bar") as ProgressBar
 		_expect(bar_p2 != null and bar_p2.value == 60.0, "Contrato 13g: J2 tiene barra de calor propia, como J1")
+		var bar_p1: ProgressBar = hud.get("_heat_progress_bar") as ProgressBar
+		_expect(bar_p2 != null and bar_p1 != null and bar_p2.get_theme_stylebox("background") == bar_p1.get_theme_stylebox("background") and bar_p2.get_theme_stylebox("fill") == bar_p1.get_theme_stylebox("fill"), "Contrato 13j: la barra de J2 usa el mismo estilo que la de J1")
 		var heat_p2: Label = hud.get("_heat_p2_label") as Label
 		_expect(heat_p2 != null and heat_p2.get_theme_font_size("font_size") == 12, "Contrato 13i: etiqueta de calor de J2 con tamaño 12 (como J1)")
 	var heat_container: Control = hud.get_node("HeatContainer") as Control
