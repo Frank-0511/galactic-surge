@@ -245,7 +245,7 @@ func _ensure_p2_panel() -> VBoxContainer:
 		_p2_panel.anchor_right = 1.0
 		_p2_panel.offset_left = -260.0
 		_p2_panel.offset_right = -16.0
-		_p2_panel.offset_top = 130.0
+		_p2_panel.offset_top = 16.0
 		_p2_panel.grow_horizontal = 0
 		_p2_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_p2_panel)
@@ -264,6 +264,7 @@ func set_lives_p2(lives: int) -> void:
 	if _lives_p2_label == null:
 		_lives_p2_label = Label.new()
 		_lives_p2_label.name = "LivesP2Label"
+		_lives_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
 		_lives_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_lives_p2_label.add_theme_font_size_override("font_size", 20)
 		_lives_p2_label.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
@@ -288,6 +289,7 @@ func set_score_p2(points: int) -> void:
 	if _score_p2_label == null:
 		_score_p2_label = Label.new()
 		_score_p2_label.name = "ScoreP2Label"
+		_score_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
 		_score_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_score_p2_label.add_theme_font_size_override("font_size", 20)
 		_score_p2_label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.25, 1.0))
@@ -304,6 +306,7 @@ func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
 	if _heat_p2_label == null:
 		_heat_p2_label = Label.new()
 		_heat_p2_label.name = "HeatP2Label"
+		_heat_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
 		_heat_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_heat_p2_label.add_theme_font_size_override("font_size", 12)
 		_heat_p2_label.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0, 1.0))
