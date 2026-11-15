@@ -52,6 +52,7 @@ var _wave_cleared_tween: Tween = null
 func _ready() -> void:
 	_make_passive()
 	_move_p1_lives_bottom_left()
+	_update_weapon_level_label()
 	_init_styles()
 	_init_wave_cleared_banner()
 	set_active_weapon(_current_weapon_type)
@@ -148,6 +149,42 @@ func set_weapon_level(level: int, weapon_type: int = -1) -> void:
 	if weapon_type >= 0:
 		_current_weapon_type = weapon_type
 	_current_weapon_level = clampi(level, 1, 15)
+	_update_weapon_level_label()
+
+
+## Weapon level of J1, shown in the bottom-left corner (spec S7).
+var _weapon_level_label: Label = null
+
+
+func _update_weapon_level_label() -> void:
+	if _weapon_level_label == null:
+		_weapon_level_label = Label.new()
+		_weapon_level_label.name = "WeaponLevelLabel"
+		_weapon_level_label.custom_minimum_size = Vector2(0.0, 28.0)
+		_weapon_level_label.add_theme_font_size_override("font_size", 20)
+		_weapon_level_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0, 1.0))
+		var panel: Node = get_node_or_null("P1BottomPanel")
+		if panel != null:
+			panel.add_child(_weapon_level_label)
+		else:
+			return
+	_weapon_level_label.text = "Nivel: %d" % _current_weapon_level
+
+
+## Weapon level of J2, shown in the bottom-right corner (spec S7, Etapa 20).
+var _weapon_level_p2_label: Label = null
+
+
+func set_weapon_level_p2(level: int) -> void:
+	if _weapon_level_p2_label == null:
+		_weapon_level_p2_label = Label.new()
+		_weapon_level_p2_label.name = "WeaponLevelP2Label"
+		_weapon_level_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_weapon_level_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
+		_weapon_level_p2_label.add_theme_font_size_override("font_size", 20)
+		_weapon_level_p2_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0, 1.0))
+		_ensure_p2_bottom_panel().add_child(_weapon_level_p2_label)
+	_weapon_level_p2_label.text = "Nivel: %d" % clampi(level, 1, 15)
 
 
 

@@ -34,6 +34,7 @@ func _run_contracts() -> void:
 	_check_hud_p2_matches_p1_style()
 	_check_hud_p2_lives_bottom_right()
 	_check_hud_p1_lives_bottom_left()
+	_check_hud_weapon_level_bottom()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -391,6 +392,27 @@ func _check_hud_p1_lives_bottom_left() -> void:
 	var bottom: Control = hud.get_node_or_null("P1BottomPanel") as Control
 	_expect(bottom != null and bottom.anchor_top == 1.0 and bottom.anchor_left == 0.0, "Contrato 19a: panel inferior de J1 anclado abajo a la izquierda")
 	_expect(lives_p1 != null and bottom != null and lives_p1.get_parent() == bottom, "Contrato 19b: vidas de J1 viven en el panel inferior izquierdo")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 20. HUD (spec S7): nivel del arma abajo en la esquina de cada jugador
+# ---------------------------------------------------------------------------
+func _check_hud_weapon_level_bottom() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_weapon_level", 3, 0)
+	_expect(hud.has_method("set_weapon_level_p2"), "Contrato 20c: HUD expone set_weapon_level_p2()")
+	if not hud.has_method("set_weapon_level_p2"):
+		hud.queue_free()
+		return
+	hud.call("set_weapon_level_p2", 2)
+	var bottom_p1: Control = hud.get_node_or_null("P1BottomPanel") as Control
+	var bottom_p2: Control = hud.get_node_or_null("P2BottomPanel") as Control
+	var level_p1: Label = hud.get("_weapon_level_label") as Label
+	var level_p2: Label = hud.get("_weapon_level_p2_label") as Label
+	_expect(level_p1 != null and bottom_p1 != null and level_p1.get_parent() == bottom_p1 and level_p1.text == "Nivel: 3", "Contrato 20a: nivel del arma de J1 abajo a la izquierda (\"Nivel: 3\")")
+	_expect(level_p2 != null and bottom_p2 != null and level_p2.get_parent() == bottom_p2 and level_p2.text == "Nivel: 2", "Contrato 20b: nivel del arma de J2 abajo a la derecha (\"Nivel: 2\")")
 	hud.queue_free()
 
 
