@@ -121,6 +121,9 @@ var _session_active: bool = false
 ## Coop local (Etapa 20): second ship and its own lives; null/unused in singleplayer.
 var _player_two: CharacterBody2D = null
 var _player_two_lives: int = STARTING_LIVES
+
+## True when the session that started from the menu is coop local.
+var session_coop: bool = false
 var _mission_complete: bool = false
 var _wave_is_clean: bool = true
 var _pending_wave_index: int = 0
@@ -232,7 +235,11 @@ func _on_main_menu_play_requested() -> void:
 	if _session_state != SessionState.MAIN_MENU:
 		return
 	session_difficulty = _main_menu.selected_difficulty
+	session_coop = _main_menu.coop_selected
+	if session_coop:
+		enable_coop_local()
 	start_session()
+	_set_player_two_active(session_coop)
 
 
 func start_session() -> void:
@@ -311,6 +318,7 @@ func _enter_main_menu() -> void:
 	_hud.visible = false
 	_player.set_gameplay_enabled(false)
 	_player.visible = false
+	_set_player_two_active(false)
 	_hide_mission_complete_message()
 	_update_hud()
 	_main_menu.set_high_score(_high_score)
@@ -341,9 +349,23 @@ func enable_coop_local() -> void:
 	_player_two.position = _game_layout.get_player_spawn_position() + Vector2(80.0, 0.0)
 	add_child(_player_two)
 	_player_two.damage_requested.connect(_on_player_damage_requested)
-	_player_two.set_gameplay_enabled(true)
+	_player_two.visible = false
+	_player_two.set_gameplay_enabled(false)
 	_player_two_lives = STARTING_LIVES
-	_hud.set_lives_p2(_player_two_lives)
+
+
+## Shows or hides J2 for a session; activating gives J2 fresh lives and a respawn.
+func _set_player_two_active(active: bool) -> void:
+	if _player_two == null:
+		return
+	if active:
+		_player_two_lives = STARTING_LIVES
+		_hud.set_lives_p2(_player_two_lives)
+		_player_two.respawn(_game_layout.get_player_spawn_position() + Vector2(80.0, 0.0))
+		_player_two.set_gameplay_enabled(true)
+	else:
+		_player_two.set_gameplay_enabled(false)
+		_player_two.visible = false
 
 
 func _request_player_damage(player: Node2D) -> void:
@@ -973,6 +995,7 @@ func _end_session() -> void:
 	_end_belt_camera_follow()
 	_session_state = SessionState.GAME_OVER
 	_player.set_gameplay_enabled(false)
+	_set_player_two_active(false)
 	_enemy_spawner.stop()
 	if _asteroid_spawner != null:
 		_asteroid_spawner.stop()

@@ -20,6 +20,7 @@ func _run_contracts() -> void:
 	_check_hull_colors_per_player()
 	_check_second_ship_lives()
 	_check_hud_lives_p2()
+	_check_coop_menu_button()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -76,11 +77,16 @@ func _check_second_ship_lives() -> void:
 		main.call("enable_coop_local")
 	var p2: CharacterBody2D = main.get("_player_two") as CharacterBody2D
 	_expect(p2 != null and p2.player_index == 2, "Contrato 4b: coop local crea J2 con player_index 2")
+	if p2 != null:
+		_expect(not p2.visible, "Contrato 4b1: J2 oculta hasta empezar la sesión coop")
 	if p2 == null:
 		_failures += 1
 		main.queue_free()
 		return
 
+	main.call("_set_player_two_active", true)
+	# Activation respawns J2 with invulnerability, as J1 has at session start; clear it to test damage.
+	p2.set("_is_invulnerable", false)
 	main.call("_request_player_damage", p2)
 	_expect(main.get("_player_two_lives") == starting - 1, "Contrato 4c: daño a J2 le resta una vida a J2")
 	_expect(main.get("lives") == starting, "Contrato 4d: daño a J2 no toca las vidas de J1")
@@ -99,6 +105,20 @@ func _check_hud_lives_p2() -> void:
 		hud.call("set_lives_p2", 2)
 		_expect(hud.call("is_lives_p2_visible") == true and hud.call("get_lives_p2_text") == "Vidas J2: 2", "Contrato 5c: J2 muestra \"Vidas J2: 2\" al activarse")
 	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 6. Menú: botón "Coop local" entre Jugar y Dificultad (Etapa 20, T3)
+# ---------------------------------------------------------------------------
+func _check_coop_menu_button() -> void:
+	var menu: Node = (load("res://scenes/ui/main_menu.tscn") as PackedScene).instantiate()
+	var coop: Button = menu.get_node_or_null("Control/Menu/CoopButton") as Button
+	_expect(coop != null and coop.text == "Coop local", "Contrato 6a: menú tiene botón \"Coop local\"")
+	if coop != null:
+		var play_idx: int = (menu.get_node("Control/Menu/PlayButton") as Control).get_index()
+		var dif_idx: int = (menu.get_node("Control/Menu/DificultadButton") as Control).get_index()
+		_expect(coop.get_index() > play_idx and coop.get_index() < dif_idx, "Contrato 6b: Coop local entre Jugar y Dificultad")
+	menu.free()
 
 
 # ---------------------------------------------------------------------------

@@ -141,6 +141,12 @@ layout_mode = 2
 theme_type_variation = &"PrimaryButton"
 text = "Jugar"
 
+[node name="CoopButton" type="Button" parent="Control/Menu"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+theme_type_variation = &"SecondaryButton"
+text = "Coop local"
+
 [node name="DifficultyCaption" type="Label" parent="Control/Menu"]
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -170,4 +176,5 @@ text = "Salir"
 [connection signal="pressed" from="Control/Menu/AjustesButton" to="." method="_on_ajustes_button_pressed"]
 [connection signal="pressed" from="Control/Menu/DificultadButton" to="." method="_on_dificultad_button_pressed"]
 [connection signal="pressed" from="Control/Menu/PlayButton" to="." method="_on_play_button_pressed"]
+[connection signal="pressed" from="Control/Menu/CoopButton" to="." method="_on_coop_button_pressed"]
 [connection signal="pressed" from="Control/Menu/QuitButton" to="." method="_on_quit_button_pressed"]

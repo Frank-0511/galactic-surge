@@ -39,6 +39,9 @@ signal settings_requested
 ## Tier chosen in the menu; read by Main when play_requested fires and fixed for the session.
 var selected_difficulty: int = DS.Tier.COMMANDER
 
+## True when the player pressed "Coop local" instead of "Jugar" (Etapa 20).
+var coop_selected: bool = false
+
 @onready var _content: Control = $Control
 @onready var _vignette: TextureRect = $Control/Vignette
 @onready var _high_score_label: Label = $Control/HighScoreLabel
@@ -72,6 +75,12 @@ func set_high_score(value: int) -> void:
 
 
 func _on_play_button_pressed() -> void:
+	coop_selected = false
+	play_requested.emit()
+
+
+func _on_coop_button_pressed() -> void:
+	coop_selected = true
 	play_requested.emit()
 
 
