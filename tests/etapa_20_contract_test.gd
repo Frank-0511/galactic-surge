@@ -269,6 +269,10 @@ func _check_hud_two_player_layout() -> void:
 	_expect(panel != null and panel.anchor_left == 1.0 and panel.anchor_right == 1.0, "Contrato 13b: panel de J2 a la derecha")
 	if panel != null:
 		_expect(hud.call("get_lives_p2_parent") == panel and hud.call("get_heat_p2_parent") == panel, "Contrato 13c: vidas y calor de J2 viven en el panel de J2")
+		_expect(panel.offset_top >= 90.0, "Contrato 13d: el panel de J2 queda debajo de la barra del jefe (top 18-68)")
+		var lives_p2: Label = hud.get("_lives_p2_label") as Label
+		_expect(lives_p2 != null and lives_p2.has_theme_font_size_override("font_size") and lives_p2.get_theme_font_size("font_size") == 20, "Contrato 13e: etiqueta de vidas de J2 con override de tamaño 20 (como J1)")
+		_expect(lives_p2 != null and lives_p2.has_theme_color_override("font_color"), "Contrato 13f: etiqueta de vidas de J2 con color propio (como J1)")
 	hud.queue_free()
 
 

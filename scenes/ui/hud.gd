@@ -236,7 +236,7 @@ func _ensure_p2_panel() -> VBoxContainer:
 		_p2_panel.anchor_right = 1.0
 		_p2_panel.offset_left = -260.0
 		_p2_panel.offset_right = -16.0
-		_p2_panel.offset_top = 16.0
+		_p2_panel.offset_top = 130.0
 		_p2_panel.grow_horizontal = 0
 		add_child(_p2_panel)
 	return _p2_panel
@@ -255,6 +255,8 @@ func set_lives_p2(lives: int) -> void:
 		_lives_p2_label = Label.new()
 		_lives_p2_label.name = "LivesP2Label"
 		_lives_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_lives_p2_label.add_theme_font_size_override("font_size", 20)
+		_lives_p2_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.15, 1.0))
 		_ensure_p2_panel().add_child(_lives_p2_label)
 	_lives_p2_label.text = "Vidas J2: %d" % lives
 	_lives_p2_label.visible = true
@@ -277,6 +279,8 @@ func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
 		_heat_p2_label = Label.new()
 		_heat_p2_label.name = "HeatP2Label"
 		_heat_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_heat_p2_label.add_theme_font_size_override("font_size", 20)
+		_heat_p2_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.15, 1.0))
 		_ensure_p2_panel().add_child(_heat_p2_label)
 	var percent: int = int(round(current / maximum * 100.0)) if maximum > 0.0 else 0
 	_heat_p2_label.text = "Calor J2: %d%%" % percent
