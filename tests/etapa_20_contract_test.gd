@@ -23,6 +23,7 @@ func _run_contracts() -> void:
 	_check_coop_menu_button()
 	_check_menu_does_not_cover_high_score()
 	_check_p2_input_actions()
+	_check_loot_nearest_ship()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -169,6 +170,29 @@ func _has_button(action: String, button: JoyButton) -> bool:
 		if ev is InputEventJoypadButton and (ev as InputEventJoypadButton).button_index == button:
 			return true
 	return false
+
+
+# ---------------------------------------------------------------------------
+# 9. Drops: el magnetismo va a la nave visible más cercana (Etapa 20, opción 1)
+# ---------------------------------------------------------------------------
+func _check_loot_nearest_ship() -> void:
+	var loot_script: Script = load("res://scenes/loot/loot_drop.gd")
+	_expect(loot_script.has_method("nearest_ship"), "Contrato 9d: LootDrop expone nearest_ship()")
+	if not loot_script.has_method("nearest_ship"):
+		return
+	var near: Node2D = Node2D.new()
+	var far: Node2D = Node2D.new()
+	get_root().add_child(near)
+	get_root().add_child(far)
+	near.global_position = Vector2(100.0, 0.0)
+	far.global_position = Vector2(500.0, 0.0)
+	var origin: Vector2 = Vector2(400.0, 0.0)
+	_expect(loot_script.nearest_ship(origin, [near, far]) == far, "Contrato 9a: el drop se engancha a la nave más cercana")
+	far.visible = false
+	_expect(loot_script.nearest_ship(origin, [near, far]) == near, "Contrato 9b: una nave oculta no atrae drops")
+	_expect(loot_script.nearest_ship(origin, []) == null, "Contrato 9c: sin naves visibles no hay objetivo")
+	near.queue_free()
+	far.queue_free()
 
 
 # ---------------------------------------------------------------------------

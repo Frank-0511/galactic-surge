@@ -64,9 +64,14 @@ func _process(delta: float) -> void:
 	# Horizontal wave velocity component: d/dt(A * sin(omega * t)) = A * omega * cos(omega * t)
 	var wave_vx: float = wave_amplitude * wave_frequency * cos(_elapsed * wave_frequency)
 
-	# Magnetism acceleration toward target when inside magnet_radius
-	if _target != null and is_instance_valid(_target):
-		var to_target: Vector2 = _target.global_position - global_position
+	# Magnetism toward the nearest visible ship (Etapa 20); configured target is the fallback.
+	var target: Node2D = null
+	if is_inside_tree():
+		target = nearest_ship(global_position, get_tree().get_nodes_in_group(&"player"))
+	if target == null and _target != null and is_instance_valid(_target):
+		target = _target
+	if target != null:
+		var to_target: Vector2 = target.global_position - global_position
 		var dist: float = to_target.length()
 		if dist <= magnet_radius and dist > 0.001:
 			var dir: Vector2 = to_target / dist
@@ -97,6 +102,21 @@ func configure(loot_type: int, spawn_position: Vector2, target: Node2D = null, c
 
 func get_type() -> Type:
 	return _type
+
+
+## Nearest visible ship to origin among candidates; null when none is visible (Etapa 20).
+static func nearest_ship(origin: Vector2, candidates: Array) -> Node2D:
+	var best: Node2D = null
+	var best_distance: float = INF
+	for candidate: Variant in candidates:
+		var ship: Node2D = candidate as Node2D
+		if ship == null or not ship.visible:
+			continue
+		var distance: float = origin.distance_squared_to(ship.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = ship
+	return best
 
 
 func get_lifetime() -> float:
