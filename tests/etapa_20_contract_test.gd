@@ -43,6 +43,7 @@ func _run_contracts() -> void:
 	_check_laser_declares_shooter()
 	_check_legacy_bullet_kill_attribution()
 	_check_hud_icons_and_wave_out()
+	_check_eliminated_ship_stays_hidden()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -584,6 +585,22 @@ func _check_hud_icons_and_wave_out() -> void:
 	hud.call("set_wave", 4)
 	_expect(not hud.get("_wave_label").visible, "Contrato 28e: la oleada no se muestra en el HUD (la muestra el anuncio)")
 	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 29. Nave eliminada: un timer de invulnerabilidad no la hace visible (bug: J1 sin vidas reaparecia)
+# ---------------------------------------------------------------------------
+func _check_eliminated_ship_stays_hidden() -> void:
+	var ship: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	get_root().add_child(ship)
+	ship.set_gameplay_enabled(false)
+	ship.visible = false
+	ship.grant_invulnerability(0.1)
+	ship.call("_on_invulnerability_timer_timeout")
+	_expect(not ship.visible, "Contrato 29a: una nave eliminada no vuelve a verse cuando vence su invulnerabilidad")
+	ship.call("_on_blink_timer_timeout")
+	_expect(not ship.visible, "Contrato 29b: el parpadeo no muestra una nave eliminada")
+	ship.queue_free()
 
 
 # ---------------------------------------------------------------------------

@@ -745,12 +745,14 @@ func _on_invulnerability_timer_timeout() -> void:
 	_is_invulnerable = false
 	if _blink_timer != null:
 		_blink_timer.stop()
-	visible = true
+	# An eliminated ship (gameplay off) must stay hidden when its window ends (Etapa 20).
+	if _gameplay_enabled:
+		visible = true
 	invulnerability_ended.emit()
 
 
 func _on_blink_timer_timeout() -> void:
-	if _is_invulnerable:
+	if _is_invulnerable and _gameplay_enabled:
 		visible = not visible
 
 
