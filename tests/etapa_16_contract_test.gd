@@ -2,7 +2,7 @@
 # Contract test harness for Etapa 16: duración de la oleada del cinturón de asteroides.
 # Verifies:
 # 1. AsteroidSpawner scene instantiates and exposes spawn_interval == 2.25 s (tolerance 0.001).
-# 2. wave_asteroid_count * spawn_interval == 18.0 s (tolerance 0.01), i.e. +50% over the previous 12 s.
+# 2. wave_asteroid_count * spawn_interval == 54.0 s (tolerance 0.01): 24 asteroids at 2.25 s.
 # 3. CameraShake follows a target on X during the belt, clamped to a max offset, and
 #    returns to its home position when the follow ends. Y is never followed.
 # No real-time dependencies: values are read from the instantiated scene and
@@ -16,7 +16,7 @@ const CAMERA_HOME := Vector2(540.0, 480.0)
 const CAMERA_MAX_OFFSET := 120.0
 const POSITION_TOLERANCE := 0.01
 const EXPECTED_SPAWN_INTERVAL := 2.25
-const EXPECTED_WAVE_DURATION := 18.0
+const EXPECTED_WAVE_DURATION := 54.0
 const SPAWN_INTERVAL_TOLERANCE := 0.001
 const WAVE_DURATION_TOLERANCE := 0.01
 
@@ -41,7 +41,7 @@ func _run_contracts() -> void:
 
 
 # ---------------------------------------------------------------------------
-# 1. Wave duration: spawn_interval * wave_asteroid_count == 18 s (+50%)
+# 1. Wave duration: spawn_interval * wave_asteroid_count == 54 s (24 asteroids)
 # ---------------------------------------------------------------------------
 func _assert_wave_duration_contract() -> bool:
 	if not ResourceLoader.exists(ASTEROID_SPAWNER_PATH):
@@ -67,7 +67,7 @@ func _assert_wave_duration_contract() -> bool:
 		push_error("wave_asteroid_count * spawn_interval must be %.2f, got %.3f" % [EXPECTED_WAVE_DURATION, wave_duration])
 		return false
 
-	print("✓ Contrato 1: Duración de oleada del cinturón (18 s, +50%) superado")
+	print("✓ Contrato 1: Duración de oleada del cinturón (54 s, 24 asteroides) superado")
 	return true
 
 

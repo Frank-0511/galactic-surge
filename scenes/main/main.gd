@@ -747,7 +747,7 @@ func _on_wave_announcement_finished() -> void:
 	if _local_index(_pending_wave_index) == ASTEROID_WAVE_INDEX and _asteroid_spawner != null and _asteroid_spawner.has_method(&"start_asteroid_wave"):
 		_enemy_spawner.stop()
 		_enemy_spawner.clear_formation()
-		_asteroid_spawner.start_asteroid_wave(8)
+		_asteroid_spawner.start_asteroid_wave(24)
 		_begin_belt_camera_follow()
 	else:
 		_enemy_spawner.start_wave(_local_index(_pending_wave_index), _pending_wave_index)

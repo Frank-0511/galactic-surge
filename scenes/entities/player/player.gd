@@ -43,7 +43,7 @@ const LEGACY_MAX_LEVEL: int = 10
 @export_range(1, 15) var weapon_level: int = 1
 
 ## Horizontal movement speed in pixels per second.
-@export var speed: float = 400.0
+@export var speed: float = 480.0
 
 ## Default blaster projectile scene.
 @export var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tscn")
