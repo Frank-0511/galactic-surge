@@ -192,6 +192,7 @@ func _ready() -> void:
 	if _laser_beam == null and laser_beam_scene != null:
 		_laser_beam = laser_beam_scene.instantiate() as Area2D
 		if _laser_beam != null:
+			_laser_beam.set("shooter", self)
 			_laser_beam.position = Vector2(0.0, -20.0)
 			add_child(_laser_beam)
 
@@ -494,6 +495,7 @@ func _shoot_blaster() -> void:
 		var bullet: Area2D = scene.instantiate() as Area2D
 		if bullet != null:
 			bullet.global_position = global_position + Vector2(offset_x, -20.0)
+			bullet.set("shooter", self)
 			if "direction" in bullet:
 				bullet.set("direction", dir)
 			if "damage" in bullet:
@@ -548,6 +550,7 @@ func _shoot_missile() -> void:
 		var missile: Area2D = scene.instantiate() as Area2D
 		if missile != null:
 			missile.global_position = global_position + Vector2(ox, -20.0)
+			missile.set("shooter", self)
 			if missile.has_method(&"set_power_level"):
 				missile.call(&"set_power_level", weapon_level)
 			if candidate_enemies.size() > 0:
@@ -587,6 +590,7 @@ func _ensure_laser_beam() -> Area2D:
 		laser_beam_scene = load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene
 	if laser_beam_scene != null:
 		_laser_beam = laser_beam_scene.instantiate() as Area2D
+		_laser_beam.set("shooter", self)
 		_laser_beam.position = Vector2(0.0, -20.0)
 		add_child(_laser_beam)
 		if _laser_beam.has_method(&"set_power_level"):

@@ -22,6 +22,9 @@ signal enemy_hit(enemy: Area2D)
 ## Damage dealt on impact.
 @export var damage: int = 3
 
+## Ship that fired this missile; hit targets record it for kill attribution (Etapa 20).
+var shooter: Node = null
+
 ## Radius in pixels of the splash applied to neighbours of the impacted enemy.
 @export var explosion_radius: float = 36.0
 
@@ -134,6 +137,8 @@ func _on_area_entered(area: Area2D) -> void:
 
 	if not damage_applied:
 		damage_applied = true
+		if shooter != null:
+			area.set("last_attacker", shooter)
 		if area.has_method(&"take_damage_from"):
 			area.call(&"take_damage_from", float(damage), Vector2.UP.rotated(rotation))
 			SESSION_STATS.register_hit()
@@ -164,6 +169,8 @@ func _apply_splash(direct_target: Area2D) -> void:
 		var neighbour: Node2D = node as Node2D
 		if global_position.distance_squared_to(neighbour.global_position) > radius_sq:
 			continue
+		if shooter != null:
+			neighbour.set("last_attacker", shooter)
 		if neighbour.has_method(&"take_damage_from"):
 			neighbour.call(&"take_damage_from", splash_damage, travel)
 

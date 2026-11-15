@@ -18,6 +18,9 @@ signal enemy_hit(enemy: Area2D)
 ## Continuous damage per second applied to the first enemy in the path.
 @export var damage_per_second: float = 2.5
 
+## Ship that owns this beam; targets record it for kill attribution (Etapa 20).
+var shooter: Node = null
+
 ## Minimum horizontal corridor used to detect targets (keeps thin beams aimable).
 @export var min_hit_corridor: float = 14.0
 
@@ -222,6 +225,8 @@ func _apply_damage_tick() -> void:
 		return
 	var amount: float = damage_per_second * damage_tick_rate
 	enemy_hit.emit(target)
+	if shooter != null:
+		target.set("last_attacker", shooter)
 	if target.has_method(&"supports_fractional_damage"):
 		target.call(&"take_damage", amount)
 		_register_hit_once()

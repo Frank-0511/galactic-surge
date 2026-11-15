@@ -39,6 +39,8 @@ func _run_contracts() -> void:
 	_check_boss_bar_center_free()
 	_check_kill_attribution()
 	_check_bullet_propagates_shooter()
+	_check_missile_propagates_shooter()
+	_check_laser_declares_shooter()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -503,6 +505,40 @@ func _check_bullet_propagates_shooter() -> void:
 	bullet.free()
 	enemy.queue_free()
 	shooter.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 25. Misiles: el impacto marca al enemigo con la nave que disparó
+# ---------------------------------------------------------------------------
+func _check_missile_propagates_shooter() -> void:
+	var missile_packed: PackedScene = load("res://scenes/entities/bullet/missile.tscn") as PackedScene
+	var missile: Node = missile_packed.instantiate()
+	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
+	var shooter: Node2D = Node2D.new()
+	get_root().add_child(enemy)
+	get_root().add_child(shooter)
+	enemy.add_to_group("enemies")
+	_expect("shooter" in missile, "Contrato 25a: los misiles declaran su nave (shooter)")
+	if not ("shooter" in missile):
+		missile.free()
+		enemy.queue_free()
+		shooter.queue_free()
+		return
+	missile.set("shooter", shooter)
+	missile.call("_on_area_entered", enemy)
+	_expect(enemy.get("last_attacker") == shooter, "Contrato 25b: el misil marca al enemigo con su nave")
+	missile.free()
+	enemy.queue_free()
+	shooter.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 26. Láser: el haz declara su nave y el daño marca al objetivo (feature L13)
+# ---------------------------------------------------------------------------
+func _check_laser_declares_shooter() -> void:
+	var beam: Node = (load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene).instantiate()
+	_expect("shooter" in beam, "Contrato 26a: el láser declara su nave (shooter)")
+	beam.free()
 
 
 # ---------------------------------------------------------------------------
