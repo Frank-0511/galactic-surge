@@ -143,6 +143,8 @@ func set_active_weapon(weapon_index: int) -> void:
 		var idx: int = clampi(weapon_index, 0, 2)
 		_active_weapon_label.text = "ARMA: %s" % weapon_names[idx]
 		_active_weapon_label.modulate = weapon_colors[idx]
+		# The weapon icon in the bottom corner already shows the weapon (Etapa 20).
+		_active_weapon_label.visible = false
 
 
 ## Maintained for backwards compatibility; weapon power is displayed diegetically through projectiles.
@@ -352,6 +354,14 @@ func _move_p1_lives_bottom_left() -> void:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(panel)
 	_lives_label.reparent(panel)
+
+
+## Shows or hides both J2 panels; outside coop local they must not appear (Etapa 20).
+func set_p2_visible(on: bool) -> void:
+	if _p2_panel != null:
+		_p2_panel.visible = on
+	if _p2_bottom_panel != null:
+		_p2_bottom_panel.visible = on
 
 
 ## Bottom-right panel for J2 lives and weapon level (spec S7, Etapa 20).

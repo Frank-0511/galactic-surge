@@ -368,7 +368,9 @@ func _set_player_two_active(active: bool) -> void:
 	_player.coop_active = active and _player_two != null
 	if _player_two == null:
 		return
+	_hud.set_p2_visible(active)
 	if active:
+		score_p2 = 0
 		_player_two_lives = STARTING_LIVES
 		_hud.set_lives_p2(_player_two_lives)
 		_hud.set_score_p2(score_p2)

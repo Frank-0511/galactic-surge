@@ -45,6 +45,8 @@ func _run_contracts() -> void:
 	_check_hud_icons_and_wave_out()
 	_check_eliminated_ship_stays_hidden()
 	_check_weapon_icon_by_type()
+	_check_active_weapon_text_hidden()
+	_check_p2_panels_follow_session()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -616,6 +618,37 @@ func _check_weapon_icon_by_type() -> void:
 	_expect(hud.get("_weapon_level_label").text == "● 2", "Contrato 30b: arma laser de J1 con icono \"● 2\"")
 	hud.call("set_weapon_level_p2", 2, 1)
 	_expect(hud.get("_weapon_level_p2_label").text == "◆ 2", "Contrato 30c: arma misil de J2 con icono \"◆ 2\"")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 31. HUD: la linea "ARMA: ..." no se muestra; el icono del arma la reemplaza
+# ---------------------------------------------------------------------------
+func _check_active_weapon_text_hidden() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_active_weapon", 2)
+	var label: Label = hud.get("_active_weapon_label") as Label
+	_expect(label != null and not label.visible, "Contrato 31a: la linea \"ARMA: ...\" queda oculta (el icono la reemplaza)")
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 32. HUD: los paneles de J2 se ocultan fuera de la sesion coop (bug: quedaban visibles en singleplayer)
+# ---------------------------------------------------------------------------
+func _check_p2_panels_follow_session() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_score_p2", 500)
+	hud.call("set_lives_p2", 2)
+	var panel: Control = hud.get_node_or_null("P2Panel") as Control
+	var bottom: Control = hud.get_node_or_null("P2BottomPanel") as Control
+	_expect(hud.has_method("set_p2_visible"), "Contrato 32a: HUD expone set_p2_visible()")
+	if hud.has_method("set_p2_visible") and panel != null and bottom != null:
+		hud.call("set_p2_visible", false)
+		_expect(not panel.visible and not bottom.visible, "Contrato 32b: fuera de coop los paneles de J2 no se ven")
+		hud.call("set_p2_visible", true)
+		_expect(panel.visible and bottom.visible, "Contrato 32c: en coop los paneles de J2 se ven")
 	hud.queue_free()
 
 
