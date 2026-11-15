@@ -358,6 +358,7 @@ func enable_coop_local() -> void:
 
 ## Shows or hides J2 for a session; activating gives J2 fresh lives and a respawn.
 func _set_player_two_active(active: bool) -> void:
+	_player.coop_active = active and _player_two != null
 	if _player_two == null:
 		return
 	if active:

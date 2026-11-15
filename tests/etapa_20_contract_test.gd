@@ -25,6 +25,7 @@ func _run_contracts() -> void:
 	_check_p2_input_actions()
 	_check_loot_nearest_ship()
 	_check_loot_collector_routing()
+	_check_j1_ignores_arrows_in_coop()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -216,6 +217,15 @@ func _check_loot_collector_routing() -> void:
 	main.call("_on_loot_collected", loot_script.Type.EXTRA_LIFE)
 	_expect(main.get("lives") == 2, "Contrato 10c: sin recolector, la vida extra es de J1 (singleplayer)")
 	main.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 11. Flechas: en coop J1 usa solo A/D; singleplayer conserva las flechas
+# ---------------------------------------------------------------------------
+func _check_j1_ignores_arrows_in_coop() -> void:
+	_expect(PLAYER_SCRIPT.ignores_arrow_keys(1, true), "Contrato 11a: en coop J1 ignora las flechas")
+	_expect(not PLAYER_SCRIPT.ignores_arrow_keys(1, false), "Contrato 11b: singleplayer conserva las flechas de J1")
+	_expect(not PLAYER_SCRIPT.ignores_arrow_keys(2, true), "Contrato 11c: J2 siempre usa sus flechas")
 
 
 # ---------------------------------------------------------------------------

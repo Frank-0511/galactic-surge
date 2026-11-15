@@ -165,6 +165,15 @@ static func _add_event_once(action: String, event: InputEvent) -> void:
 	InputMap.action_add_event(action, event)
 
 
+## In coop local, J1 moves with A/D only so its arrows do not drive J2 (Etapa 20).
+static func ignores_arrow_keys(player_index: int, coop_active: bool) -> bool:
+	return player_index == 1 and coop_active
+
+
+## Set by Main while a coop local session runs (J1 then reads A/D only).
+var coop_active: bool = false
+
+
 ## Hull outline color per slot: J1 Azul Neón (default), J2 Naranja Neón (coop local).
 static func hull_outline_color(player_index: int) -> Color:
 	return Color(1.0, 0.6, 0.15) if player_index == 2 else Color(0.45, 0.95, 1.0)
@@ -213,7 +222,11 @@ func _process(delta: float) -> void:
 		return
 
 	# Horizontal movement
-	var direction: float = Input.get_axis(input_action_name("move_left", player_index), input_action_name("move_right", player_index))
+	var direction: float = 0.0
+	if ignores_arrow_keys(player_index, coop_active):
+		direction = (1.0 if Input.is_physical_key_pressed(KEY_D) else 0.0) - (1.0 if Input.is_physical_key_pressed(KEY_A) else 0.0)
+	else:
+		direction = Input.get_axis(input_action_name("move_left", player_index), input_action_name("move_right", player_index))
 	velocity = Vector2(direction * speed, 0.0)
 	move_and_slide()
 
