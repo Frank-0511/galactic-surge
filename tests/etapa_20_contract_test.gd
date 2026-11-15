@@ -31,6 +31,7 @@ func _run_contracts() -> void:
 	_check_score_per_player()
 	_check_hud_score_p2()
 	_check_hud_is_passive()
+	_check_hud_p2_matches_p1_style()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -113,7 +114,7 @@ func _check_hud_lives_p2() -> void:
 	_expect(not hud.call("is_lives_p2_visible") if hud.has_method("is_lives_p2_visible") else false, "Contrato 5b: indicador de J2 oculto en singleplayer")
 	if hud.has_method("set_lives_p2"):
 		hud.call("set_lives_p2", 2)
-		_expect(hud.call("is_lives_p2_visible") == true and hud.call("get_lives_p2_text") == "Vidas J2: 2", "Contrato 5c: J2 muestra \"Vidas J2: 2\" al activarse")
+		_expect(hud.call("is_lives_p2_visible") == true and hud.call("get_lives_p2_text") == "Vidas: 2", "Contrato 5c: J2 muestra \"Vidas: 2\" como J1")
 	hud.queue_free()
 
 
@@ -322,7 +323,7 @@ func _check_hud_score_p2() -> void:
 	if hud.has_method("set_score_p2"):
 		hud.call("set_score_p2", 300)
 		var label: Label = hud.get("_score_p2_label") as Label
-		_expect(label != null and label.text == "Score J2: 300", "Contrato 15b: J2 muestra \"Score J2: 300\"")
+		_expect(label != null and label.text == "Score: 300", "Contrato 15b: J2 muestra \"Score: 300\" como J1")
 		_expect(label != null and label.get_parent() == hud.get("_p2_panel"), "Contrato 15c: score de J2 vive en el panel de J2")
 		_expect(label != null and label.has_theme_font_size_override("font_size") and label.get_theme_font_size("font_size") == 20, "Contrato 15d: score de J2 con tamaño 20 (como J1)")
 	hud.queue_free()
@@ -339,6 +340,24 @@ func _check_hud_is_passive() -> void:
 	for path: String in wrappers:
 		var node: Control = hud.get_node_or_null(path) as Control
 		_expect(node != null and node.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Contrato 16: %s no captura el mouse" % path)
+	hud.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 17. Estilo: las etiquetas de J2 usan los mismos colores que las de J1
+# ---------------------------------------------------------------------------
+func _check_hud_p2_matches_p1_style() -> void:
+	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	get_root().add_child(hud)
+	hud.call("set_lives_p2", 2)
+	hud.call("set_score_p2", 10)
+	hud.call("set_heat_p2", 10.0, 100.0, false)
+	var lives_p1: Label = hud.get_node("Margin/LivesLabel") as Label
+	var score_p1: Label = hud.get_node("Margin/ScoreLabel") as Label
+	var lives_p2: Label = hud.get("_lives_p2_label") as Label
+	var score_p2: Label = hud.get("_score_p2_label") as Label
+	_expect(lives_p2 != null and lives_p2.get_theme_color("font_color") == lives_p1.get_theme_color("font_color"), "Contrato 17a: color de vidas de J2 igual al de J1")
+	_expect(score_p2 != null and score_p2.get_theme_color("font_color") == score_p1.get_theme_color("font_color"), "Contrato 17b: color de score de J2 igual al de J1")
 	hud.queue_free()
 
 

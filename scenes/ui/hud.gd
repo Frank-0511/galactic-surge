@@ -266,9 +266,9 @@ func set_lives_p2(lives: int) -> void:
 		_lives_p2_label.name = "LivesP2Label"
 		_lives_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_lives_p2_label.add_theme_font_size_override("font_size", 20)
-		_lives_p2_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.15, 1.0))
+		_lives_p2_label.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
 		_ensure_p2_panel().add_child(_lives_p2_label)
-	_lives_p2_label.text = "Vidas J2: %d" % lives
+	_lives_p2_label.text = "Vidas: %d" % lives
 	_lives_p2_label.visible = true
 
 
@@ -290,9 +290,9 @@ func set_score_p2(points: int) -> void:
 		_score_p2_label.name = "ScoreP2Label"
 		_score_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_score_p2_label.add_theme_font_size_override("font_size", 20)
-		_score_p2_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.15, 1.0))
+		_score_p2_label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.25, 1.0))
 		_ensure_p2_panel().add_child(_score_p2_label)
-	_score_p2_label.text = "Score J2: %d" % points
+	_score_p2_label.text = "Score: %d" % points
 	_score_p2_label.visible = true
 
 
@@ -306,10 +306,10 @@ func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
 		_heat_p2_label.name = "HeatP2Label"
 		_heat_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_heat_p2_label.add_theme_font_size_override("font_size", 12)
-		_heat_p2_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.15, 1.0))
+		_heat_p2_label.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0, 1.0))
 		_ensure_p2_panel().add_child(_heat_p2_label)
 	var percent: int = int(round(current / maximum * 100.0)) if maximum > 0.0 else 0
-	_heat_p2_label.text = "Calor J2: %d%%" % percent
+	_heat_p2_label.text = "CALOR: %d%%" % percent
 	if overheated:
 		_heat_p2_label.text += " SOBRECARGA"
 	_heat_p2_label.visible = true
