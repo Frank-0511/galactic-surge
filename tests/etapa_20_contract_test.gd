@@ -38,6 +38,7 @@ func _run_contracts() -> void:
 	_check_hud_p1_score_heat_top_left()
 	_check_boss_bar_center_free()
 	_check_kill_attribution()
+	_check_bullet_propagates_shooter()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -477,6 +478,31 @@ func _check_kill_attribution() -> void:
 	main.call("_on_enemy_destroyed", enemy)
 	_expect(main.get("score_p2") > 0 and main.get("score") == 0, "Contrato 23b: kill de J2 suma a J2, no a J1")
 	main.queue_free()
+
+
+# ---------------------------------------------------------------------------
+# 24. Balas: el impacto marca al enemigo con la nave que disparó (feature L13)
+# ---------------------------------------------------------------------------
+func _check_bullet_propagates_shooter() -> void:
+	var bullet_packed: PackedScene = load("res://scenes/entities/bullet/spread_bullet.tscn") as PackedScene
+	var bullet: Node = bullet_packed.instantiate()
+	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
+	var shooter: Node2D = Node2D.new()
+	get_root().add_child(enemy)
+	get_root().add_child(shooter)
+	enemy.add_to_group("enemies")
+	_expect("shooter" in bullet, "Contrato 24a: las balas declaran su nave (shooter)")
+	if not ("shooter" in bullet):
+		bullet.free()
+		enemy.queue_free()
+		shooter.queue_free()
+		return
+	bullet.set("shooter", shooter)
+	bullet.call("_on_area_entered", enemy)
+	_expect(enemy.get("last_attacker") == shooter, "Contrato 24b: el impacto deja al enemigo marcado con la nave que disparó")
+	bullet.free()
+	enemy.queue_free()
+	shooter.queue_free()
 
 
 # ---------------------------------------------------------------------------

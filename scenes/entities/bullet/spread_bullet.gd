@@ -18,6 +18,9 @@ signal enemy_hit(enemy: Area2D)
 ## Damage dealt to enemies or bosses.
 @export var damage: int = 1
 
+## Ship that fired this bullet; the hit target records it for kill attribution (Etapa 20).
+var shooter: Node = null
+
 var _has_hit: bool = false
 var damage_applied: bool = false
 
@@ -52,6 +55,8 @@ func _on_area_entered(area: Area2D) -> void:
 
 	if not damage_applied:
 		damage_applied = true
+		if shooter != null:
+			area.set("last_attacker", shooter)
 		if area.has_method(&"take_damage_from"):
 			area.call(&"take_damage_from", float(damage), direction)
 			SESSION_STATS.register_hit()
