@@ -131,6 +131,40 @@ static func input_action_name(base: String, player_index: int) -> String:
 	return base if player_index == 1 else "p2_" + base
 
 
+## Registers J2's input actions (Etapa 20): arrows + Shift, or gamepad. Idempotent.
+static func ensure_p2_input_actions() -> void:
+	var bindings: Dictionary = {
+		"p2_move_left": [KEY_LEFT],
+		"p2_move_right": [KEY_RIGHT],
+		"p2_shoot": [KEY_SHIFT],
+	}
+	for action: String in bindings:
+		if not InputMap.has_action(action):
+			InputMap.add_action(action, 0.2)
+		for keycode: Key in bindings[action]:
+			var key_event := InputEventKey.new()
+			key_event.keycode = keycode
+			_add_event_once(action, key_event)
+	var motion_left := InputEventJoypadMotion.new()
+	motion_left.axis = JOY_AXIS_LEFT_X
+	motion_left.axis_value = -1.0
+	_add_event_once("p2_move_left", motion_left)
+	var motion_right := InputEventJoypadMotion.new()
+	motion_right.axis = JOY_AXIS_LEFT_X
+	motion_right.axis_value = 1.0
+	_add_event_once("p2_move_right", motion_right)
+	var button := InputEventJoypadButton.new()
+	button.button_index = JOY_BUTTON_A
+	_add_event_once("p2_shoot", button)
+
+
+static func _add_event_once(action: String, event: InputEvent) -> void:
+	for existing: InputEvent in InputMap.action_get_events(action):
+		if existing.is_match(event, true) or existing.get_class() == event.get_class() and existing.as_text() == event.as_text():
+			return
+	InputMap.action_add_event(action, event)
+
+
 ## Hull outline color per slot: J1 Azul Neón (default), J2 Naranja Neón (coop local).
 static func hull_outline_color(player_index: int) -> Color:
 	return Color(1.0, 0.6, 0.15) if player_index == 2 else Color(0.45, 0.95, 1.0)

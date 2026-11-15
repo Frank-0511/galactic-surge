@@ -22,6 +22,7 @@ func _run_contracts() -> void:
 	_check_hud_lives_p2()
 	_check_coop_menu_button()
 	_check_menu_does_not_cover_high_score()
+	_check_p2_input_actions()
 
 	if _failures == 0:
 		print("ETAPA 20 CONTRACT TESTS: ALL PASSED")
@@ -132,6 +133,42 @@ func _check_menu_does_not_cover_high_score() -> void:
 	var height: float = box.offset_bottom - box.offset_top
 	_expect(height >= box.get_combined_minimum_size().y, "Contrato 7b: el alto del menú cubre su contenido mínimo")
 	menu.free()
+
+
+# ---------------------------------------------------------------------------
+# 8. Controles de J2: flechas + Shift, o gamepad (Etapa 20, S3)
+# ---------------------------------------------------------------------------
+func _check_p2_input_actions() -> void:
+	PLAYER_SCRIPT.ensure_p2_input_actions()
+	PLAYER_SCRIPT.ensure_p2_input_actions()
+	_expect(InputMap.has_action("p2_move_left") and InputMap.has_action("p2_move_right") and InputMap.has_action("p2_shoot"), "Contrato 8a: existen las acciones p2_ de J2")
+	_expect(_has_key("p2_move_left", KEY_LEFT), "Contrato 8b: p2_move_left con flecha izquierda")
+	_expect(_has_key("p2_move_right", KEY_RIGHT), "Contrato 8c: p2_move_right con flecha derecha")
+	_expect(_has_key("p2_shoot", KEY_SHIFT), "Contrato 8d: p2_shoot con Shift")
+	_expect(_has_axis("p2_move_left", JOY_AXIS_LEFT_X, -1.0) and _has_axis("p2_move_right", JOY_AXIS_LEFT_X, 1.0), "Contrato 8e: movimiento de J2 con stick izquierdo del gamepad")
+	_expect(_has_button("p2_shoot", JOY_BUTTON_A), "Contrato 8f: disparo de J2 con el botón A del gamepad")
+	_expect(InputMap.action_get_events("p2_shoot").size() == 2, "Contrato 8g: registrar dos veces no duplica eventos")
+
+
+func _has_key(action: String, keycode: Key) -> bool:
+	for ev: InputEvent in InputMap.action_get_events(action):
+		if ev is InputEventKey and (ev as InputEventKey).keycode == keycode:
+			return true
+	return false
+
+
+func _has_axis(action: String, axis: JoyAxis, value: float) -> bool:
+	for ev: InputEvent in InputMap.action_get_events(action):
+		if ev is InputEventJoypadMotion and (ev as InputEventJoypadMotion).axis == axis and signf((ev as InputEventJoypadMotion).axis_value) == signf(value):
+			return true
+	return false
+
+
+func _has_button(action: String, button: JoyButton) -> bool:
+	for ev: InputEvent in InputMap.action_get_events(action):
+		if ev is InputEventJoypadButton and (ev as InputEventJoypadButton).button_index == button:
+			return true
+	return false
 
 
 # ---------------------------------------------------------------------------

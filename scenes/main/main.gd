@@ -5,6 +5,7 @@
 extends Node2D
 
 const STARTING_LIVES: int = 3
+const PlayerScript: Script = preload("res://scenes/entities/player/player.gd")
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 10
@@ -342,6 +343,7 @@ func _on_enemy_bullet_player_hit(player: Node2D) -> void:
 func enable_coop_local() -> void:
 	if _player_two != null:
 		return
+	PlayerScript.ensure_p2_input_actions()
 	var packed: PackedScene = load("res://scenes/entities/player/player.tscn") as PackedScene
 	_player_two = packed.instantiate() as CharacterBody2D
 	_player_two.player_index = 2
