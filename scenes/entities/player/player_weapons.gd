@@ -157,7 +157,7 @@ func shoot_missile() -> void:
 
 func shoot_laser_pulse() -> void:
 	if _replaying:
-		return # The client shows no laser pulse yet (Etapa 20 T2 limit: the beam is not replicated).
+		return # The client shows no laser pulse; the held beam is replicated by net_sync_laser.gd (Etapa 20 T36).
 	_player._set_laser_active(true)
 	_player._heat.add_heat(_player._heat.heat_per_second(_player.WeaponType.LASER) * 0.25)
 	_player._shoot_cooldown.start(0.25)

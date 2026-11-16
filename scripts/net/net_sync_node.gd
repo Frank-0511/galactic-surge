@@ -6,6 +6,7 @@
 # and never applies damage. Explicit RPCs, not MultiplayerSynchronizer (decision L5). Shot events live in
 # net_sync_shots.gd; enemies and the boss in net_sync_enemies.gd and net_sync_boss.gd.
 # Loot, asteroids, score and the end of the match: net_sync_loot.gd, net_sync_asteroids.gd, net_sync_score.gd.
+# Laser beams of both ships (firing, level, origin, length) ride in the state: net_sync_laser.gd.
 
 extends Node
 
@@ -16,6 +17,7 @@ const NetSyncLoot: GDScript = preload("res://scripts/net/net_sync_loot.gd")
 const NetSyncAsteroids: GDScript = preload("res://scripts/net/net_sync_asteroids.gd")
 const NetSyncScore: GDScript = preload("res://scripts/net/net_sync_score.gd")
 const NetSyncBullets: GDScript = preload("res://scripts/net/net_sync_bullets.gd")
+const NetSyncLaser: GDScript = preload("res://scripts/net/net_sync_laser.gd")
 ## Seconds between state packets (host) or input packets (client): 20 per second.
 const SEND_INTERVAL: float = 0.05
 
@@ -169,6 +171,7 @@ func build_state() -> Dictionary:
 		if _asteroids != null:
 			_asteroids.encode_into(state)
 		NetSyncScore.encode_into(_main, state)
+		NetSyncLaser.encode_into(_main, state)
 	return state
 
 
@@ -182,6 +185,7 @@ func apply_host_state(state: Dictionary) -> void:
 		_enemies.apply_state(state)
 	if _asteroids != null:
 		_asteroids.apply_state(state)
+	NetSyncLaser.apply(_main, state)
 	if _main.get("_session_active") == true:
 		NetSyncScore.apply(_main, state)
 
@@ -224,6 +228,7 @@ func clear_replicas() -> void:
 		_asteroids.clear()
 	if _bullets != null:
 		_bullets.clear()
+	NetSyncLaser.hide_all(_main)
 
 
 ## The client's own move direction, read from the J2 actions (arrows or left stick).

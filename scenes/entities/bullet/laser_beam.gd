@@ -81,10 +81,14 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## Beam width in pixels for a power level: levels 1-10 keep the original curve; above 10 the beam gains extra width.
+static func width_for_level(level: int) -> float:
+	return 4.0 + 2.2 * float(mini(level, 10) - 1) + 3.0 * float(maxi(level - 10, 0))
+
+
 func set_power_level(level: int) -> void:
 	_power_level = clampi(level, 1, 15)
-	# Levels 1-10 keep the original curve; above 10 the beam gains extra width and DPS.
-	beam_width = 4.0 + 2.2 * float(mini(_power_level, 10) - 1) + 3.0 * float(maxi(_power_level - 10, 0))
+	beam_width = width_for_level(_power_level)
 	damage_per_second = 2.5 + 2.0 * float(mini(_power_level, 10) - 1) + 4.5 * float(maxi(_power_level - 10, 0))
 	damage_per_tick = 1 + int(_power_level >= 5) + int(_power_level >= 9) + int(_power_level >= 13)
 	if _collision_shape == null:
@@ -117,6 +121,11 @@ func set_firing(firing: bool) -> void:
 
 func is_beam() -> bool:
 	return true
+
+
+## Current reach of the beam in pixels (the network sync reads it to replicate the laser).
+func get_active_length() -> float:
+	return _active_length
 
 
 func _update_firing_state() -> void:
