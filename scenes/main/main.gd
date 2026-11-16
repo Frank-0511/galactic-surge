@@ -50,6 +50,7 @@ const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
 const MainLoot: Script = preload("res://scenes/main/main_loot.gd")
 const MainBoss: Script = preload("res://scenes/main/main_boss.gd")
 const MainShips: Script = preload("res://scenes/main/main_ships.gd")
+const MainScoring: Script = preload("res://scenes/main/main_scoring.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
 const EXTRA_LIFE_SCORE_THRESHOLD: int = 1_000_000
@@ -142,6 +143,7 @@ var _zoom_tween: Tween = null
 var _loot: RefCounted = MainLoot.new(self)
 var _boss: RefCounted = MainBoss.new(self)
 var _ships: RefCounted = MainShips.new(self)
+var _scoring: RefCounted = MainScoring.new(self)
 
 var _game_layout: GameLayout = GameLayout.new()
 
@@ -389,140 +391,36 @@ func _spawn_recovery_capsule(spawn_pos: Vector2) -> void:
 	_ships.spawn_recovery_capsule(spawn_pos)
 
 
-## Adds points scaled by the session difficulty score multiplier, then checks extra-life milestones.
-## ship: the ship that earned the points; null means J1 (singleplayer and unattributed bonuses).
 func _add_score(points: int, ship: Node2D = null) -> void:
-	var gained: int = int(round(points * DS.score_multiplier(session_difficulty)))
-	if _ship_for(ship) == _player_two and _player_two != null:
-		score_p2 += gained
-		_hud.set_score_p2(score_p2)
-	else:
-		score += gained
-	_check_score_milestones()
+	_scoring.add_score(points, ship)
 
-
-## Nave que corresponde a un atacante: J2 si es _player_two, si no J1.
 func _ship_for(attacker: Node) -> Node:
-	return _player_two if attacker != null and attacker == _player_two else _player
-
+	return _scoring.ship_for(attacker)
 
 func _check_score_milestones() -> void:
-	if EXTRA_LIFE_SCORE_THRESHOLD <= 0:
-		return
-	var current_threshold: int = score / EXTRA_LIFE_SCORE_THRESHOLD
-	if current_threshold > _last_extra_life_threshold:
-		var bonus_lives: int = current_threshold - _last_extra_life_threshold
-		_last_extra_life_threshold = current_threshold
-		lives += bonus_lives
-		_hud.set_lives(lives)
-		if _visual_feedback != null and _visual_feedback.has_method(&"play_extra_life_alert"):
-			_visual_feedback.play_extra_life_alert(_player.global_position)
-		if _audio_feedback != null and _audio_feedback.has_method(&"play_extra_life"):
-			_audio_feedback.play_extra_life()
-
-
+	_scoring.check_score_milestones()
 
 func _on_player_shot_fired(is_double_shot: bool) -> void:
-	if _session_active:
-		if _player != null and _audio_feedback != null and _audio_feedback.has_method(&"play_weapon_shot"):
-			_audio_feedback.play_weapon_shot(_player.get_weapon() if _player.has_method(&"get_weapon") else 0)
-		elif _audio_feedback != null:
-			_audio_feedback.play_player_shot(is_double_shot)
-
+	_scoring.on_player_shot_fired(is_double_shot)
 
 func _on_enemy_destroyed(enemy: Area2D) -> void:
-	if not _session_active:
-		return
-	if enemy.has_method(&"get_variant_id"):
-		var variant_id: StringName = enemy.call(&"get_variant_id")
-		kills_by_type[variant_id] = int(kills_by_type.get(variant_id, 0)) + 1
-	var explosion_position: Vector2 = enemy.global_position
-	_visual_feedback.play_enemy_explosion(explosion_position)
-	if _visual_feedback.has_method(&"play_hull_fragments"):
-		_visual_feedback.play_hull_fragments(explosion_position)
-	var multiplier: int = _combo_system.register_kill() if (_combo_system != null and _combo_system.has_method(&"register_kill")) else 1
-	var points_earned: int = POINTS_PER_ENEMY * multiplier
-	_add_score(points_earned, enemy.get("last_attacker") as Node2D if enemy != null else null)
-	_hud.set_score(score)
-	_visual_feedback.play_score_popup(explosion_position, points_earned, multiplier > 1)
-	_audio_feedback.play_enemy_explosion()
-	if explosion_position.distance_to(_player.global_position) < NEARBY_SHAKE_RADIUS:
-		_camera.shake(3.0, 0.12)
-	_try_spawn_enemy_loot(explosion_position)
-
+	_scoring.on_enemy_destroyed(enemy)
 
 func _on_asteroid_spawned(asteroid: Area2D) -> void:
-	if asteroid == null:
-		return
-	if not asteroid.destroyed.is_connected(_on_asteroid_destroyed):
-		asteroid.destroyed.connect(_on_asteroid_destroyed)
-	if not asteroid.player_contacted.is_connected(_on_asteroid_player_contacted):
-		asteroid.player_contacted.connect(_on_asteroid_player_contacted)
-
+	_scoring.on_asteroid_spawned(asteroid)
 
 func _on_asteroid_destroyed(asteroid: Area2D, size_idx: int, pos: Vector2, _vel: Vector2) -> void:
-	if not _session_active:
-		return
-	var base_pts: int = ASTEROID_LARGE_POINTS
-	var trauma_add: float = 0.35
-	match size_idx:
-		0: # LARGE
-			base_pts = ASTEROID_LARGE_POINTS
-			trauma_add = 0.35
-		1: # MEDIUM
-			base_pts = ASTEROID_MEDIUM_POINTS
-			trauma_add = 0.20
-		2: # SMALL
-			base_pts = ASTEROID_SMALL_POINTS
-			trauma_add = 0.10
-
-	var mult: int = _combo_system.register_kill() if (_combo_system != null and _combo_system.has_method(&"register_kill")) else 1
-	var points_earned: int = base_pts * mult
-	_add_score(points_earned, asteroid.get("last_attacker") as Node2D if asteroid != null else null)
-	_hud.set_score(score)
-	_visual_feedback.play_score_popup(pos, points_earned, mult > 1)
-	_visual_feedback.play_enemy_explosion(pos)
-	_audio_feedback.play_enemy_explosion()
-	if _camera != null and _camera.has_method(&"add_trauma"):
-		_camera.add_trauma(trauma_add)
-	elif _camera != null:
-		_camera.shake(4.0, 0.15)
-
-	# High-HP large asteroids drop resources or power-ups
-	if size_idx == 0:
-		var has_loot: bool = (asteroid != null and asteroid.get("contains_loot") == true)
-		if has_loot or randf() < 0.60:
-			_spawn_loot(_pick_loot_type(), pos)
-
+	_scoring.on_asteroid_destroyed(asteroid, size_idx, pos, _vel)
 
 func _on_asteroid_player_contacted(player: Node2D) -> void:
-	_request_player_damage(player)
-	if _camera != null and _camera.has_method(&"add_trauma"):
-		_camera.add_trauma(0.50)
-
+	_scoring.on_asteroid_player_contacted(player)
 
 func _on_asteroid_wave_completed() -> void:
-	_end_belt_camera_follow()
-	if not _session_active:
-		return
-	_on_wave_cleared(ASTEROID_WAVE_INDEX)
-
+	_scoring.on_asteroid_wave_completed()
 
 func _on_enrage_triggered() -> void:
-	if not _session_active:
-		return
-	if _camera != null:
-		_camera.shake(5.0, 0.25)
-	if _audio_feedback != null:
-		if _audio_feedback.has_method(&"play_enrage_warning"):
-			_audio_feedback.play_enrage_warning()
-		elif _audio_feedback.has_method(&"play_overheat_warning"):
-			_audio_feedback.play_overheat_warning()
-	if _visual_feedback != null:
-		if _visual_feedback.has_method(&"play_enrage_alert"):
-			_visual_feedback.play_enrage_alert()
-		elif _visual_feedback.has_method(&"play_damage_flash"):
-			_visual_feedback.play_damage_flash()
+	_scoring.on_enrage_triggered()
+
 
 
 func _pick_loot_type() -> int:
