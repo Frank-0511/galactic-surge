@@ -95,13 +95,13 @@ func on_defeated(boss: Area2D) -> void:
 	if _main._chapter < _main.TOTAL_CHAPTERS:
 		begin_next_chapter()
 	else:
-		_main._complete_mission()
+		_main._session.complete_mission()
 
 
 ## Starts the next chapter: waves restart at 1 after the chapter announcement.
 func begin_next_chapter() -> void:
 	_main._chapter += 1
-	_main._perform_hyperspace_jump()
+	_main._waves.perform_hyperspace_jump()
 	_main._session_state = _main.SessionState.WAVE_TRANSITION
 	_main._enemy_spawner.stop()
 	_main._enemy_spawner.clear_formation()

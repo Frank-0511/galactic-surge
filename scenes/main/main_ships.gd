@@ -91,7 +91,7 @@ func on_player_damage_requested(ship: Node2D = null) -> void:
 		_main._player.set_gameplay_enabled(false)
 		_main._player.visible = false
 		return
-	_main._end_session()
+	_main._session.end_session()
 
 
 ## J2 loses a life; the session ends only when both ships are out of lives.
@@ -104,7 +104,7 @@ func on_player_two_damage_requested() -> void:
 	_main._player_two.set_gameplay_enabled(false)
 	_main._player_two.visible = false
 	if _main.lives <= 0:
-		_main._end_session()
+		_main._session.end_session()
 
 
 func spawn_recovery_capsule(spawn_pos: Vector2) -> void:

@@ -125,7 +125,7 @@ func on_asteroid_player_contacted(player: Node2D) -> void:
 
 
 func on_asteroid_wave_completed() -> void:
-	_main._end_belt_camera_follow()
+	_main._waves.end_belt_camera_follow()
 	if not _main._session_active:
 		return
 	_main._on_wave_cleared(_main.ASTEROID_WAVE_INDEX)
