@@ -158,7 +158,8 @@ func _on_back_pressed() -> void:
 func _on_controls_pressed() -> void:
 	_content.visible = false
 	_remap_host.visible = true
-	_remap_panel = RemapPanel.new(remap, REMAP_COLORS, &"", REMAP_TABLE_HEIGHT)
+	# Only the keyboard family is offered in the UI (gamepad moved to Bloque B): fixing the family hides the pad tab.
+	_remap_panel = RemapPanel.new(remap, REMAP_COLORS, InputKey.KEYBOARD, REMAP_TABLE_HEIGHT)
 	_remap_panel.closed.connect(_on_remap_closed)
 	_remap_column.add_child(_remap_panel)
 	_remap_panel.focus_first()
