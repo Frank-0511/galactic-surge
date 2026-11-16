@@ -74,6 +74,14 @@ const SPECTRE_ENRAGED_VOLLEY_INTERVAL: float = 0.95
 ## Enables the three-phase Núcleo Blindado mode. Set by main.gd for chapter 3 only.
 var multi_phase_enabled: bool = false
 
+## True on a client replica (Etapa 20 T3): the host moves, shoots and takes damage; the replica only shows its state.
+## A replica has no collision either: its area monitoring and detection are off.
+var replica: bool = false:
+	set(value):
+		replica = value
+		monitoring = not value
+		monitorable = not value
+
 ## Current health points.
 var health: int = 150
 var current_health: int = 150
@@ -127,7 +135,8 @@ func _process(delta: float) -> void:
 	if _hit_flash_time > 0.0:
 		_hit_flash_time = maxf(0.0, _hit_flash_time - delta)
 
-	_movement.update(delta)
+	if not replica:
+		_movement.update(delta)
 	queue_redraw()
 
 
@@ -151,7 +160,21 @@ func take_damage(amount: int = 1) -> void:
 
 
 func _on_shoot_timer_timeout() -> void:
-	_attacks.on_shoot_timer_timeout()
+	if not replica:
+		_attacks.on_shoot_timer_timeout()
+
+
+## Client replica (Etapa 20 T3): copies the host's position, tilt, health, armor phase, movement state and enraged flag.
+func apply_replica_state(data: Dictionary) -> void:
+	position = Vector2(float(data["x"]), float(data["y"]))
+	rotation = float(data["rot"])
+	max_health = int(data["max_health"])
+	health = int(data["health"])
+	current_health = health
+	is_enraged = bool(data["enraged"])
+	_state = int(data["state"]) as MovementState
+	_armor_phase = int(data["phase"]) as ArmorPhase
+	queue_redraw()
 
 
 func _on_area_entered(area: Area2D) -> void:
@@ -159,7 +182,7 @@ func _on_area_entered(area: Area2D) -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if _is_defeated:
+	if _is_defeated or replica:
 		return
 	if body.is_in_group(&"player"):
 		boss_contacted_player.emit(body)

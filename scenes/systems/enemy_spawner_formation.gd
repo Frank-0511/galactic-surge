@@ -8,6 +8,8 @@ extends RefCounted
 const FormationPatterns: Script = preload("res://scripts/systems/formation_patterns.gd")
 
 var _spawner: Node2D
+## Next network id handed to a spawned enemy (Etapa 20 T3). Boss ids are negative, so they never collide.
+var _next_net_id: int = 1
 
 
 func _init(spawner: Node2D) -> void:
@@ -50,6 +52,8 @@ func spawn_formation() -> void:
 		var enemy: Area2D = _spawner.enemy_scene.instantiate() as Area2D
 		if enemy == null:
 			continue
+		enemy.set(&"net_id", _next_net_id)
+		_next_net_id += 1
 		if variant_slots.has(i) and enemy.has_method(&"apply_variant"):
 			enemy.call(&"apply_variant", variant_slots[i])
 		if enemy.has_method(&"set_bullet_mix"):
@@ -99,6 +103,8 @@ func clear_formation() -> void:
 
 
 func stop() -> void:
+	if _spawner.replica:
+		return # Client replica (Etapa 20 T3): nothing local to stop; cancelling fly-ins would move the replicas.
 	_spawner._is_running = false
 	_spawner._is_flying_in = false
 	_spawner.set_process(false)

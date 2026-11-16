@@ -27,7 +27,7 @@ func get_deflector_multiplier(travel_direction: Vector2) -> float:
 
 ## Applies projectile damage honoring the frontal deflector.
 func take_damage_from(amount: float, travel_direction: Vector2) -> void:
-	if _enemy._destroyed or amount <= 0.0:
+	if _enemy._destroyed or _enemy.replica or amount <= 0.0:
 		return
 	var multiplier: float = get_deflector_multiplier(travel_direction)
 	if multiplier < 1.0:
@@ -37,7 +37,7 @@ func take_damage_from(amount: float, travel_direction: Vector2) -> void:
 
 ## Applies damage (fractional values allowed, used by the continuous laser).
 func take_damage(amount: float = 1.0) -> void:
-	if _enemy._destroyed or amount <= 0.0:
+	if _enemy._destroyed or _enemy.replica or amount <= 0.0:
 		return
 	_enemy.health = maxf(0.0, _enemy.health - amount)
 	_enemy._hit_flash_timer = _enemy.HIT_FLASH_DURATION
@@ -59,7 +59,7 @@ func destroy() -> void:
 
 func on_area_entered(area: Area2D) -> void:
 	# Player bullets occupy collision layer 2, which is part of this Area2D mask.
-	if _enemy._destroyed or (area.collision_layer & 2) == 0:
+	if _enemy._destroyed or _enemy.replica or (area.collision_layer & 2) == 0:
 		return
 	# Continuous beams apply their own damage over time.
 	if area.has_method(&"is_beam"):
@@ -75,7 +75,7 @@ func on_area_entered(area: Area2D) -> void:
 
 
 func on_body_entered(body: Node2D) -> void:
-	if _enemy._destroyed or not body.is_in_group("player"):
+	if _enemy._destroyed or _enemy.replica or not body.is_in_group("player"):
 		return
 	_enemy.player_contacted.emit(body)
 	destroy()

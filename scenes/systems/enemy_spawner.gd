@@ -130,6 +130,9 @@ var _formation: RefCounted = FormationModule.new(self)
 var _slots: RefCounted = SlotsModule.new(self)
 var _pressure: RefCounted = PressureModule.new(self)
 
+## Client replica spawner (Etapa 20 T3): the host runs the formation, so this spawner never starts one.
+var replica: bool = false
+
 
 ## Sets the formation origin (center_x, first_row_y) from GameLayout.
 func set_formation_layout(origin: Vector2, first_row_y: float) -> void:
@@ -233,6 +236,17 @@ func get_current_wave() -> int:
 
 func is_flying_in() -> bool:
 	return _is_flying_in
+
+
+func is_running() -> bool:
+	return _is_running
+
+
+## Client replica (Etapa 20 T3): shows the host's wave, fly-in and enrage flags without running the formation.
+func apply_replica_phase(local_wave: int, flying_in: bool, enraged: bool) -> void:
+	_current_wave = local_wave
+	_is_flying_in = flying_in
+	_is_enraged = enraged
 
 
 func is_enraged() -> bool:

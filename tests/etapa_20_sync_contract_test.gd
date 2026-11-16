@@ -228,7 +228,6 @@ func _check_host_shot_replayed_on_client() -> void:
 	_close_session(main, peer)
 
 
-# Bullets in the scene fired by one ship (their shooter is that ship).
 func _bullets_of(main: Node, ship: Node) -> Array:
 	if ship == null:
 		return []

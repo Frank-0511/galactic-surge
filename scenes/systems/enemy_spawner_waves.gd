@@ -103,6 +103,8 @@ func get_scaled_wave_config(local_index: int, global_index: int) -> Dictionary:
 ## wave_index is the local index (0-9); global_index (0-29, -1 = same as local) drives the
 ## difficulty ramp across chapters.
 func start_wave(wave_index: int, global_index: int = -1) -> void:
+	if _spawner.replica:
+		return # Client replica (Etapa 20 T3): the host starts the waves.
 	var effective_global: int = global_index if global_index >= 0 else wave_index
 	var config: Dictionary = get_scaled_wave_config(wave_index, effective_global)
 	if config.is_empty():

@@ -51,6 +51,14 @@ func start_fly_in(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, duration: 
 		_enemy._shoot_cooldown.stop()
 
 
+## Client replica: copies the host's movement state, health and enraged flag (position is set by the caller).
+func apply_replica_state(state: int, hp: float, enraged: bool) -> void:
+	_enemy._state = state
+	_enemy._is_flying_in = state == _enemy.State.FLY_IN
+	_enemy.health = hp
+	_enemy.set_enraged(enraged)
+
+
 func cancel_fly_in() -> void:
 	if _enemy._state != _enemy.State.FLY_IN and not _enemy._is_flying_in:
 		return

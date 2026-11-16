@@ -145,6 +145,7 @@ func _begin_net_sync(network: bool) -> void:
 		if ship != null:
 			ship.set("remote_driven", false)
 			ship.set("replica", false)
+	_main._enemy_spawner.set("replica", false)
 	if not network:
 		return
 	var sync: Node = NetSyncNode.new()

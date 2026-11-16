@@ -30,7 +30,7 @@ func _phase_for_health(current: int) -> int:
 
 ## Applies damage to the boss: exposed-core multiplier, armor phase change, enrage and defeat.
 func take_damage(amount: int = 1) -> void:
-	if _boss._is_defeated:
+	if _boss._is_defeated or _boss.replica:
 		return
 	var applied: int = amount
 	if get_armor_phase() == _boss.ArmorPhase.EXPOSED_CORE:
@@ -63,7 +63,7 @@ func take_damage(amount: int = 1) -> void:
 
 ## Area contact: player projectiles that are not beams and have not hit yet deal their damage once.
 func on_area_entered(area: Area2D) -> void:
-	if _boss._is_defeated:
+	if _boss._is_defeated or _boss.replica:
 		return
 	if area.has_method(&"is_beam") and area.call(&"is_beam"):
 		return
