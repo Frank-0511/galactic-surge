@@ -49,6 +49,7 @@ const SETTINGS_MENU_SCENE: PackedScene = preload("res://scenes/ui/settings_menu.
 const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
 const MainLoot: Script = preload("res://scenes/main/main_loot.gd")
 const MainBoss: Script = preload("res://scenes/main/main_boss.gd")
+const MainShips: Script = preload("res://scenes/main/main_ships.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
 const EXTRA_LIFE_SCORE_THRESHOLD: int = 1_000_000
@@ -140,6 +141,7 @@ var _active_boss: Area2D = null
 var _zoom_tween: Tween = null
 var _loot: RefCounted = MainLoot.new(self)
 var _boss: RefCounted = MainBoss.new(self)
+var _ships: RefCounted = MainShips.new(self)
 
 var _game_layout: GameLayout = GameLayout.new()
 
@@ -361,109 +363,30 @@ func _on_enemy_bullet_player_hit(player: Node2D) -> void:
 
 ## Coop local (Etapa 20): creates the second ship with its own lives. Singleplayer never calls it.
 func enable_coop_local() -> void:
-	if _player_two != null:
-		return
-	PlayerScript.ensure_p2_input_actions()
-	var packed: PackedScene = load("res://scenes/entities/player/player.tscn") as PackedScene
-	_player_two = packed.instantiate() as CharacterBody2D
-	_player_two.player_index = 2
-	_player_two.bullet_scene = bullet_scene
-	_player_two.position = _game_layout.get_player_spawn_position() + Vector2(80.0, 0.0)
-	add_child(_player_two)
-	_player_two.damage_requested.connect(_on_player_damage_requested)
-	_player_two.weapon_level_changed.connect(func(lvl: int) -> void:
-		_hud.set_weapon_level_p2(lvl, _player_two.get_weapon()))
-	_player_two.heat_changed.connect(func(cur: float, m: float) -> void:
-		_hud.set_heat_p2(cur, m, _player_two.is_weapon_overheated()))
-	_player_two.visible = false
-	_player_two.set_gameplay_enabled(false)
-	_player_two_lives = STARTING_LIVES
+	_ships.enable_coop_local()
 
 
 ## Shows or hides J2 for a session; activating gives J2 fresh lives and a respawn.
 func _set_player_two_active(active: bool) -> void:
-	_player.coop_active = active and _player_two != null
-	if _player_two == null:
-		return
-	_hud.set_p2_visible(active)
-	if active:
-		score_p2 = 0
-		_player_two_lives = STARTING_LIVES
-		_hud.set_lives_p2(_player_two_lives)
-		_hud.set_score_p2(score_p2)
-		_hud.set_weapon_level_p2(_player_two.get_weapon_level(), _player_two.get_weapon())
-		_player_two.cooling_scale = _player.cooling_scale
-		_hud.set_heat_p2(0.0, _player_two.max_heat, false)
-		_player_two.respawn(_game_layout.get_player_spawn_position() + Vector2(80.0, 0.0))
-		_player_two.set_gameplay_enabled(true)
-	else:
-		_player_two.reset_heat()
-		_hud.set_heat_p2(0.0, _player_two.max_heat, false)
-		_player_two.set_gameplay_enabled(false)
-		_player_two.visible = false
+	_ships.set_player_two_active(active)
 
 
 func _request_player_damage(player: Node2D) -> void:
-	if not _session_active:
-		return
-	if player == _player or (player != null and player == _player_two):
-		player.take_damage()
+	_ships.request_player_damage(player)
 
 
 ## ship: the ship that requested damage; null means J1 (keeps the singleplayer path).
 func _on_player_damage_requested(ship: Node2D = null) -> void:
-	if not _session_active:
-		return
-	if ship != null and ship == _player_two:
-		_on_player_two_damage_requested()
-		return
-	if _combo_system != null and _combo_system.has_method(&"reset_combo"):
-		_combo_system.reset_combo()
-	_visual_feedback.play_damage_flash()
-	_camera.shake(6.0, 0.2)
-	if _camera != null and _camera.has_method(&"add_trauma"):
-		_camera.add_trauma(0.55)
-	_audio_feedback.play_player_damage()
-	_wave_is_clean = false
-	var death_pos: Vector2 = _player.global_position
-	var lost_level: int = _player.penalize_weapon_on_death() if _player.has_method(&"penalize_weapon_on_death") else 0
-	if lost_level > 0:
-		_spawn_recovery_capsule(death_pos)
-	lives -= 1
-	_hud.set_lives(lives)
-	if lives > 0:
-		_player.respawn(_game_layout.get_player_spawn_position())
-		return
-	if _player_two != null and _player_two_lives > 0:
-		# J1 sin vidas: sale de la partida, J2 sigue (vidas por nave).
-		_player.set_gameplay_enabled(false)
-		_player.visible = false
-		return
-	_end_session()
+	_ships.on_player_damage_requested(ship)
 
 
 ## J2 loses a life; the session ends only when both ships are out of lives.
 func _on_player_two_damage_requested() -> void:
-	_player_two_lives -= 1
-	_hud.set_lives_p2(_player_two_lives)
-	if _player_two_lives > 0:
-		_player_two.respawn(_game_layout.get_player_spawn_position() + Vector2(80.0, 0.0))
-		return
-	_player_two.set_gameplay_enabled(false)
-	_player_two.visible = false
-	if lives <= 0:
-		_end_session()
+	_ships.on_player_two_damage_requested()
 
 
 func _spawn_recovery_capsule(spawn_pos: Vector2) -> void:
-	var loot: Area2D = LOOT_DROP_SCENE.instantiate() as Area2D
-	if loot == null:
-		return
-	if loot.has_signal(&"collected"):
-		loot.collected.connect(_on_loot_collected)
-	if loot.has_method(&"configure"):
-		loot.configure(LootDrop.Type.RECOVERY_CAPSULE, spawn_pos, _player, 3.0)
-	add_child(loot)
+	_ships.spawn_recovery_capsule(spawn_pos)
 
 
 ## Adds points scaled by the session difficulty score multiplier, then checks extra-life milestones.
