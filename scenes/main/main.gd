@@ -48,6 +48,7 @@ const Settings: Script = preload("res://scripts/systems/settings.gd")
 const SETTINGS_MENU_SCENE: PackedScene = preload("res://scenes/ui/settings_menu.tscn")
 const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
 const MainLoot: Script = preload("res://scenes/main/main_loot.gd")
+const MainBoss: Script = preload("res://scenes/main/main_boss.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
 const EXTRA_LIFE_SCORE_THRESHOLD: int = 1_000_000
@@ -138,6 +139,7 @@ var _last_phrase_index: int = -1
 var _active_boss: Area2D = null
 var _zoom_tween: Tween = null
 var _loot: RefCounted = MainLoot.new(self)
+var _boss: RefCounted = MainBoss.new(self)
 
 var _game_layout: GameLayout = GameLayout.new()
 
@@ -713,101 +715,29 @@ func _on_wave_announcement_finished() -> void:
 
 
 func _start_boss_battle() -> void:
-	_session_state = SessionState.BOSS_BATTLE
-	_clear_boss()
-	var boss: Area2D = BOSS_SCENE.instantiate() as Area2D
-	if boss == null:
-		return
-	_active_boss = boss
-	boss.global_position = Vector2(get_viewport().get_visible_rect().size.x * 0.5, -100.0)
-	boss.max_health = int(round(BOSS_BASE_HEALTH * (1.0 + BOSS_HEALTH_STEP * float(_chapter - 1))))
-	var chapter_index: int = clampi(_chapter - 1, 0, TOTAL_CHAPTERS - 1)
-	boss.boss_variant = BOSS_VARIANTS_BY_CHAPTER[chapter_index]
-	# Núcleo Blindado three-phase fight is reserved for the final chapter.
-	boss.multi_phase_enabled = _chapter == TOTAL_CHAPTERS
-	boss.armor_phase_changed.connect(_on_boss_armor_phase_changed)
-	boss.health_changed.connect(_on_boss_health_changed)
-	boss.boss_defeated.connect(_on_boss_defeated)
-	boss.boss_contacted_player.connect(_on_boss_contacted_player)
-	add_child(boss)
-	var max_hp: int = int(boss.get("max_health")) if "max_health" in boss else 150
-	_hud.show_boss_health_bar(BOSS_NAMES_BY_CHAPTER[chapter_index], max_hp)
-	_audio_feedback.stop_combat_music()
-	_audio_feedback.start_boss_music()
+	_boss.start_battle()
 
 
 func _on_boss_health_changed(current: int, max_hp: int) -> void:
-	_hud.update_boss_health(current, max_hp)
-	_camera.shake(4.0, 0.15)
+	_boss.on_health_changed(current, max_hp)
 
 
 ## Núcleo Blindado armor phase change: camera shake and a short on-screen message.
 func _on_boss_armor_phase_changed(phase: int) -> void:
-	if not _session_active:
-		return
-	if phase != ARMOR_PHASE_SUBCORE and phase != ARMOR_PHASE_EXPOSED_CORE:
-		return
-	var text: String = ARMOR_BROKEN_TEXT if phase == ARMOR_PHASE_SUBCORE else CORE_EXPOSED_TEXT
-	if _camera != null and _camera.has_method(&"add_trauma"):
-		_camera.add_trauma(ARMOR_PHASE_CHANGE_TRAUMA)
-	if _visual_feedback != null and _active_boss != null:
-		_visual_feedback.play_text_popup(_active_boss.global_position + Vector2(0, -60), text, Color(1.0, 0.75, 0.25))
+	_boss.on_armor_phase_changed(phase)
 
 
 func _on_boss_contacted_player(player: Node2D) -> void:
-	_request_player_damage(player)
+	_boss.on_contacted_player(player)
 
 
 func _on_boss_defeated(boss: Area2D) -> void:
-	if not _session_active:
-		return
-	var explosion_pos: Vector2 = boss.global_position
-	_visual_feedback.play_enemy_explosion(explosion_pos)
-	_visual_feedback.play_enemy_explosion(explosion_pos + Vector2(-35, 15))
-	_visual_feedback.play_enemy_explosion(explosion_pos + Vector2(35, -15))
-	_visual_feedback.play_score_popup(explosion_pos, BOSS_POINTS, true)
-	_camera.shake(8.0, 0.35)
-	_audio_feedback.play_enemy_explosion()
-	_add_score(BOSS_POINTS)
-	_hud.set_score(score)
-
-	# Guaranteed alternative weapon medallion reward post-boss with high magnetism
-	var active_w: int = _player.get_weapon() if (_player != null and _player.has_method(&"get_weapon")) else 0
-	var alt_weapons: Array[int] = []
-	for w_idx: int in range(4):
-		if w_idx != active_w:
-			alt_weapons.append(w_idx)
-	var chosen_alt: int = alt_weapons[randi() % alt_weapons.size()]
-	var loot: Area2D = LOOT_DROP_SCENE.instantiate() as Area2D
-	if loot != null:
-		if loot.has_signal(&"collected"):
-			loot.collected.connect(_on_loot_collected)
-		if loot.has_method(&"configure"):
-			loot.configure(LootDrop.Type.MEDALLION_BLASTER + chosen_alt, explosion_pos, _player)
-		loot.set("magnet_radius", 2000.0)
-		loot.set("magnet_acceleration", 1500.0)
-		add_child(loot)
-
-	_audio_feedback.stop_boss_music()
-	_hud.hide_boss_health_bar()
-	_active_boss = null
-	if _chapter < TOTAL_CHAPTERS:
-		_begin_next_chapter()
-	else:
-		_complete_mission()
+	_boss.on_defeated(boss)
 
 
 ## Starts the next chapter: waves restart at 1 after the chapter announcement.
 func _begin_next_chapter() -> void:
-	_chapter += 1
-	_perform_hyperspace_jump()
-	_session_state = SessionState.WAVE_TRANSITION
-	_enemy_spawner.stop()
-	_enemy_spawner.clear_formation()
-	# Wave numbering is global: the next chapter continues after the boss wave.
-	_pending_wave_index = wave
-	_wave_is_clean = true
-	_wave_announcement.show_announcement(wave + 1, "¡CAPÍTULO %d INICIADO!" % _chapter)
+	_boss.begin_next_chapter()
 
 
 func is_bonus_wave_active() -> bool:
@@ -866,12 +796,7 @@ func get_total_chapters() -> int:
 
 
 func _clear_boss() -> void:
-	if is_instance_valid(_active_boss):
-		_active_boss.queue_free()
-	_active_boss = null
-	for child: Node in get_children():
-		if child is Area2D and child.has_signal(&"boss_defeated"):
-			child.queue_free()
+	_boss.clear_boss()
 
 
 func _pick_radar_phrase() -> String:
