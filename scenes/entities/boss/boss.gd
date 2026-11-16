@@ -5,6 +5,7 @@
 # dynamic banking tilt, sinusoidal cruise oscillation, dive maneuvers, and health-based defeat signaling.
 
 extends Area2D
+const PlayerShip: Script = preload("res://scenes/entities/player/player.gd")
 
 ## Emitted when current health changes.
 signal health_changed(current: int, max_health: int)
@@ -210,7 +211,7 @@ func trigger_dive() -> void:
 	_telegraph_timer = 0.4 if is_enraged else 0.5
 	var target_x: float = global_position.x
 	if is_inside_tree():
-		var player: Node2D = get_tree().get_first_node_in_group(&"player") as Node2D
+		var player: Node2D = PlayerShip.first_alive_ship(get_tree())
 		if player != null and is_instance_valid(player):
 			target_x = player.global_position.x
 	_dive_target = Vector2(clampf(target_x, _left_margin, _right_margin), 760.0)
@@ -338,8 +339,8 @@ func _fire_spectre_volley() -> void:
 
 func _get_player_node() -> Node2D:
 	if is_inside_tree():
-		var player: Node2D = get_tree().get_first_node_in_group(&"player") as Node2D
-		if player != null and is_instance_valid(player) and player.visible:
+		var player: Node2D = PlayerShip.first_alive_ship(get_tree())
+		if player != null and is_instance_valid(player):
 			return player
 	return null
 

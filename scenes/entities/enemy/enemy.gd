@@ -8,6 +8,7 @@
 # slow-projectile evasion and a charge state for suicide units.
 
 extends Area2D
+const PlayerShip: Script = preload("res://scenes/entities/player/player.gd")
 
 const VectorMath: Script = preload("res://scripts/math/vector_math.gd")
 const EnemyAI: Script = preload("res://scripts/components/enemy_ai.gd")
@@ -310,7 +311,7 @@ func _get_target_position() -> Variant:
 		return _target_override
 	if not is_inside_tree():
 		return null
-	var player: Node2D = get_tree().get_first_node_in_group(&"player") as Node2D
+	var player: Node2D = PlayerShip.first_alive_ship(get_tree())
 	if player != null and is_instance_valid(player):
 		return player.global_position
 	return null
@@ -687,7 +688,7 @@ func _configure_bullet(bullet: Node2D) -> void:
 			var target_pos: Vector2 = Vector2.ZERO
 			var has_target: bool = false
 			if is_inside_tree():
-				var player: Node2D = get_tree().get_first_node_in_group(&"player") as Node2D
+				var player: Node2D = PlayerShip.first_alive_ship(get_tree())
 				if player != null and is_instance_valid(player):
 					target_pos = player.global_position
 					has_target = true

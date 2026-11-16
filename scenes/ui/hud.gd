@@ -157,6 +157,22 @@ func set_weapon_level(level: int, weapon_type: int = -1) -> void:
 
 ## Weapon level of J1, shown in the bottom-left corner (spec S7).
 ## Draws the falling medallion of a weapon, so the HUD icon matches the drop (Etapa 20).
+## Heart drawn in code (two circles and a triangle) for the lives counter (Etapa 20).
+class HeartIcon extends Control:
+	func _ready() -> void:
+		custom_minimum_size = Vector2(18.0, 18.0)
+
+	func _draw() -> void:
+		var c: Vector2 = size * 0.5
+		var red: Color = Color(1.0, 0.22, 0.3)
+		draw_circle(c + Vector2(-3.5, -2.5), 4.5, red)
+		draw_circle(c + Vector2(3.5, -2.5), 4.5, red)
+		draw_colored_polygon(PackedVector2Array([
+			c + Vector2(-7.9, -1.2), c + Vector2(7.9, -1.2), c + Vector2(0.0, 8.5)
+		]), red)
+		draw_circle(c + Vector2(-4.5, -4.0), 1.4, Color(1.0, 0.85, 0.9, 0.9))
+
+
 class WeaponIcon extends Control:
 	var weapon_type: int = 0:
 		set(value):
@@ -304,7 +320,7 @@ func hide_boss_health_bar() -> void:
 
 
 func set_lives(lives: int) -> void:
-	_lives_label.text = "♥ %d" % lives
+	_lives_label.text = str(lives)
 	lives_changed.emit(lives)
 
 
@@ -383,7 +399,11 @@ func _move_p1_lives_bottom_left() -> void:
 	panel.grow_vertical = 0
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(panel)
-	_lives_label.reparent(panel)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "LivesRowP1"
+	panel.add_child(row)
+	row.add_child(HeartIcon.new())
+	_lives_label.reparent(row)
 
 
 ## Shows or hides both J2 panels; outside coop local they must not appear (Etapa 20).
@@ -433,8 +453,13 @@ func set_lives_p2(lives: int) -> void:
 		_lives_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		_lives_p2_label.add_theme_font_size_override("font_size", 20)
 		_lives_p2_label.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
-		_ensure_p2_bottom_panel().add_child(_lives_p2_label)
-	_lives_p2_label.text = "♥ %d" % lives
+		var row_p2: HBoxContainer = HBoxContainer.new()
+		row_p2.name = "LivesRowP2"
+		row_p2.alignment = BoxContainer.ALIGNMENT_END
+		_ensure_p2_bottom_panel().add_child(row_p2)
+		row_p2.add_child(HeartIcon.new())
+		row_p2.add_child(_lives_p2_label)
+	_lives_p2_label.text = str(lives)
 	_lives_p2_label.visible = true
 
 

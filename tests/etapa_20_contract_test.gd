@@ -44,6 +44,8 @@ func _run_contracts() -> void:
 	_check_legacy_bullet_kill_attribution()
 	_check_hud_icons_and_wave_out()
 	_check_eliminated_ship_stays_hidden()
+	_check_dead_ship_has_no_collision()
+	_check_targets_skip_dead_ship()
 	_check_weapon_icon_by_type()
 	_check_active_weapon_text_hidden()
 	_check_p2_panels_follow_session()
@@ -132,7 +134,7 @@ func _check_hud_lives_p2() -> void:
 	_expect(not hud.call("is_lives_p2_visible") if hud.has_method("is_lives_p2_visible") else false, "Contrato 5b: indicador de J2 oculto en singleplayer")
 	if hud.has_method("set_lives_p2"):
 		hud.call("set_lives_p2", 2)
-		_expect(hud.call("is_lives_p2_visible") == true and hud.call("get_lives_p2_text") == "♥ 2", "Contrato 5c: J2 muestra \"♥ 2\" como J1")
+		_expect(hud.call("is_lives_p2_visible") == true and hud.call("get_lives_p2_text") == "2", "Contrato 5c: J2 muestra \"2\" como J1")
 	hud.queue_free()
 
 
@@ -290,7 +292,8 @@ func _check_hud_two_player_layout() -> void:
 	var panel: Control = hud.get_node_or_null("P2Panel") as Control
 	_expect(panel != null and panel.anchor_left == 1.0 and panel.anchor_right == 1.0, "Contrato 13b: panel de J2 a la derecha")
 	if panel != null:
-		_expect(hud.call("get_heat_p2_parent") == panel and hud.call("get_lives_p2_parent") == hud.get_node_or_null("P2BottomPanel"), "Contrato 13c: calor de J2 arriba en su panel, vidas de J2 abajo (spec S7-S8)")
+		var lives_row: Node = hud.call("get_lives_p2_parent") as Node
+		_expect(hud.call("get_heat_p2_parent") == panel and lives_row != null and lives_row.get_parent() == hud.get_node_or_null("P2BottomPanel"), "Contrato 13c: calor de J2 arriba en su panel, vidas de J2 abajo (spec S7-S8)")
 		var view_w: float = get_root().get_visible_rect().size.x
 		var boss_right: float = view_w * 0.5 + 200.0
 		var panel_left: float = view_w - 260.0
@@ -393,7 +396,7 @@ func _check_hud_p2_lives_bottom_right() -> void:
 	var lives_p2: Label = hud.get("_lives_p2_label") as Label
 	var bottom: Control = hud.get_node_or_null("P2BottomPanel") as Control
 	_expect(bottom != null and bottom.anchor_top == 1.0 and bottom.anchor_right == 1.0, "Contrato 18a: panel inferior de J2 anclado abajo a la derecha")
-	_expect(lives_p2 != null and bottom != null and lives_p2.get_parent() == bottom, "Contrato 18b: vidas de J2 viven en el panel inferior")
+	_expect(lives_p2 != null and bottom != null and lives_p2.get_parent().get_parent() == bottom, "Contrato 18b: vidas de J2 (fila con corazon) viven en el panel inferior")
 	hud.queue_free()
 
 
@@ -406,7 +409,7 @@ func _check_hud_p1_lives_bottom_left() -> void:
 	var lives_p1: Label = hud.get("_lives_label") as Label
 	var bottom: Control = hud.get_node_or_null("P1BottomPanel") as Control
 	_expect(bottom != null and bottom.anchor_top == 1.0 and bottom.anchor_left == 0.0, "Contrato 19a: panel inferior de J1 anclado abajo a la izquierda")
-	_expect(lives_p1 != null and bottom != null and lives_p1.get_parent() == bottom, "Contrato 19b: vidas de J1 viven en el panel inferior izquierdo")
+	_expect(lives_p1 != null and bottom != null and lives_p1.get_parent().get_parent() == bottom, "Contrato 19b: vidas de J1 (fila con corazon) viven en el panel inferior izquierdo")
 	hud.queue_free()
 
 
@@ -581,9 +584,9 @@ func _check_hud_icons_and_wave_out() -> void:
 	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_lives", 3)
-	_expect(hud.get("_lives_label").text == "♥ 3", "Contrato 28a: vidas de J1 con icono \"♥ 3\"")
+	_expect(hud.get("_lives_label").text == "3", "Contrato 28a: vidas de J1 como numero (el icono es un corazon dibujado)")
 	hud.call("set_lives_p2", 2)
-	_expect(hud.call("get_lives_p2_text") == "♥ 2", "Contrato 28b: vidas de J2 con icono \"♥ 2\"")
+	_expect(hud.call("get_lives_p2_text") == "2", "Contrato 28b: vidas de J2 como numero")
 	hud.call("set_weapon_level", 3, 0)
 	_expect(hud.get("_weapon_level_label").text == "3", "Contrato 28c: nivel del arma de J1 como numero")
 	hud.call("set_weapon_level_p2", 2)
@@ -596,6 +599,40 @@ func _check_hud_icons_and_wave_out() -> void:
 # ---------------------------------------------------------------------------
 # 29. Nave eliminada: un timer de invulnerabilidad no la hace visible (bug: J1 sin vidas reaparecia)
 # ---------------------------------------------------------------------------
+# Dead ship: enemies and bullets must not collide with an invisible, eliminated ship.
+# Contract 36: the ship's collision layer and mask are off while eliminated and back on after respawn.
+func _check_dead_ship_has_no_collision() -> void:
+	var ship: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	get_root().add_child(ship)
+	ship.set_gameplay_enabled(false)
+	ship.visible = false
+	_expect(ship.collision_layer == 0, "Contrato 36a: una nave eliminada no ocupa capa de colision (enemigos y balas no la detectan)")
+	_expect(ship.collision_mask == 0, "Contrato 36b: una nave eliminada no detecta colisiones")
+	ship.respawn(Vector2(100.0, 100.0))
+	_expect(ship.collision_layer == 1, "Contrato 36c: el respawn restaura la capa del jugador")
+	_expect(ship.collision_mask == 12, "Contrato 36d: el respawn restaura la mascara del jugador")
+	ship.queue_free()
+
+
+# Contract 37: enemies and the boss aim at a living ship, never at an eliminated one.
+func _check_targets_skip_dead_ship() -> void:
+	var dead: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	var alive: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	get_root().add_child(dead)
+	get_root().add_child(alive)
+	dead.set_gameplay_enabled(false)
+	dead.visible = false
+	var probe: Object = PLAYER_SCRIPT.new()
+	var exposed: bool = probe.has_method("first_alive_ship")
+	_expect(exposed, "Contrato 37a: player.gd expone first_alive_ship()")
+	if exposed:
+		var target: Object = probe.call("first_alive_ship", self) as Object
+		_expect(target != null and target != dead, "Contrato 37b: el objetivo nunca es la nave eliminada, aunque sea el primer nodo del grupo")
+	probe.free()
+	dead.queue_free()
+	alive.queue_free()
+
+
 func _check_eliminated_ship_stays_hidden() -> void:
 	var ship: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
 	get_root().add_child(ship)

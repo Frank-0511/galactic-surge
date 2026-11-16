@@ -643,6 +643,7 @@ func take_damage() -> bool:
 
 func respawn(respawn_position: Vector2) -> void:
 	position = respawn_position
+	_set_body_collision(true)
 	_is_invulnerable = true
 	visible = true
 	_set_laser_active(false)
@@ -668,11 +669,34 @@ func get_invulnerability_time_left() -> float:
 	return _invulnerability_timer.time_left
 
 
+## Collision values of the ship in player.tscn (layer 1, mask 12).
+const PLAYER_COLLISION_LAYER: int = 1
+const PLAYER_COLLISION_MASK: int = 12
+
+
 func set_gameplay_enabled(enabled: bool) -> void:
 	_gameplay_enabled = enabled
+	_set_body_collision(enabled)
 	if not _gameplay_enabled:
 		velocity = Vector2.ZERO
 		_set_laser_active(false)
+
+
+## Puts the ship on or off the collision layers. An eliminated ship is in layer 0 and
+## detects nothing, so enemies and bullets do not hit an invisible ship (Etapa 20 fix).
+func _set_body_collision(active: bool) -> void:
+	collision_layer = PLAYER_COLLISION_LAYER if active else 0
+	collision_mask = PLAYER_COLLISION_MASK if active else 0
+
+
+## First ship of the "player" group that is alive (collision layer on). Enemies and the boss
+## aim with it, so an eliminated ship is never a target (Etapa 20 fix).
+static func first_alive_ship(tree: SceneTree) -> Node2D:
+	for node: Node in tree.get_nodes_in_group(&"player"):
+		var ship: CharacterBody2D = node as CharacterBody2D
+		if ship != null and is_instance_valid(ship) and ship.collision_layer != 0:
+			return ship
+	return null
 
 
 ## Sets the horizontal movement limits (min_x, max_x) from GameLayout.
