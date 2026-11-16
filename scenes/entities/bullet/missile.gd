@@ -25,6 +25,9 @@ signal enemy_hit(enemy: Area2D)
 ## Ship that fired this missile; hit targets record it for kill attribution (Etapa 20).
 var shooter: Node = null
 
+## True for a client-side replica of a host shot (Etapa 20 T2): it shows the shot and never hits.
+var visual_only: bool = false
+
 ## Radius in pixels of the splash applied to neighbours of the impacted enemy.
 @export var explosion_radius: float = 36.0
 
@@ -128,7 +131,7 @@ func _find_nearest_target() -> Node2D:
 
 
 func _on_area_entered(area: Area2D) -> void:
-	if _has_hit or not is_instance_valid(area) or not area.is_in_group(&"enemies"):
+	if visual_only or _has_hit or not is_instance_valid(area) or not area.is_in_group(&"enemies"):
 		return
 	if area.get("_destroyed") == true or area.is_queued_for_deletion():
 		return

@@ -21,6 +21,9 @@ signal weapon_changed(new_weapon: int)
 ## Emitted when active weapon power level changes (1 to 15).
 signal weapon_level_changed(new_level: int)
 
+## Emitted for each volley this ship fires (Etapa 20 T2): weapon, level, origin, aim, double shot.
+signal volley_fired(weapon: int, level: int, origin: Vector2, aim: Vector2, double_shot: bool)
+
 ## Emitted when barrel heat changes.
 signal heat_changed(current_heat: float, max_heat: float)
 
@@ -121,8 +124,9 @@ var coop_active: bool = false
 ## replica: the client only shows the host's state (no simulation, no damage).
 var remote_driven: bool = false
 var replica: bool = false
-## Move direction (-1, 0 or 1) received from the client while remote_driven.
+## Move direction (-1, 0 or 1) and shoot intent received from the client while remote_driven.
 var remote_direction: float = 0.0
+var remote_shoot: bool = false
 ## Horizontal facing from the last replicated state (-1, 0 or 1).
 var facing: int = 0
 

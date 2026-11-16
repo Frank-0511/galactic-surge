@@ -1,12 +1,14 @@
 # net_sync_node.gd
-# Replication node of a network match (Etapa 20 T1, S1/S3). Lives at Main/NetSync on both peers.
-# Host: simulates J1 and J2, sends their state to the client and applies the client's input to J2.
-# Client: sends its own input (the J2 keys) to the host and applies the state the host sends; it never
-# simulates the ships and never applies damage. Explicit RPCs, not MultiplayerSynchronizer (decision L5).
+# Replication node of a network match (Etapa 20 T1/T2, S1/S2/S3). Lives at Main/NetSync on both peers.
+# Host: simulates J1 and J2, sends their state to the client, applies the client's input (move and shoot
+# intent) to J2, and broadcasts every volley as a shot event. Client: sends its own input (the J2 keys) to
+# the host and applies the state and shots the host sends; it never simulates the ships and never applies damage.
+# Explicit RPCs, not MultiplayerSynchronizer (decision L5). Shot events live in net_sync_shots.gd.
 
 extends Node
 
 const PlayerInput: GDScript = preload("res://scenes/entities/player/player_input.gd")
+const NetSyncShots: GDScript = preload("res://scripts/net/net_sync_shots.gd")
 ## Seconds between state packets (host) or input packets (client): 20 per second.
 const SEND_INTERVAL: float = 0.05
 
@@ -23,6 +25,8 @@ func setup(main: Node2D, is_host: bool) -> void:
 	_remote_peer = 0
 	if _is_host:
 		_main._player_two.set("remote_driven", true)
+		_main._player.volley_fired.connect(_on_volley.bind(1))
+		_main._player_two.volley_fired.connect(_on_volley.bind(2))
 	else:
 		_main._player.set("replica", true)
 		_main._player_two.set("replica", true)
@@ -38,12 +42,12 @@ func _physics_process(delta: float) -> void:
 	if _is_host:
 		rpc("rpc_host_state", build_state())
 	else:
-		rpc_id(1, "rpc_client_input", local_input_direction())
+		rpc_id(1, "rpc_client_input", local_input_direction(), local_shoot_intent())
 
 
-## Client -> host: the client's move direction for J2 (-1, 0 or 1). Accepted from the first client only.
+## Client -> host: the client's move direction for J2 (-1, 0 or 1) and its shoot intent. Accepted from the first client only.
 @rpc("any_peer", "call_remote", "unreliable_ordered")
-func rpc_client_input(direction: float) -> void:
+func rpc_client_input(direction: float, shoot: bool = false) -> void:
 	if not _is_host or _main == null or _main._player_two == null:
 		return
 	var sender: int = multiplayer.get_remote_sender_id()
@@ -53,12 +57,21 @@ func rpc_client_input(direction: float) -> void:
 		if sender != _remote_peer:
 			return
 	_main._player_two.set("remote_direction", clampf(direction, -1.0, 1.0))
+	_main._player_two.set("remote_shoot", shoot)
 
 
 ## Host -> client: the authoritative state of J1 and J2. Only the host (the authority) may send it.
 @rpc("authority", "call_remote", "unreliable_ordered")
 func rpc_host_state(state: Dictionary) -> void:
 	apply_host_state(state)
+
+
+## Host -> client: one volley the host fired (ship, weapon, level, origin, aim). Reliable: a lost shot is visible.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_shot(event: Dictionary) -> void:
+	if _is_host or _main == null:
+		return
+	NetSyncShots.replay(_main, event)
 
 
 ## Host side: the state of both ships, as sent to the client.
@@ -80,6 +93,17 @@ func apply_host_state(state: Dictionary) -> void:
 ## The client's own move direction, read from the J2 actions (arrows or left stick).
 func local_input_direction() -> float:
 	return Input.get_axis(PlayerInput.input_action_name("move_left", 2), PlayerInput.input_action_name("move_right", 2))
+
+
+## The client's own shoot intent, read from the J2 shoot action (Shift or gamepad A).
+func local_shoot_intent() -> bool:
+	return Input.is_action_pressed(PlayerInput.input_action_name("shoot", 2))
+
+
+## Host side: sends one volley of ship_index (1 or 2) to the client when a client is connected.
+func _on_volley(weapon: int, level: int, origin: Vector2, aim: Vector2, double_shot: bool, ship_index: int) -> void:
+	if _has_remote_peer():
+		rpc("rpc_host_shot", NetSyncShots.make_event(ship_index, weapon, level, origin, aim, double_shot))
 
 
 static func _ship_state(ship: CharacterBody2D, lives: int) -> Dictionary:

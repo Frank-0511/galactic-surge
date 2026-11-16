@@ -1,7 +1,5 @@
 extends SceneTree
-# Contract test for Etapa 20 T1: host-authoritative ship sync (S1, S3, S5, S6).
-# Covers session mode selection, where J2 comes from in each mode, client input reaching the host,
-# host state reaching the client, client damage being ignored, and LOCAL_COOP staying unchanged.
+# Contract test for Etapa 20 T1/T2: host-authoritative ship sync (S1, S3, S5, S6) and replicated shots (S2).
 # Two peers are simulated in one process: RPC handlers are called directly, and RPC wiring is
 # checked through the node's RPC configuration.
 
@@ -10,6 +8,7 @@ const MODE_SCRIPT_PATH := "res://scripts/net/net_sync_mode.gd"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT_A: int = 7793
 const HOST_PORT_B: int = 7794
+const HOST_PORT_C: int = 7796
 const CLIENT_TARGET_PORT: int = 7795
 const NET_COOP_BUTTON := "Control/NetPanel/ButtonRow/NetCoopButton"
 const COOP_BUTTON := "Control/Menu/CoopButton"
@@ -32,6 +31,8 @@ func _run_contracts() -> void:
 	await _check_client_applies_no_damage()
 	await _check_local_coop_unchanged()
 	await _check_singleplayer_has_no_j2()
+	await _check_client_shoot_intent_fires_j2()
+	await _check_host_shot_replayed_on_client()
 
 	if _failures == 0:
 		print("ETAPA 20 SYNC CONTRACT TESTS: ALL PASSED")
@@ -148,7 +149,7 @@ func _check_client_applies_no_damage() -> void:
 	_close_session(main, peer)
 
 
-# T7 (S5): LOCAL_COOP is unchanged: J2 is local, moves with its own keys, and no network node exists.
+# T7 (S5, T9d of task T2): LOCAL_COOP is unchanged: J2 is local, moves and fires with its own keys, and no network node exists.
 func _check_local_coop_unchanged() -> void:
 	root.multiplayer.multiplayer_peer = null
 	var main: Node = await _new_main()
@@ -164,6 +165,13 @@ func _check_local_coop_unchanged() -> void:
 		await physics_frame
 	Input.action_release("p2_move_right")
 	_expect(p2 != null and p2.position.x > start_x, "Contrato T7b: en coop local J2 se mueve con sus propias teclas")
+	Input.action_press("shoot")
+	Input.action_press("p2_shoot")
+	for i: int in 3:
+		await physics_frame
+	Input.action_release("shoot")
+	Input.action_release("p2_shoot")
+	_expect(_bullets_of(main, main.get("_player")).size() > 0 and _bullets_of(main, p2).size() > 0 and _bullets_of(main, p2)[0].monitoring == true, "Contrato T9d: en coop local J1 y J2 disparan con sus teclas y sus balas colisionan")
 	_expect(main.get_node_or_null(SYNC_NODE_NAME) == null, "Contrato T7c: coop local no crea el nodo de sincronizacion de red")
 	_free_main(main)
 
@@ -179,6 +187,57 @@ func _check_singleplayer_has_no_j2() -> void:
 	_expect(main.get("_session_active") == true and main.get("_player_two") == null, "Contrato T8a: singleplayer inicia sin J2")
 	_expect(main.get_node_or_null(SYNC_NODE_NAME) == null, "Contrato T8b: singleplayer no crea el nodo de sincronizacion de red")
 	_free_main(main)
+
+
+# T9a (S2, task T2): the client's shoot intent reaches the host and makes J2 fire there.
+func _check_client_shoot_intent_fires_j2() -> void:
+	var peer: ENetMultiplayerPeer = _open_server(HOST_PORT_C)
+	var main: Node = await _new_main()
+	var p2: CharacterBody2D = await _start_network_session(main)
+	var sync: Node = main.get_node_or_null(SYNC_NODE_NAME)
+	if sync != null and p2 != null and _has_arity(sync, "rpc_client_input", 2):
+		sync.call("rpc_client_input", 0.0, true)
+		for i: int in 3:
+			await physics_frame
+	_expect(p2 != null and _bullets_of(main, p2).size() > 0, "Contrato T9a: la intencion de disparo del cliente hace que J2 dispare en el host")
+	_close_session(main, peer)
+
+
+# T9b/T9c (S2, task T2): the host's shot reaches the client as a visual bullet of J2 that never collides or hits.
+func _check_host_shot_replayed_on_client() -> void:
+	var peer: ENetMultiplayerPeer = _open_client(CLIENT_TARGET_PORT)
+	var main: Node = await _new_main()
+	var p2: CharacterBody2D = await _start_network_session(main)
+	var sync: Node = main.get_node_or_null(SYNC_NODE_NAME)
+	var origin := Vector2(333.0, 500.0)
+	if sync != null and p2 != null and _has_arity(sync, "rpc_host_shot", 1):
+		sync.call("rpc_host_shot", {"ship": 2, "weapon": 0, "level": 1, "x": origin.x, "y": origin.y, "dx": 0.0, "dy": -1.0, "double": false})
+	var shots: Array = _bullets_of(main, p2)
+	var config: Dictionary = sync.get_script().get_rpc_config() if sync != null and sync.get_script() != null else {}
+	_expect(config.has(&"rpc_host_shot") and config[&"rpc_host_shot"]["rpc_mode"] == MultiplayerAPI.RPC_MODE_AUTHORITY, "Contrato T9b: rpc_host_shot solo acepta al host como autoridad")
+	_expect(shots.size() > 0 and shots[0].get("visual_only") == true and shots[0].global_position.distance_to(origin) < 40.0, "Contrato T9b2: el disparo del host llega al cliente como bala visual de J2 en su origen")
+	var hits: Array = [0]
+	var dummy := Area2D.new()
+	dummy.add_to_group(&"enemies")
+	for shot: Node in shots:
+		_expect(shot.monitoring == false and shot.monitorable == false, "Contrato T9c: la bala visual del cliente no monitorea ni es detectada")
+		shot.enemy_hit.connect(func(_e: Area2D) -> void: hits[0] += 1)
+		shot.call("_on_area_entered", dummy)
+	_expect(shots.size() > 0 and hits[0] == 0, "Contrato T9c2: la bala visual del cliente no marca impacto aunque toque un enemigo")
+	dummy.free()
+	_close_session(main, peer)
+
+
+# Bullets in the scene fired by one ship (their shooter is that ship).
+func _bullets_of(main: Node, ship: Node) -> Array:
+	if ship == null:
+		return []
+	return main.get_children().filter(func(c: Node) -> bool: return c.get("shooter") == ship)
+
+
+# True when obj's script has the method with that arity (a wrong RPC call would abort the check).
+func _has_arity(obj: Object, method: String, arity: int) -> bool:
+	return obj.get_script().get_script_method_list().any(func(e: Dictionary) -> bool: return e["name"] == method and (e["args"] as Array).size() == arity)
 
 
 # Precondition: J2 actions are registered as the game does when a coop ship is created.
