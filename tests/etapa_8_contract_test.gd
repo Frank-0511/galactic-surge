@@ -13,7 +13,7 @@ const SPAWNER_PATH := "res://scenes/systems/enemy_spawner.tscn"
 const STARFIELD_PATH := "res://scenes/background/starfield.tscn"
 const MAIN_PATH := "res://scenes/main/main.tscn"
 
-const VectorMath: Script = preload("res://scripts/math/vector_math.gd")
+const VectorMath: Script = preload("res://core/math/vector_math.gd")
 const FormationPatterns: Script = preload("res://scripts/systems/formation_patterns.gd")
 
 

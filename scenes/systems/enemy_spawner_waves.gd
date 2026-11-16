@@ -6,7 +6,7 @@
 
 extends RefCounted
 
-const DS := preload("res://scripts/systems/difficulty_settings.gd")
+const DS := preload("res://core/settings/difficulty_settings.gd")
 
 ## Progressive wave configurations.
 ## The optional "variants" dictionary maps a tactical variant id (enemy_variants.gd)

@@ -6,7 +6,7 @@
 
 extends Area2D
 
-const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+const SESSION_STATS := preload("res://core/session/session_stats.gd")
 const TargetingModule: GDScript = preload("res://scenes/entities/bullet/laser_beam_targeting.gd")
 const DamageModule: GDScript = preload("res://scenes/entities/bullet/laser_beam_damage.gd")
 const GeometryModule: GDScript = preload("res://scenes/entities/bullet/laser_beam_geometry.gd")

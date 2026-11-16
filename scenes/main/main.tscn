@@ -13,7 +13,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/touch_controls.tscn" id="15_touch"]
 [ext_resource type="PackedScene" path="res://scenes/ui/wave_announcement.tscn" id="11"]
 [ext_resource type="Script" path="res://scenes/main/camera_shake.gd" id="12_camera_shake"]
-[ext_resource type="Script" path="res://scripts/systems/combo_system.gd" id="13_combo_system"]
+[ext_resource type="Script" path="res://core/session/combo_system.gd" id="13_combo_system"]
 [ext_resource type="PackedScene" path="res://scenes/systems/asteroid_spawner.tscn" id="14_asteroid_spawner"]
 
 [node name="Main" type="Node2D"]

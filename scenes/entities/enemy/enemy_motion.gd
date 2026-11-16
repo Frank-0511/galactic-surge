@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const VectorMath: Script = preload("res://scripts/math/vector_math.gd")
+const VectorMath: Script = preload("res://core/math/vector_math.gd")
 
 ## Fly-in entrance curve parameters.
 var _fly_in_p0: Vector2 = Vector2.ZERO

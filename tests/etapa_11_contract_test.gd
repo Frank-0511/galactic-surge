@@ -13,7 +13,7 @@ extends SceneTree
 
 const BULLET_PATH := "res://scenes/entities/enemy/enemy_bullet.tscn"
 const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
-const VectorMathScript: Script = preload("res://scripts/math/vector_math.gd")
+const VectorMathScript: Script = preload("res://core/math/vector_math.gd")
 
 
 func _init() -> void:

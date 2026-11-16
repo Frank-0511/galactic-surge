@@ -10,7 +10,7 @@
 
 extends SceneTree
 
-const SETTINGS := preload("res://scripts/systems/settings.gd")
+const SETTINGS := preload("res://core/settings/settings.gd")
 const TEST_PATH := "user://settings_test.cfg"
 
 

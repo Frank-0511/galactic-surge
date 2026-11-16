@@ -21,7 +21,7 @@ func _init(main: Node2D) -> void:
 ## Called from Main._ready: creates the combo system when missing and connects every signal.
 func setup() -> void:
 	if _main._combo_system == null:
-		var combo_script: Script = load("res://scripts/systems/combo_system.gd") as Script
+		var combo_script: Script = load("res://core/session/combo_system.gd") as Script
 		if combo_script != null:
 			_main._combo_system = combo_script.new() as Node
 			_main._combo_system.name = "ComboSystem"

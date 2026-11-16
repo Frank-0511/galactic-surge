@@ -3,7 +3,7 @@
 
 extends Area2D
 
-const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+const SESSION_STATS := preload("res://core/session/session_stats.gd")
 
 ## Emitted once when this projectile hits an enemy.
 signal enemy_hit(enemy: Area2D)

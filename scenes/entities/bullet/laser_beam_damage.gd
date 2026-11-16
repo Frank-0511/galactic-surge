@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+const SESSION_STATS := preload("res://core/session/session_stats.gd")
 
 var _beam: Area2D
 

@@ -43,10 +43,10 @@ const LOOT_DROP_SCENE: PackedScene = preload("res://scenes/loot/loot_drop.tscn")
 const SCORE_LOOT_POINTS: int = 250
 const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
 const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss/boss.tscn")
-const HighScore: Script = preload("res://scripts/systems/high_score.gd")
-const Settings: Script = preload("res://scripts/systems/settings.gd")
+const HighScore: Script = preload("res://core/session/high_score.gd")
+const Settings: Script = preload("res://core/settings/settings.gd")
 const SETTINGS_MENU_SCENE: PackedScene = preload("res://scenes/ui/settings_menu.tscn")
-const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+const SESSION_STATS := preload("res://core/session/session_stats.gd")
 const MainLoot: Script = preload("res://scenes/main/main_loot.gd")
 const MainBoss: Script = preload("res://scenes/main/main_boss.gd")
 const MainShips: Script = preload("res://scenes/main/main_ships.gd")
@@ -58,7 +58,7 @@ const MainWiring: Script = preload("res://scenes/main/main_wiring.gd")
 const SHIELD_DURATION: float = 10.0
 const NEARBY_SHAKE_RADIUS: float = 220.0
 const EXTRA_LIFE_SCORE_THRESHOLD: int = 1_000_000
-const DS := preload("res://scripts/systems/difficulty_settings.gd")
+const DS := preload("res://core/settings/difficulty_settings.gd")
 
 const _RADAR_PHRASES: Array[String] = [
 	"SEÑAL HOSTIL DETECTADA", "FORMACIÓN ENTRANTE",

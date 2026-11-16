@@ -9,7 +9,7 @@
 
 extends CanvasLayer
 
-const DS := preload("res://scripts/systems/difficulty_settings.gd")
+const DS := preload("res://core/settings/difficulty_settings.gd")
 ## Session modes (Etapa 20, S6): LOCAL_COOP (J2 on this PC) or NETWORK (J2 is the remote peer).
 const NetSyncMode := preload("res://scripts/net/net_sync_mode.gd")
 ## Red section (Etapa 20, S2/T1): Host, Join and Coop en red, with IP/port validation.

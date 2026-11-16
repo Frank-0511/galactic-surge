@@ -10,7 +10,7 @@ extends RefCounted
 
 const InputModule: GDScript = preload("res://scenes/entities/player/player_input.gd")
 const WeaponPatterns: GDScript = preload("res://scenes/entities/player/player_weapon_patterns.gd")
-const SESSION_STATS := preload("res://scripts/systems/session_stats.gd")
+const SESSION_STATS := preload("res://core/session/session_stats.gd")
 
 var _player: CharacterBody2D
 ## Remote trigger of the previous frame (remote_driven ships only), to detect a new press.

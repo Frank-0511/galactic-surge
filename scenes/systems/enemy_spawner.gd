@@ -12,7 +12,7 @@ const WavesModule: Script = preload("res://scenes/systems/enemy_spawner_waves.gd
 const FormationModule: Script = preload("res://scenes/systems/enemy_spawner_formation.gd")
 const SlotsModule: Script = preload("res://scenes/systems/enemy_spawner_slots.gd")
 const PressureModule: Script = preload("res://scenes/systems/enemy_spawner_pressure.gd")
-const DS := preload("res://scripts/systems/difficulty_settings.gd")
+const DS := preload("res://core/settings/difficulty_settings.gd")
 
 ## Master switch for the tactical enemy AI (Stage 12, ADR 009). When false, the
 ## "variants" key of every wave config is ignored at spawn time and all enemies

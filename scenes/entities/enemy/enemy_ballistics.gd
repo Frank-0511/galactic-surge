@@ -6,7 +6,7 @@
 extends RefCounted
 
 const PlayerShip: Script = preload("res://scenes/entities/player/player.gd")
-const VectorMath: Script = preload("res://scripts/math/vector_math.gd")
+const VectorMath: Script = preload("res://core/math/vector_math.gd")
 
 ## Optional forced bullet variant for testing/scripting (-1 for standard probability).
 var _forced_bullet_variant: int = -1
