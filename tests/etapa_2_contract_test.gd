@@ -8,18 +8,18 @@ func _init() -> void:
 func _run_contracts() -> void:
 	var passed: bool = true
 	passed = _assert_player_contract() and passed
-	passed = _assert_scene("res://scenes/entities/enemy/enemy.tscn") and passed
-	passed = _assert_scene("res://scenes/entities/enemy/enemy_bullet.tscn") and passed
+	passed = _assert_scene("res://features/enemy/enemy.tscn") and passed
+	passed = _assert_scene("res://features/enemy/enemy_bullet.tscn") and passed
 	passed = _assert_collision_contract(
 		"res://features/bullet/bullet.tscn", 2, 4, "enemy_hit"
 	) and passed
 	passed = _assert_collision_contract(
-		"res://scenes/entities/enemy/enemy_bullet.tscn", 8, 1, "player_hit"
+		"res://features/enemy/enemy_bullet.tscn", 8, 1, "player_hit"
 	) and passed
 	passed = _assert_enemy_contract() and passed
 	passed = _assert_enemy_projectile_contract() and passed
 	passed = _assert_enemy_spawner_contract() and passed
-	passed = _assert_scene("res://scenes/systems/enemy_spawner.tscn") and passed
+	passed = _assert_scene("res://features/spawning/enemy_spawner.tscn") and passed
 	passed = _assert_game_over_contract() and passed
 	passed = _assert_main_session_contract() and passed
 	quit(0 if passed else 1)
@@ -231,9 +231,9 @@ func _assert_collision_contract(
 
 
 func _assert_enemy_contract() -> bool:
-	var packed_scene: PackedScene = load("res://scenes/entities/enemy/enemy.tscn") as PackedScene
+	var packed_scene: PackedScene = load("res://features/enemy/enemy.tscn") as PackedScene
 	if packed_scene == null:
-		push_error("Missing scene: res://scenes/entities/enemy/enemy.tscn")
+		push_error("Missing scene: res://features/enemy/enemy.tscn")
 		return false
 	var enemy: Area2D = packed_scene.instantiate() as Area2D
 	if enemy == null:
@@ -260,7 +260,7 @@ func _assert_enemy_contract() -> bool:
 
 
 func _assert_enemy_projectile_contract() -> bool:
-	var enemy_source: String = FileAccess.get_file_as_string("res://scenes/entities/enemy/enemy.gd")
+	var enemy_source: String = FileAccess.get_file_as_string("res://features/enemy/enemy.gd")
 	var passed: bool = true
 	if not enemy_source.contains("get_tree().current_scene.add_child(enemy_bullet)"):
 		push_error("EnemyBullet must be added to the current scene")
@@ -272,9 +272,9 @@ func _assert_enemy_projectile_contract() -> bool:
 
 
 func _assert_enemy_spawner_contract() -> bool:
-	var packed_scene: PackedScene = load("res://scenes/systems/enemy_spawner.tscn") as PackedScene
+	var packed_scene: PackedScene = load("res://features/spawning/enemy_spawner.tscn") as PackedScene
 	if packed_scene == null:
-		push_error("Missing scene: res://scenes/systems/enemy_spawner.tscn")
+		push_error("Missing scene: res://features/spawning/enemy_spawner.tscn")
 		return false
 	var spawner: Node2D = packed_scene.instantiate() as Node2D
 	if spawner == null:
@@ -314,7 +314,7 @@ func _assert_enemy_spawner_contract() -> bool:
 
 
 func _assert_formation_edge_contract() -> bool:
-	var spawner_source: String = FileAccess.get_file_as_string("res://scenes/systems/enemy_spawner.gd")
+	var spawner_source: String = FileAccess.get_file_as_string("res://features/spawning/enemy_spawner.gd")
 	var passed: bool = true
 	if not spawner_source.contains("const ENEMY_HALF_WIDTH: float = 18.0"):
 		push_error("EnemySpawner must define the Enemy half-width as 18 px")

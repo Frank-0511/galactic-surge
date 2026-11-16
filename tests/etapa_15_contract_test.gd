@@ -9,7 +9,7 @@ const BOSS_DEFEAT_CHAPTER_SCORE: int = 3000
 const TOTAL_WAVES: int = 10
 const TOTAL_CHAPTERS: int = 3
 const BONUS_WAVE_NUMBER: int = 8
-const BOSS_SCENE_PATH := "res://scenes/entities/boss/boss.tscn"
+const BOSS_SCENE_PATH := "res://features/boss/boss.tscn"
 # Chapter 3 boss health (T1 scaling: 150 -> 225 -> 300).
 const BLINDADO_MAX_HEALTH: int = 300
 const ARMOR_PHASE_EXTERIOR: int = 1
@@ -89,7 +89,7 @@ func _assert_stacking_shield_contract() -> bool:
 # Waves 11-30 keep getting harder: wave 11 is harder than wave 10 and wave 30 is
 # harder than wave 11 (faster formation, faster fire, never beyond 8 columns).
 func _assert_global_difficulty_contract() -> bool:
-	var spawner: Node2D = (load("res://scenes/systems/enemy_spawner.tscn") as PackedScene).instantiate() as Node2D
+	var spawner: Node2D = (load("res://features/spawning/enemy_spawner.tscn") as PackedScene).instantiate() as Node2D
 	root.add_child(spawner)
 	await process_frame
 	var passed: bool = true

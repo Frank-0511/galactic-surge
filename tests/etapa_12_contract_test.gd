@@ -13,11 +13,11 @@
 
 extends SceneTree
 
-const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
+const ENEMY_PATH := "res://features/enemy/enemy.tscn"
 const MISSILE_PATH := "res://features/bullet/missile.tscn"
-const SPAWNER_PATH := "res://scenes/systems/enemy_spawner.tscn"
-const EnemyAIScript: Script = preload("res://scripts/components/enemy_ai.gd")
-const EnemyVariantsScript: Script = preload("res://scripts/systems/enemy_variants.gd")
+const SPAWNER_PATH := "res://features/spawning/enemy_spawner.tscn"
+const EnemyAIScript: Script = preload("res://features/enemy/enemy_ai.gd")
+const EnemyVariantsScript: Script = preload("res://features/enemy/enemy_variants.gd")
 
 var _transitions: Array = []
 

@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/entities/player/player.tscn" id="2"]
-[ext_resource type="PackedScene" path="res://scenes/systems/enemy_spawner.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://features/spawning/enemy_spawner.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/ui/game_over.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://features/background/starfield.tscn" id="6"]
@@ -14,7 +14,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/wave_announcement.tscn" id="11"]
 [ext_resource type="Script" path="res://scenes/main/camera_shake.gd" id="12_camera_shake"]
 [ext_resource type="Script" path="res://core/session/combo_system.gd" id="13_combo_system"]
-[ext_resource type="PackedScene" path="res://scenes/systems/asteroid_spawner.tscn" id="14_asteroid_spawner"]
+[ext_resource type="PackedScene" path="res://features/spawning/asteroid_spawner.tscn" id="14_asteroid_spawner"]
 
 [node name="Main" type="Node2D"]
 process_mode = 3

@@ -8,10 +8,10 @@
 
 extends Node2D
 
-const WavesModule: Script = preload("res://scenes/systems/enemy_spawner_waves.gd")
-const FormationModule: Script = preload("res://scenes/systems/enemy_spawner_formation.gd")
-const SlotsModule: Script = preload("res://scenes/systems/enemy_spawner_slots.gd")
-const PressureModule: Script = preload("res://scenes/systems/enemy_spawner_pressure.gd")
+const WavesModule: Script = preload("res://features/spawning/enemy_spawner_waves.gd")
+const FormationModule: Script = preload("res://features/spawning/enemy_spawner_formation.gd")
+const SlotsModule: Script = preload("res://features/spawning/enemy_spawner_slots.gd")
+const PressureModule: Script = preload("res://features/spawning/enemy_spawner_pressure.gd")
 const DS := preload("res://core/settings/difficulty_settings.gd")
 
 ## Master switch for the tactical enemy AI (Stage 12, ADR 009). When false, the
@@ -46,7 +46,7 @@ signal enemy_dived(enemy: Area2D)
 signal formation_rejoined(enemy: Area2D)
 
 ## Scene used for every member of the formation.
-@export var enemy_scene: PackedScene = preload("res://scenes/entities/enemy/enemy.tscn")
+@export var enemy_scene: PackedScene = preload("res://features/enemy/enemy.tscn")
 
 ## Number of horizontal formation rows.
 @export var rows: int = 3

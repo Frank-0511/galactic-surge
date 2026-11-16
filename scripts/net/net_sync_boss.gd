@@ -6,7 +6,7 @@
 
 extends RefCounted
 
-const BossScene: PackedScene = preload("res://scenes/entities/boss/boss.tscn")
+const BossScene: PackedScene = preload("res://features/boss/boss.tscn")
 
 var _main: Node2D
 var _replica: Node2D = null

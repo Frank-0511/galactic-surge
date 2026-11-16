@@ -8,11 +8,11 @@
 # the public API (signals, exports, state, delegates) used by main, the HUD and the tests.
 
 extends Area2D
-const MovementModule: GDScript = preload("res://scenes/entities/boss/boss_movement.gd")
-const AttacksModule: GDScript = preload("res://scenes/entities/boss/boss_attacks.gd")
-const DamageModule: GDScript = preload("res://scenes/entities/boss/boss_damage.gd")
-const VisualsModule: GDScript = preload("res://scenes/entities/boss/boss_visuals.gd")
-const VariantVisualsModule: GDScript = preload("res://scenes/entities/boss/boss_visuals_variants.gd")
+const MovementModule: GDScript = preload("res://features/boss/boss_movement.gd")
+const AttacksModule: GDScript = preload("res://features/boss/boss_attacks.gd")
+const DamageModule: GDScript = preload("res://features/boss/boss_damage.gd")
+const VisualsModule: GDScript = preload("res://features/boss/boss_visuals.gd")
+const VariantVisualsModule: GDScript = preload("res://features/boss/boss_visuals_variants.gd")
 
 ## Emitted when current health changes.
 signal health_changed(current: int, max_health: int)
@@ -63,7 +63,7 @@ const SPECTRE_ENRAGED_VOLLEY_INTERVAL: float = 0.95
 @export var max_health: int = 150
 
 ## Projectile scene used for boss attacks.
-@export var boss_bullet_scene: PackedScene = preload("res://scenes/entities/boss/boss_bullet.tscn")
+@export var boss_bullet_scene: PackedScene = preload("res://features/boss/boss_bullet.tscn")
 
 ## Base hover elevation in cruise mode.
 @export var base_y: float = 140.0

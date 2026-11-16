@@ -8,13 +8,13 @@
 # 6. Main integration: warp boost triggered on wave clear.
 extends SceneTree
 
-const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
-const SPAWNER_PATH := "res://scenes/systems/enemy_spawner.tscn"
+const ENEMY_PATH := "res://features/enemy/enemy.tscn"
+const SPAWNER_PATH := "res://features/spawning/enemy_spawner.tscn"
 const STARFIELD_PATH := "res://features/background/starfield.tscn"
 const MAIN_PATH := "res://scenes/main/main.tscn"
 
 const VectorMath: Script = preload("res://core/math/vector_math.gd")
-const FormationPatterns: Script = preload("res://scripts/systems/formation_patterns.gd")
+const FormationPatterns: Script = preload("res://features/enemy/formation_patterns.gd")
 
 
 func _init() -> void:

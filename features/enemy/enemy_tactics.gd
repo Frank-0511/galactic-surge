@@ -6,8 +6,8 @@
 extends RefCounted
 
 const PlayerShip: Script = preload("res://scenes/entities/player/player.gd")
-const EnemyAI: Script = preload("res://scripts/components/enemy_ai.gd")
-const EnemyVariants: Script = preload("res://scripts/systems/enemy_variants.gd")
+const EnemyAI: Script = preload("res://features/enemy/enemy_ai.gd")
+const EnemyVariants: Script = preload("res://features/enemy/enemy_variants.gd")
 
 var _enemy: Area2D
 

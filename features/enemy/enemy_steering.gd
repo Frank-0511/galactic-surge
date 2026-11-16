@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const EnemyAI: Script = preload("res://scripts/components/enemy_ai.gd")
+const EnemyAI: Script = preload("res://features/enemy/enemy_ai.gd")
 
 var _enemy: Area2D
 

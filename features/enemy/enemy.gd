@@ -6,13 +6,13 @@
 
 extends Area2D
 
-const MotionModule: GDScript = preload("res://scenes/entities/enemy/enemy_motion.gd")
-const WeaponsModule: GDScript = preload("res://scenes/entities/enemy/enemy_weapons.gd")
-const DamageModule: GDScript = preload("res://scenes/entities/enemy/enemy_damage.gd")
-const TacticsModule: GDScript = preload("res://scenes/entities/enemy/enemy_tactics.gd")
-const SteeringModule: GDScript = preload("res://scenes/entities/enemy/enemy_steering.gd")
-const BallisticsModule: GDScript = preload("res://scenes/entities/enemy/enemy_ballistics.gd")
-const VisualsModule: GDScript = preload("res://scenes/entities/enemy/enemy_visuals.gd")
+const MotionModule: GDScript = preload("res://features/enemy/enemy_motion.gd")
+const WeaponsModule: GDScript = preload("res://features/enemy/enemy_weapons.gd")
+const DamageModule: GDScript = preload("res://features/enemy/enemy_damage.gd")
+const TacticsModule: GDScript = preload("res://features/enemy/enemy_tactics.gd")
+const SteeringModule: GDScript = preload("res://features/enemy/enemy_steering.gd")
+const BallisticsModule: GDScript = preload("res://features/enemy/enemy_ballistics.gd")
+const VisualsModule: GDScript = preload("res://features/enemy/enemy_visuals.gd")
 
 ## Maximum displacement (px) applied on top of the formation slot by AI steering.
 const MAX_AI_OFFSET_X: float = 48.0

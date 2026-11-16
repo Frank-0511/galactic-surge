@@ -474,7 +474,7 @@ func _check_boss_bar_center_free() -> void:
 # 23. Kills: el score de un enemigo destruido va a la nave que lo atacó (feature L13)
 # ---------------------------------------------------------------------------
 func _check_kill_attribution() -> void:
-	var enemy_packed: PackedScene = load("res://scenes/entities/enemy/enemy.tscn") as PackedScene
+	var enemy_packed: PackedScene = load("res://features/enemy/enemy.tscn") as PackedScene
 	var enemy: Node = enemy_packed.instantiate()
 	_expect("last_attacker" in enemy, "Contrato 23a: el enemigo registra su último atacante (last_attacker)")
 	if not ("last_attacker" in enemy):
@@ -501,7 +501,7 @@ func _check_kill_attribution() -> void:
 func _check_bullet_propagates_shooter() -> void:
 	var bullet_packed: PackedScene = load("res://features/bullet/spread_bullet.tscn") as PackedScene
 	var bullet: Node = bullet_packed.instantiate()
-	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
+	var enemy: Node = (load("res://features/enemy/enemy.tscn") as PackedScene).instantiate()
 	var shooter: Node2D = Node2D.new()
 	get_root().add_child(enemy)
 	get_root().add_child(shooter)
@@ -526,7 +526,7 @@ func _check_bullet_propagates_shooter() -> void:
 func _check_missile_propagates_shooter() -> void:
 	var missile_packed: PackedScene = load("res://features/bullet/missile.tscn") as PackedScene
 	var missile: Node = missile_packed.instantiate()
-	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
+	var enemy: Node = (load("res://features/enemy/enemy.tscn") as PackedScene).instantiate()
 	var shooter: Node2D = Node2D.new()
 	get_root().add_child(enemy)
 	get_root().add_child(shooter)
@@ -559,7 +559,7 @@ func _check_laser_declares_shooter() -> void:
 # ---------------------------------------------------------------------------
 func _check_legacy_bullet_kill_attribution() -> void:
 	var bullet: Area2D = (load("res://features/bullet/bullet.tscn") as PackedScene).instantiate() as Area2D
-	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
+	var enemy: Node = (load("res://features/enemy/enemy.tscn") as PackedScene).instantiate()
 	var shooter: Node2D = Node2D.new()
 	get_root().add_child(enemy)
 	get_root().add_child(shooter)

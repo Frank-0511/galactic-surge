@@ -10,8 +10,8 @@
 
 extends SceneTree
 
-const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
-const SPAWNER_PATH := "res://scenes/systems/enemy_spawner.tscn"
+const ENEMY_PATH := "res://features/enemy/enemy.tscn"
+const SPAWNER_PATH := "res://features/spawning/enemy_spawner.tscn"
 const MAIN_PATH := "res://scenes/main/main.tscn"
 
 

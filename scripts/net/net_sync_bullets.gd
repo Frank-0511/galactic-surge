@@ -7,9 +7,9 @@
 
 extends RefCounted
 
-const ENEMY_BULLET_PATH: String = "res://scenes/entities/enemy/enemy_bullet.tscn"
-const BOSS_BULLET_PATH: String = "res://scenes/entities/boss/boss_bullet.tscn"
-const ENEMY_REPLICA: GDScript = preload("res://scenes/entities/enemy/enemy_bullet_replica.gd")
+const ENEMY_BULLET_PATH: String = "res://features/enemy/enemy_bullet.tscn"
+const BOSS_BULLET_PATH: String = "res://features/boss/boss_bullet.tscn"
+const ENEMY_REPLICA: GDScript = preload("res://features/enemy/enemy_bullet_replica.gd")
 const GROUP: StringName = &"enemy_bullets"
 const KIND_ENEMY: int = 0
 const KIND_BOSS: int = 1

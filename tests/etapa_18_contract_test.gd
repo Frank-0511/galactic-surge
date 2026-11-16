@@ -25,7 +25,7 @@ extends SceneTree
 const DS := preload("res://core/settings/difficulty_settings.gd")
 const SESSION_STATS := preload("res://core/session/session_stats.gd")
 const GAME_OVER_SCENE := preload("res://scenes/ui/game_over.tscn")
-const SPAWNER_SCENE := preload("res://scenes/systems/enemy_spawner.tscn")
+const SPAWNER_SCENE := preload("res://features/spawning/enemy_spawner.tscn")
 const PLAYER_SCENE := preload("res://scenes/entities/player/player.tscn")
 const MENU_SCENE := preload("res://scenes/ui/main_menu.tscn")
 const HULL_FRAGMENT_SCRIPT := preload("res://features/effects/hull_fragment.gd")

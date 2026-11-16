@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scenes/entities/boss/boss.gd" id="1"]
+[ext_resource type="Script" path="res://features/boss/boss.gd" id="1"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_boss"]
 size = Vector2(136, 64)

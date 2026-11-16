@@ -11,8 +11,8 @@
 
 extends SceneTree
 
-const BULLET_PATH := "res://scenes/entities/enemy/enemy_bullet.tscn"
-const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
+const BULLET_PATH := "res://features/enemy/enemy_bullet.tscn"
+const ENEMY_PATH := "res://features/enemy/enemy.tscn"
 const VectorMathScript: Script = preload("res://core/math/vector_math.gd")
 
 

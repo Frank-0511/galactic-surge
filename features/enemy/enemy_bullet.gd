@@ -18,9 +18,9 @@ enum PlasmaVariant {
 	CLUSTER_SUBMUNITION,
 }
 
-const BULLET_SCENE_PATH: String = "res://scenes/entities/enemy/enemy_bullet.tscn"
+const BULLET_SCENE_PATH: String = "res://features/enemy/enemy_bullet.tscn"
 const MAX_TRAIL_POINTS: int = 12
-const ReplicaModule: GDScript = preload("res://scenes/entities/enemy/enemy_bullet_replica.gd")
+const ReplicaModule: GDScript = preload("res://features/enemy/enemy_bullet_replica.gd")
 
 ## Active plasma variant.
 @export var plasma_variant: PlasmaVariant = PlasmaVariant.DIRECT

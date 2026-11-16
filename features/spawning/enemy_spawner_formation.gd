@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const FormationPatterns: Script = preload("res://scripts/systems/formation_patterns.gd")
+const FormationPatterns: Script = preload("res://features/enemy/formation_patterns.gd")
 
 var _spawner: Node2D
 ## Next network id handed to a spawned enemy (Etapa 20 T3). Boss ids are negative, so they never collide.

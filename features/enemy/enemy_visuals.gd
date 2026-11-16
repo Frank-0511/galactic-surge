@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const EnemyVariants: Script = preload("res://scripts/systems/enemy_variants.gd")
+const EnemyVariants: Script = preload("res://features/enemy/enemy_variants.gd")
 
 var _enemy: Area2D
 
