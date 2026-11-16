@@ -20,6 +20,7 @@ enum PlasmaVariant {
 
 const BULLET_SCENE_PATH: String = "res://scenes/entities/enemy/enemy_bullet.tscn"
 const MAX_TRAIL_POINTS: int = 12
+const ReplicaModule: GDScript = preload("res://scenes/entities/enemy/enemy_bullet_replica.gd")
 
 ## Active plasma variant.
 @export var plasma_variant: PlasmaVariant = PlasmaVariant.DIRECT
@@ -63,6 +64,14 @@ var _elapsed_flight_time: float = 0.0
 var _trail_points: Array[Vector2] = []
 var _trail_record_interval: float = 0.02
 var _trail_timer: float = 0.0
+## Host-given network id (Etapa 20 T5); 0 when not networked.
+var net_id: int = 0
+## Client replica (T5): visual only, no collision, damage or detonation; the host's removal event ends it.
+var replica: bool = false:
+	set(value):
+		replica = value
+		monitoring = not value
+		monitorable = not value
 
 
 func _ready() -> void:
@@ -95,6 +104,9 @@ func get_effective_gravity() -> float:
 
 
 func _process(delta: float) -> void:
+	if replica:
+		ReplicaModule.step(self, delta)
+		return
 	if _is_detonating:
 		_detonation_timer += delta
 		queue_redraw()
@@ -118,14 +130,7 @@ func _process(delta: float) -> void:
 		velocity.y += get_effective_gravity() * delta
 		position += velocity * delta
 
-	# Trail point tracking
-	_trail_timer += delta
-	if _trail_timer >= _trail_record_interval:
-		_trail_timer = 0.0
-		if _trail_points.is_empty() or _trail_points[-1].distance_squared_to(global_position) > 1.0:
-			_trail_points.append(global_position)
-			if _trail_points.size() > MAX_TRAIL_POINTS:
-				_trail_points.pop_front()
+	update_trail(delta)
 
 	# Cluster fuse timer
 	if plasma_variant == PlasmaVariant.CLUSTER:
@@ -151,6 +156,17 @@ func _process(delta: float) -> void:
 		return
 
 	queue_redraw()
+
+
+## Records a trail point every interval (also driven by the client replica).
+func update_trail(delta: float) -> void:
+	_trail_timer += delta
+	if _trail_timer >= _trail_record_interval:
+		_trail_timer = 0.0
+		if _trail_points.is_empty() or _trail_points[-1].distance_squared_to(global_position) > 1.0:
+			_trail_points.append(global_position)
+			if _trail_points.size() > MAX_TRAIL_POINTS:
+				_trail_points.pop_front()
 
 
 func _split_cluster() -> void:
@@ -199,7 +215,7 @@ func _detonate(is_ground: bool = false) -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if _has_hit or _is_detonating or not body.is_in_group("player"):
+	if replica or _has_hit or _is_detonating or not body.is_in_group("player"):
 		return
 	_has_hit = true
 	player_hit.emit(body)

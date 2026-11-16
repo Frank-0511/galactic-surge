@@ -15,6 +15,15 @@ signal player_hit(player: Node2D)
 
 var _has_hit: bool = false
 
+## Host-given network id (Etapa 20 T5); 0 when not networked.
+var net_id: int = 0
+## Client replica (T5): visual only, no collision or damage; the host's removal event ends it.
+var replica: bool = false:
+	set(value):
+		replica = value
+		monitoring = not value
+		monitorable = not value
+
 
 func _process(delta: float) -> void:
 	global_position += direction.normalized() * speed * delta
@@ -27,7 +36,7 @@ func _process(delta: float) -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if _has_hit or not body.is_in_group(&"player"):
+	if replica or _has_hit or not body.is_in_group(&"player"):
 		return
 	_has_hit = true
 	player_hit.emit(body)

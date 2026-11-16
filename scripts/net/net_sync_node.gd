@@ -15,6 +15,7 @@ const NetSyncEnemies: GDScript = preload("res://scripts/net/net_sync_enemies.gd"
 const NetSyncLoot: GDScript = preload("res://scripts/net/net_sync_loot.gd")
 const NetSyncAsteroids: GDScript = preload("res://scripts/net/net_sync_asteroids.gd")
 const NetSyncScore: GDScript = preload("res://scripts/net/net_sync_score.gd")
+const NetSyncBullets: GDScript = preload("res://scripts/net/net_sync_bullets.gd")
 ## Seconds between state packets (host) or input packets (client): 20 per second.
 const SEND_INTERVAL: float = 0.05
 
@@ -25,6 +26,7 @@ var _accumulator: float = 0.0
 var _enemies: RefCounted = null
 var _loot: RefCounted = null
 var _asteroids: RefCounted = null
+var _bullets: RefCounted = null
 ## Reliable events the host sends on the next physics frame: [rpc method, payload] pairs.
 var _outbox: Array = []
 
@@ -37,6 +39,7 @@ func setup(main: Node2D, is_host: bool) -> void:
 	_enemies = NetSyncEnemies.new(main)
 	_loot = NetSyncLoot.new(main, self)
 	_asteroids = NetSyncAsteroids.new(main, self)
+	_bullets = NetSyncBullets.new(main, self)
 	_main._enemy_spawner.set("replica", not is_host)
 	if _is_host:
 		_main._player_two.set("remote_driven", true)
@@ -54,6 +57,8 @@ func _physics_process(delta: float) -> void:
 		_flush_outbox()
 	if not _main._session_active or not _has_remote_peer():
 		return
+	if _is_host:
+		_bullets.scan_host()
 	_accumulator += delta
 	if _accumulator < SEND_INTERVAL:
 		return
@@ -102,6 +107,22 @@ func rpc_host_shot(event: Dictionary) -> void:
 	if _is_host or _main == null:
 		return
 	NetSyncShots.replay(_main, event)
+
+
+## Host -> client: an enemy or boss bullet was spawned (id, kind, variant, origin, velocity, gravity). Reliable.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_bullet_spawned(event: Dictionary) -> void:
+	if _is_host or _bullets == null:
+		return
+	_bullets.apply_spawn(event)
+
+
+## Host -> client: the ids of enemy or boss bullets that died (hit, left, cleared or detonated). Reliable.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_bullets_removed(ids: Array) -> void:
+	if _is_host or _bullets == null:
+		return
+	_bullets.remove_ids(ids)
 
 
 ## Host -> client: a loot drop appeared (id, type, position). Reliable: its pickup event must find the replica.
@@ -189,12 +210,20 @@ func announce_session_end(kind: String) -> void:
 		queue_reliable("rpc_host_session_end", NetSyncScore.session_end_event(_main, kind))
 
 
-## Frees the client replicas of loot and asteroids (session end, new session or leaving the match).
+## Host side: scans the enemy and boss bullets now (the physics path does this each frame with a client connected).
+func announce_bullets() -> void:
+	if _is_host and _bullets != null:
+		_bullets.scan_host()
+
+
+## Frees the client replicas of loot, asteroids and bullets (session end, new session or leaving the match).
 func clear_replicas() -> void:
 	if _loot != null:
 		_loot.clear()
 	if _asteroids != null:
 		_asteroids.clear()
+	if _bullets != null:
+		_bullets.clear()
 
 
 ## The client's own move direction, read from the J2 actions (arrows or left stick).
