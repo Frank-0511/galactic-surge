@@ -34,6 +34,10 @@ func _run_contracts() -> void:
 		_expect(has_fire_api, "Contrato T21.11-0: el modulo expone set_fire_button_center")
 		if has_fire_api:
 			_check_fire_button_presses_shoot(controls)
+		var has_pause_api: bool = controls.has_method("set_pause_button_center")
+		_expect(has_pause_api, "Contrato T21.12-0: el modulo expone set_pause_button_center")
+		if has_pause_api:
+			await _check_pause_button_emits_pause(controls)
 		controls.free()
 
 	if _failures == 0:
@@ -167,6 +171,34 @@ func _check_fire_button_presses_shoot(controls: Node) -> void:
 	controls.call("handle_input_event", release)
 	_expect(not Input.is_action_pressed("shoot"), "Contrato T21.11c: levantar el dedo del disparo libera shoot")
 	Input.action_release("shoot")
+
+
+# T21.12 (S3): un toque en el boton de pausa emite una vez el evento de accion pause (no un estado).
+# Un toque fuera de esa zona no emite pause.
+func _check_pause_button_emits_pause(controls: Node) -> void:
+	controls.call("set_pause_button_center", Vector2(900.0, 80.0))
+	var source := GDScript.new()
+	source.source_code = "extends Node\nvar pauses: int = 0\nfunc _unhandled_input(event: InputEvent) -> void:\n\tif event.is_action_pressed(&\"pause\"):\n\t\tpauses += 1\n"
+	source.reload()
+	var probe: Node = Node.new()
+	probe.set_script(source)
+	get_root().add_child(probe)
+	var outside := InputEventScreenTouch.new()
+	outside.index = 4
+	outside.pressed = true
+	outside.position = Vector2(200.0, 700.0)
+	controls.call("handle_input_event", outside)
+	await process_frame
+	_expect(probe.get("pauses") == 0, "Contrato T21.12a: un toque fuera del boton de pausa no emite pause")
+	var press := InputEventScreenTouch.new()
+	press.index = 5
+	press.pressed = true
+	press.position = Vector2(900.0, 80.0)
+	controls.call("handle_input_event", press)
+	await process_frame
+	_expect(probe.get("pauses") == 1, "Contrato T21.12b: un toque en el boton de pausa emite pause una vez")
+	get_root().remove_child(probe)
+	probe.free()
 
 
 func _release_move_actions() -> void:

@@ -3,17 +3,20 @@ extends CanvasLayer
 # The joystick only presses move_left / move_right; the fire button only presses shoot.
 # One finger owns the joystick and one owns the fire button at a time (the first touch that claims each, until released).
 # A pressed touch inside the fire zone claims the fire button and never the joystick.
+# A tap on the pause button emits one pause action event (not a held state, like the keyboard).
 # Drawn on a child Control; visible only after the first touch input (S6).
 
 const DEADZONE: float = 0.2
 const RADIUS: float = 80.0
 const FIRE_RADIUS: float = 60.0
+const PAUSE_RADIUS: float = 40.0
 const NO_TOUCH: int = -1
 const BASE_COLOR: Color = Color(1.0, 1.0, 1.0, 0.18)
 const KNOB_COLOR: Color = Color(1.0, 1.0, 1.0, 0.45)
 
 var _joystick_center: Vector2 = Vector2.ZERO
 var _fire_center: Vector2 = Vector2.ZERO
+var _pause_center: Vector2 = Vector2.ZERO
 var _touch_index: int = NO_TOUCH
 var _fire_index: int = NO_TOUCH
 var _touch_seen: bool = false
@@ -30,6 +33,7 @@ func _ready() -> void:
 	var size: Vector2 = get_viewport().get_visible_rect().size
 	set_joystick_center(Vector2(size.x * 0.2, size.y * 0.8))
 	set_fire_button_center(Vector2(size.x * 0.8, size.y * 0.8))
+	set_pause_button_center(Vector2(size.x * 0.9, size.y * 0.08))
 
 
 # Raw touch events reach the controls here: a CanvasLayer does not receive them through its children.
@@ -52,6 +56,11 @@ func set_fire_button_center(center: Vector2) -> void:
 	_request_redraw()
 
 
+func set_pause_button_center(center: Vector2) -> void:
+	_pause_center = center
+	_request_redraw()
+
+
 # Routes a screen touch or drag event to the controls. Other events are ignored.
 func handle_input_event(event: InputEvent) -> void:
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
@@ -65,6 +74,9 @@ func handle_input_event(event: InputEvent) -> void:
 
 func _handle_touch(touch: InputEventScreenTouch) -> void:
 	if touch.pressed:
+		if touch.position.distance_to(_pause_center) <= PAUSE_RADIUS:
+			_emit_pause()
+			return
 		# Fire zone is checked first so its touches are never claimed by the joystick.
 		if _is_in_fire_zone(touch.position):
 			if _fire_index == NO_TOUCH:
@@ -95,6 +107,13 @@ func _is_in_fire_zone(position: Vector2) -> bool:
 	return position.distance_to(_fire_center) <= FIRE_RADIUS
 
 
+func _emit_pause() -> void:
+	var event := InputEventAction.new()
+	event.action = &"pause"
+	event.pressed = true
+	Input.parse_input_event(event)
+
+
 # axis in [-1, 1]: negative = left, positive = right, inside the deadzone = released.
 func apply_joystick_axis(axis: float) -> void:
 	var clamped: float = clampf(axis, -1.0, 1.0)
@@ -122,3 +141,4 @@ func _draw_pad() -> void:
 	_pad.draw_circle(_joystick_center, RADIUS, BASE_COLOR)
 	_pad.draw_circle(_joystick_center + Vector2(_axis * RADIUS, 0.0), RADIUS * 0.4, KNOB_COLOR)
 	_pad.draw_circle(_fire_center, FIRE_RADIUS, BASE_COLOR)
+	_pad.draw_circle(_pause_center, PAUSE_RADIUS, BASE_COLOR)
