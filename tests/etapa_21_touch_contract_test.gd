@@ -30,6 +30,10 @@ func _run_contracts() -> void:
 		_check_visible_after_touch(touch_script)
 		_check_scene_root_has_script()
 		_check_touch_reaches_joystick_in_tree()
+		var has_fire_api: bool = controls.has_method("set_fire_button_center")
+		_expect(has_fire_api, "Contrato T21.11-0: el modulo expone set_fire_button_center")
+		if has_fire_api:
+			_check_fire_button_presses_shoot(controls)
 		controls.free()
 
 	if _failures == 0:
@@ -137,6 +141,32 @@ func _check_touch_reaches_joystick_in_tree() -> void:
 	get_root().remove_child(controls)
 	controls.free()
 	_release_move_actions()
+
+
+# T21.11 (S3): un toque en la zona del boton de disparo presiona shoot; levantarlo lo libera.
+# Un toque fuera de esa zona no dispara.
+func _check_fire_button_presses_shoot(controls: Node) -> void:
+	Input.action_release("shoot")
+	controls.call("set_fire_button_center", Vector2(900.0, 700.0))
+	var outside := InputEventScreenTouch.new()
+	outside.index = 1
+	outside.pressed = true
+	outside.position = Vector2(200.0, 700.0)
+	controls.call("handle_input_event", outside)
+	_expect(not Input.is_action_pressed("shoot"), "Contrato T21.11a: un toque fuera de la zona de disparo no dispara")
+	var press := InputEventScreenTouch.new()
+	press.index = 2
+	press.pressed = true
+	press.position = Vector2(900.0, 700.0)
+	controls.call("handle_input_event", press)
+	_expect(Input.is_action_pressed("shoot"), "Contrato T21.11b: un toque en la zona de disparo presiona shoot")
+	var release := InputEventScreenTouch.new()
+	release.index = 2
+	release.pressed = false
+	release.position = Vector2(900.0, 700.0)
+	controls.call("handle_input_event", release)
+	_expect(not Input.is_action_pressed("shoot"), "Contrato T21.11c: levantar el dedo del disparo libera shoot")
+	Input.action_release("shoot")
 
 
 func _release_move_actions() -> void:
