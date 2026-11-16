@@ -4,6 +4,7 @@ extends SceneTree
 # Calls go through dynamic dispatch so a missing module reports a failed contract, not a parse error.
 
 const TOUCH_SCRIPT_PATH := "res://scenes/ui/touch_controls.gd"
+const TOUCH_SCENE_PATH := "res://scenes/ui/touch_controls.tscn"
 
 var _failures: int = 0
 
@@ -27,6 +28,7 @@ func _run_contracts() -> void:
 			_check_touch_release_clears_move(controls)
 		_check_hidden_without_touch(touch_script)
 		_check_visible_after_touch(touch_script)
+		_check_scene_root_has_script()
 		controls.free()
 
 	if _failures == 0:
@@ -101,6 +103,17 @@ func _check_visible_after_touch(touch_script: Script) -> void:
 	controls.call("handle_input_event", press)
 	_expect(controls.has_method("is_visible_for_touch") and controls.call("is_visible_for_touch"), "Contrato T21.8: tras un toque los controles son visibles")
 	controls.free()
+
+
+# T21.9 (S2): la escena de controles existe y su raiz usa el script de controles.
+func _check_scene_root_has_script() -> void:
+	var scene: PackedScene = load(TOUCH_SCENE_PATH) as PackedScene
+	_expect(scene != null, "Contrato T21.9a: existe la escena de controles tactiles %s" % TOUCH_SCENE_PATH)
+	if scene == null:
+		return
+	var root: Node = scene.instantiate()
+	_expect(root.get_script() != null and root.get_script().resource_path == TOUCH_SCRIPT_PATH, "Contrato T21.9b: la raiz de la escena usa touch_controls.gd")
+	root.free()
 
 
 func _release_move_actions() -> void:
