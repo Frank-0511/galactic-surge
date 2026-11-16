@@ -4,7 +4,7 @@ extends SceneTree
 # reliable events are read from the sync node's outbox (the payloads it would send). Asteroids, score, lives and the
 # end of the match are checked in etapa_20_sync_session_contract_test.gd.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT_I: int = 7802
 const HOST_PORT_K: int = 7804

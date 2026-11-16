@@ -5,8 +5,8 @@ extends SceneTree
 
 const NET_SCRIPT_PATH := "res://features/net/lobby_net.gd"
 const MAIN_MENU_SCENE_PATH := "res://features/ui/main_menu.tscn"
-const MAIN_SCRIPT_PATH := "res://scenes/main/main.gd"
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCRIPT_PATH := "res://features/main/main.gd"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const TEST_PORT: int = 7788
 const BLOCKED_PORT: int = 7790
 const IDLE_PORT: int = 7791

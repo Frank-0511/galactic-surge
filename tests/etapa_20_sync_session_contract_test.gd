@@ -4,7 +4,7 @@ extends SceneTree
 # RPC handlers are called directly with an arity check, and the host's reliable events are read from the sync node's
 # outbox (the payloads it would send). Drops are checked in etapa_20_sync_loot_contract_test.gd.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const NET_SYNC_PATH := "res://features/net/net_sync_node.gd"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT_I: int = 7802

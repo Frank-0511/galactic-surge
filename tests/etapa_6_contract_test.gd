@@ -4,7 +4,7 @@
 extends SceneTree
 
 const LOOT_SCENE_PATH := "res://features/loot/loot_drop.tscn"
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const ENEMY_BULLET_SCENE_PATH := "res://features/enemy/enemy_bullet.tscn"
 const BOSS_BULLET_SCENE_PATH := "res://features/boss/boss_bullet.tscn"
 const PLAYER_BULLET_SCENE_PATH := "res://features/bullet/bullet.tscn"

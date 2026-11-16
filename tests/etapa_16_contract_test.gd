@@ -11,7 +11,7 @@
 extends SceneTree
 
 const ASTEROID_SPAWNER_PATH := "res://features/spawning/asteroid_spawner.tscn"
-const CAMERA_SHAKE_PATH := "res://scenes/main/camera_shake.gd"
+const CAMERA_SHAKE_PATH := "res://features/main/camera_shake.gd"
 const CAMERA_HOME := Vector2(540.0, 480.0)
 const CAMERA_MAX_OFFSET := 120.0
 const POSITION_TOLERANCE := 0.01

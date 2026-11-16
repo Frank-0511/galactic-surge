@@ -94,7 +94,7 @@ func _check_hull_colors_per_player() -> void:
 # 4. Vidas por nave (Etapa 20, decisión: "Vidas por nave")
 # ---------------------------------------------------------------------------
 func _check_second_ship_lives() -> void:
-	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var packed: PackedScene = load("res://features/main/main.tscn") as PackedScene
 	var main: Node = packed.instantiate()
 	get_root().add_child(main)
 	main.set("_session_active", true)
@@ -229,7 +229,7 @@ func _check_loot_nearest_ship() -> void:
 # ---------------------------------------------------------------------------
 func _check_loot_collector_routing() -> void:
 	var loot_script: Script = load("res://features/loot/loot_drop.gd")
-	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var packed: PackedScene = load("res://features/main/main.tscn") as PackedScene
 	var main: Node = packed.instantiate()
 	get_root().add_child(main)
 	main.set("_session_active", true)
@@ -259,7 +259,7 @@ func _check_j1_ignores_arrows_in_coop() -> void:
 # 12. Sobrecarga de J2: HUD propio, mismo enfriamiento que J1, reset al cerrar la sesión
 # ---------------------------------------------------------------------------
 func _check_p2_overheat_wiring() -> void:
-	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var packed: PackedScene = load("res://features/main/main.tscn") as PackedScene
 	var main: Node = packed.instantiate()
 	get_root().add_child(main)
 	main.set("_session_active", true)
@@ -318,7 +318,7 @@ func _check_hud_two_player_layout() -> void:
 # 14. Score por jugador (Etapa 20, decisión: "Score por jugador")
 # ---------------------------------------------------------------------------
 func _check_score_per_player() -> void:
-	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var packed: PackedScene = load("res://features/main/main.tscn") as PackedScene
 	var main: Node = packed.instantiate()
 	get_root().add_child(main)
 	main.set("_session_active", true)
@@ -480,7 +480,7 @@ func _check_kill_attribution() -> void:
 	if not ("last_attacker" in enemy):
 		enemy.free()
 		return
-	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var packed: PackedScene = load("res://features/main/main.tscn") as PackedScene
 	var main: Node = packed.instantiate()
 	get_root().add_child(main)
 	main.set("_session_active", true)
@@ -637,7 +637,7 @@ func _check_targets_skip_dead_ship() -> void:
 # Contract 38: a new session or the main menu restarts the spawner's difficulty level.
 # Without it, the first wave of a new session keeps the difficulty of the previous chapter.
 func _check_session_reset_difficulty() -> void:
-	var src: String = FileAccess.get_file_as_string("res://scenes/main/main.gd")
+	var src: String = FileAccess.get_file_as_string("res://features/main/main.gd")
 	for fn: String in ["reset_session", "_enter_main_menu"]:
 		var start: int = src.find("func %s(" % fn)
 		var finish: int = src.find("\nfunc ", start + 1)
@@ -738,7 +738,7 @@ func _check_weapon_icon_size() -> void:
 # 35. Camara del cinturon: sigue a la nave viva; si ambas viven, a la que se mueve de costado
 # ---------------------------------------------------------------------------
 func _check_camera_follow_pick() -> void:
-	var cam_script: Script = load("res://scenes/main/camera_shake.gd")
+	var cam_script: Script = load("res://features/main/camera_shake.gd")
 	_expect(cam_script.has_method("pick_follow_target"), "Contrato 35a: la camara expone pick_follow_target()")
 	if not cam_script.has_method("pick_follow_target"):
 		return

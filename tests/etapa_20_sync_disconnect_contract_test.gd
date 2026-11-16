@@ -5,7 +5,7 @@ extends SceneTree
 # the notice, frees the NetSync node, the peer and every replica, and raises no errors. Two peers are simulated
 # in one process; RPC handlers are called with an arity check, never a silent pass.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const NET_SYNC_PATH := "res://features/net/net_sync_node.gd"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT: int = 7804

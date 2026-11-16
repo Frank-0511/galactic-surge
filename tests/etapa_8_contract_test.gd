@@ -11,7 +11,7 @@ extends SceneTree
 const ENEMY_PATH := "res://features/enemy/enemy.tscn"
 const SPAWNER_PATH := "res://features/spawning/enemy_spawner.tscn"
 const STARFIELD_PATH := "res://features/background/starfield.tscn"
-const MAIN_PATH := "res://scenes/main/main.tscn"
+const MAIN_PATH := "res://features/main/main.tscn"
 
 const VectorMath: Script = preload("res://core/math/vector_math.gd")
 const FormationPatterns: Script = preload("res://features/enemy/formation_patterns.gd")

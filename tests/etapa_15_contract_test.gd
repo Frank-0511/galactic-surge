@@ -4,7 +4,7 @@
 # wave continues at 11 and 21; defeating the boss of chapter 3 completes the mission.
 extends SceneTree
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const BOSS_DEFEAT_CHAPTER_SCORE: int = 3000
 const TOTAL_WAVES: int = 10
 const TOTAL_CHAPTERS: int = 3

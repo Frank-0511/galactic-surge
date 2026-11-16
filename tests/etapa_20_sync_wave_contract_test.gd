@@ -4,7 +4,7 @@ extends SceneTree
 # Two peers are simulated in one process: the host's reliable event is read from the sync node's outbox, and the
 # client's RPC handler is called directly with an arity check.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const NET_SYNC_PATH := "res://features/net/net_sync_node.gd"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT_K: int = 7830

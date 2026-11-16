@@ -1,6 +1,6 @@
 [gd_scene load_steps=16 format=3]
 
-[ext_resource type="Script" path="res://scenes/main/main.gd" id="1"]
+[ext_resource type="Script" path="res://features/main/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://features/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://features/spawning/enemy_spawner.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://features/ui/game_over.tscn" id="4"]
@@ -12,7 +12,7 @@
 [ext_resource type="PackedScene" path="res://features/audio/audio_feedback.tscn" id="10"]
 [ext_resource type="PackedScene" path="res://features/ui/touch_controls.tscn" id="15_touch"]
 [ext_resource type="PackedScene" path="res://features/ui/wave_announcement.tscn" id="11"]
-[ext_resource type="Script" path="res://scenes/main/camera_shake.gd" id="12_camera_shake"]
+[ext_resource type="Script" path="res://features/main/camera_shake.gd" id="12_camera_shake"]
 [ext_resource type="Script" path="res://core/session/combo_system.gd" id="13_combo_system"]
 [ext_resource type="PackedScene" path="res://features/spawning/asteroid_spawner.tscn" id="14_asteroid_spawner"]
 

@@ -1,7 +1,7 @@
 # Contract harness for the Etapa 4A UI, visual feedback, and session navigation.
 extends SceneTree
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const MAIN_MENU_SCENE_PATH := "res://features/ui/main_menu.tscn"
 const PAUSE_MENU_SCENE_PATH := "res://features/ui/pause_menu.tscn"
 const STARFIELD_SCENE_PATH := "res://features/background/starfield.tscn"

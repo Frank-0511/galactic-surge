@@ -3,7 +3,7 @@
 # and Main orchestration of the Boss encounter upon clearing wave 5.
 extends SceneTree
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const AUDIO_FEEDBACK_SCENE_PATH := "res://features/audio/audio_feedback.tscn"
 const HUD_SCENE_PATH := "res://features/ui/hud.tscn"
 const BOSS_SCENE_PATH := "res://features/boss/boss.tscn"

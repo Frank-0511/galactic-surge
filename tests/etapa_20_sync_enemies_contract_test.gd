@@ -3,7 +3,7 @@ extends SceneTree
 # Two peers are simulated in one process: RPC handlers are called directly, and RPC wiring is
 # checked through the node's RPC configuration.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT_D: int = 7797
 const HOST_PORT_E: int = 7798

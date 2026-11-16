@@ -3,7 +3,7 @@ extends SceneTree
 # Two peers are simulated in one process: the host scans its bullets, the RPC handlers are called
 # directly on the client, and RPC wiring is checked through the node's RPC configuration.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const BOSS_BULLET_SCENE_PATH := "res://features/boss/boss_bullet.tscn"
 const ENEMY_BULLET_SCENE_PATH := "res://features/enemy/enemy_bullet.tscn"
 const SYNC_NODE_NAME := "NetSync"

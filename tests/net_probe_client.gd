@@ -5,7 +5,7 @@ extends SceneTree
 # returns this client to the menu. Holds the J2 left key so the host has input to apply.
 # Prints one "PROBE client ok|fail: <name>" line per check; exits 0 when all pass, 1 otherwise.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const PLAYER_INPUT: GDScript = preload("res://features/player/player_input.gd")
 const PORT_TEXT := "7791"
 const HOST_ADDRESS := "127.0.0.1"

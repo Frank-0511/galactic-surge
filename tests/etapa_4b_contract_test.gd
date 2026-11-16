@@ -3,7 +3,7 @@
 # for AudioFeedback, PowerUp, WaveAnnouncement, Player and Main integration.
 extends SceneTree
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const AUDIO_FEEDBACK_SCENE_PATH := "res://features/audio/audio_feedback.tscn"
 const POWER_UP_SCENE_PATH := "res://features/powerups/power_up.tscn"
 const WAVE_ANNOUNCEMENT_SCENE_PATH := "res://features/ui/wave_announcement.tscn"
@@ -603,7 +603,7 @@ func _assert_main_integration_contract() -> bool:
 					passed = false
 
 				# The clear-wave fallback must use GameLayout, not the historical Vector2(300, 160).
-				var main_source: String = FileAccess.get_file_as_string("res://scenes/main/main.gd")
+				var main_source: String = FileAccess.get_file_as_string("res://features/main/main.gd")
 				if main_source.contains("Vector2(300, 160)"):
 					push_error("Main must not use the historical Vector2(300, 160) for the fallback drop")
 					passed = false

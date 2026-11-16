@@ -4,7 +4,7 @@ extends SceneTree
 # Checks over the real ENet socket: the client connects, the client's input moves J2 here, and the host's
 # session end is sent. Prints one "PROBE host ok|fail: <name>" line per check; exits 0 when all pass, 1 otherwise.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const PORT_TEXT := "7791"
 const HOST_BUTTON := "Control/NetPanel/ButtonRow/HostButton"
 const NET_COOP_BUTTON := "Control/NetPanel/ButtonRow/NetCoopButton"

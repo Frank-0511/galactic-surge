@@ -2,7 +2,7 @@
 extends SceneTree
 
 const HUD_SCENE_PATH := "res://features/ui/hud.tscn"
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const SPAWNER_SCENE_PATH := "res://features/spawning/enemy_spawner.tscn"
 const GAME_OVER_SCENE_PATH := "res://features/ui/game_over.tscn"
 

@@ -91,10 +91,10 @@ func _assert_game_over_contract() -> bool:
 
 
 func _assert_main_session_contract() -> bool:
-	var main_source: String = FileAccess.get_file_as_string("res://scenes/main/main.gd")
-	var packed_scene: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
+	var main_source: String = FileAccess.get_file_as_string("res://features/main/main.gd")
+	var packed_scene: PackedScene = load("res://features/main/main.tscn") as PackedScene
 	if packed_scene == null:
-		push_error("Missing scene: res://scenes/main/main.tscn")
+		push_error("Missing scene: res://features/main/main.tscn")
 		return false
 	var main: Node2D = packed_scene.instantiate() as Node2D
 	if main == null:

@@ -4,7 +4,7 @@ extends SceneTree
 # a client never starts an asteroid wave on its own (S1). Two peers are simulated in one process: RPC handlers are
 # called directly with an arity check, and the host's session-end event is read from the sync node's outbox.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const SESSION_STATS := preload("res://core/session/session_stats.gd")
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT_K: int = 7804

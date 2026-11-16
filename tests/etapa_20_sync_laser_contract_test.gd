@@ -3,7 +3,7 @@ extends SceneTree
 # state path, and the client shows a visual-only laser replica that never monitors, collides or damages (S2, S5).
 # Two peers are simulated in one process, one after the other: the host session, then the client session.
 
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
 const SYNC_NODE_NAME := "NetSync"
 const REPLICA_NAME := "LaserReplica"
 const NET_COOP_BUTTON := "Control/NetPanel/ButtonRow/NetCoopButton"

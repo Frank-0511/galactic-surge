@@ -17,8 +17,8 @@ extends SceneTree
 
 const ASTEROID_SCENE_PATH := "res://features/asteroid/asteroid.tscn"
 const ASTEROID_SPAWNER_PATH := "res://features/spawning/asteroid_spawner.tscn"
-const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
-const CAMERA_SHAKE_SCRIPT_PATH := "res://scenes/main/camera_shake.gd"
+const MAIN_SCENE_PATH := "res://features/main/main.tscn"
+const CAMERA_SHAKE_SCRIPT_PATH := "res://features/main/camera_shake.gd"
 
 const AsteroidScript: Script = preload("res://features/asteroid/asteroid.gd")
 
