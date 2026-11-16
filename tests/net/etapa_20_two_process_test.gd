@@ -5,8 +5,8 @@ extends SceneTree
 # because the host finishes only after the client connects. Scratch files live in a mktemp dir outside the repo,
 # removed at the end.
 
-const HOST_PROBE := "res://tests/net_probe_host.gd"
-const CLIENT_PROBE := "res://tests/net_probe_client.gd"
+const HOST_PROBE := "res://tests/net/net_probe_host.gd"
+const CLIENT_PROBE := "res://tests/net/net_probe_client.gd"
 const PORT: int = 7791
 const TIMEOUT_MS: int = 60000
 const POLL_MS: int = 100
