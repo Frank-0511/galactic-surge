@@ -163,13 +163,17 @@ func destroy() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if replica:
 		return
+	PhysicsSafe.begin_callback()
 	_damage.on_body_entered(body)
+	PhysicsSafe.end_callback()
 
 
 func _on_area_entered(area: Area2D) -> void:
 	if replica:
 		return
+	PhysicsSafe.begin_callback()
 	_damage.on_area_entered(area)
+	PhysicsSafe.end_callback()
 
 
 func _draw() -> void:

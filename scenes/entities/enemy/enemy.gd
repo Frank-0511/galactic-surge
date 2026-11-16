@@ -249,11 +249,15 @@ func supports_fractional_damage() -> bool:
 
 
 func _on_area_entered(area: Area2D) -> void:
+	PhysicsSafe.begin_callback()
 	_damage.on_area_entered(area)
+	PhysicsSafe.end_callback()
 
 
 func _on_body_entered(body: Node2D) -> void:
+	PhysicsSafe.begin_callback()
 	_damage.on_body_entered(body)
+	PhysicsSafe.end_callback()
 
 
 func set_bullet_mix(normal_mix: Array, enraged_mix: Array) -> void:

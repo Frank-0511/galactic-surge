@@ -218,8 +218,10 @@ func _on_body_entered(body: Node2D) -> void:
 	if replica or _has_hit or _is_detonating or not body.is_in_group("player"):
 		return
 	_has_hit = true
+	PhysicsSafe.begin_callback()
 	player_hit.emit(body)
 	_detonate(false)
+	PhysicsSafe.end_callback()
 
 
 func is_detonating() -> bool:
