@@ -129,7 +129,7 @@ func spawn_loot(loot_type: int, spawn_position: Vector2) -> void:
 		loot.collected.connect(on_loot_collected)
 	if loot.has_method(&"configure"):
 		loot.configure(loot_type, spawn_position, _main._player)
-	_main.add_child(loot)
+	PhysicsSafe.add_child_safe(_main, loot)
 	announce_net_spawn(loot, loot_type, spawn_position)
 
 

@@ -52,10 +52,10 @@ func split() -> Array[Area2D]:
 		frag.rotation = _asteroid.rotation + angles[i]
 
 		if parent_container != null:
-			parent_container.add_child(frag)
-		# Set after add_child: global_position outside the tree is treated as local,
+			PhysicsSafe.add_child_safe(parent_container, frag)
+		# Set after insertion: global_position outside the tree is treated as local,
 		# which would offset the fragment by its parent's own position.
-		frag.global_position = _asteroid.global_position + frag_dir * offset_dist
+		PhysicsSafe.set_global_position_safe(frag, _asteroid.global_position + frag_dir * offset_dist)
 
 		fragments.append(frag)
 		_asteroid.fragment_spawned.emit(frag)

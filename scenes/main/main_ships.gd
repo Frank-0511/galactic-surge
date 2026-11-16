@@ -116,5 +116,5 @@ func spawn_recovery_capsule(spawn_pos: Vector2) -> void:
 		loot.collected.connect(_main._on_loot_collected)
 	if loot.has_method(&"configure"):
 		loot.configure(LootDrop.Type.RECOVERY_CAPSULE, spawn_pos, _main._player, 3.0)
-	_main.add_child(loot)
+	PhysicsSafe.add_child_safe(_main, loot)
 	_main._loot.announce_net_spawn(loot, LootDrop.Type.RECOVERY_CAPSULE, spawn_pos)
