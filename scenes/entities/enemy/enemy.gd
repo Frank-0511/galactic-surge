@@ -68,6 +68,15 @@ signal charge_started
 ## Last ship that damaged this enemy; kill points go to it (Etapa 20, kill attribution).
 var last_attacker: Node = null
 
+## Host-given network id (Etapa 20 T3); 0 when not networked.
+var net_id: int = 0
+## Client replica (T3): no AI, fire, motion, damage or collision; the host decides all of it.
+var replica: bool = false:
+	set(value):
+		replica = value
+		monitoring = not value
+		monitorable = not value
+
 @onready var _shoot_cooldown: Timer = $ShootCooldown
 
 var health: float = 1.0
@@ -110,11 +119,15 @@ func _ready() -> void:
 	_tactics.init_variant()
 	health = max_health
 	_pulse_offset = randf_range(0.0, TAU)
-	if _state == State.FORMATION:
+	if _state == State.FORMATION and not replica:
 		_weapons.schedule_next_shot()
 
 
 func _process(delta: float) -> void:
+	if replica:
+		_time += delta
+		queue_redraw()
+		return
 	if not _destroyed:
 		_tactics.process_ai(delta)
 		_weapons.process_burst(delta)
@@ -208,6 +221,10 @@ func set_enraged(enraged: bool) -> void:
 func is_enraged() -> bool:
 	return _is_enraged
 
+## Client replica: copies the host's movement state, health and enraged flag (position is set by the caller).
+func apply_replica_state(state: int, hp: float, enraged: bool) -> void:
+	_motion.apply_replica_state(state, hp, enraged)
+
 
 func start_fly_in(p0: Vector2, p1: Vector2, p2: Vector2, p3: Vector2, duration: float, delay: float = 0.0) -> void:
 	_motion.start_fly_in(p0, p1, p2, p3, duration, delay)
@@ -263,7 +280,8 @@ func _configure_bullet(bullet: Node2D) -> void:
 
 
 func _on_shoot_cooldown_timeout() -> void:
-	_weapons.on_shoot_cooldown_timeout()
+	if not replica:
+		_weapons.on_shoot_cooldown_timeout()
 
 
 func _fire_bullet(lateral_offset: float = 0.0) -> void:
