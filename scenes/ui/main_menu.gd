@@ -70,6 +70,7 @@ func _ready() -> void:
 	_content.theme = _build_menu_theme()
 	_apply_vignette()
 	_apply_title_style()
+	apply_network_availability(OS.has_feature("web"))
 	_apply_chip_style()
 	_start_title_pulse()
 	_refresh_difficulty_text()
@@ -136,6 +137,19 @@ func _on_join_button_pressed() -> void:
 ## Public: shows a network notice (for example, a lost host) in the Red section.
 func show_network_message(text: String) -> void:
 	_lobby_menu.show_message(text)
+
+
+## Etapa 21 (S7): web builds have no ENet networking. In web the Red buttons are disabled and a notice shows;
+## outside web they are enabled again.
+func apply_network_availability(is_web: bool) -> void:
+	for button: Button in [
+		$Control/NetPanel/ButtonRow/HostButton,
+		$Control/NetPanel/ButtonRow/JoinButton,
+		$Control/NetPanel/ButtonRow/NetCoopButton,
+	]:
+		button.disabled = is_web
+	if is_web:
+		show_network_message("El coop en red no está disponible en el navegador.")
 
 
 ## Public: closes the lobby and clears the scene multiplayer peer. Safe when nothing is open.

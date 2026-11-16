@@ -5,6 +5,8 @@ extends SceneTree
 
 const TOUCH_SCRIPT_PATH := "res://scenes/ui/touch_controls.gd"
 const TOUCH_SCENE_PATH := "res://scenes/ui/touch_controls.tscn"
+const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
+const WEB_NET_NOTICE := "El coop en red no está disponible en el navegador."
 
 var _failures: int = 0
 
@@ -38,6 +40,7 @@ func _run_contracts() -> void:
 		_expect(has_pause_api, "Contrato T21.12-0: el modulo expone set_pause_button_center")
 		if has_pause_api:
 			await _check_pause_button_emits_pause(controls)
+		await _check_web_disables_network_buttons()
 		controls.free()
 
 	if _failures == 0:
@@ -199,6 +202,33 @@ func _check_pause_button_emits_pause(controls: Node) -> void:
 	_expect(probe.get("pauses") == 1, "Contrato T21.12b: un toque en el boton de pausa emite pause una vez")
 	get_root().remove_child(probe)
 	probe.free()
+
+
+# T21.13 (S7): en web los botones de red quedan deshabilitados y el menu muestra un aviso;
+# fuera de web vuelven a estar habilitados.
+func _check_web_disables_network_buttons() -> void:
+	var scene: PackedScene = load(MAIN_MENU_SCENE_PATH) as PackedScene
+	_expect(scene != null, "Contrato T21.13-0: existe la escena del menu principal")
+	if scene == null:
+		return
+	var menu: Node = scene.instantiate()
+	get_root().add_child(menu)
+	var host: Button = menu.get_node("Control/NetPanel/ButtonRow/HostButton") as Button
+	var join: Button = menu.get_node("Control/NetPanel/ButtonRow/JoinButton") as Button
+	var net_coop: Button = menu.get_node("Control/NetPanel/ButtonRow/NetCoopButton") as Button
+	var error_label: Label = menu.get_node("Control/NetPanel/NetErrorLabel") as Label
+	var has_api: bool = menu.has_method("apply_network_availability")
+	_expect(has_api, "Contrato T21.13-1: el menu expone apply_network_availability")
+	if not has_api:
+		menu.free()
+		return
+	menu.call("apply_network_availability", true)
+	_expect(host.disabled and join.disabled and net_coop.disabled, "Contrato T21.13a: en web Host, Join y Coop en red estan deshabilitados")
+	_expect(error_label.text == WEB_NET_NOTICE, "Contrato T21.13b: en web el menu muestra el aviso de red no disponible")
+	menu.call("apply_network_availability", false)
+	_expect(not host.disabled and not join.disabled and not net_coop.disabled, "Contrato T21.13c: fuera de web los botones de red quedan habilitados")
+	get_root().remove_child(menu)
+	menu.free()
 
 
 func _release_move_actions() -> void:
