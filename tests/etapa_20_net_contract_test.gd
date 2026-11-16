@@ -6,7 +6,11 @@ extends SceneTree
 const NET_SCRIPT_PATH := "res://scripts/net/lobby_net.gd"
 const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
 const MAIN_SCRIPT_PATH := "res://scenes/main/main.gd"
+const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const TEST_PORT: int = 7788
+const BLOCKED_PORT: int = 7790
+const IDLE_PORT: int = 7791
+const NETWORK_LOST_TEXT: String = "Se perdio la conexion con el host."
 
 var _failures: int = 0
 
@@ -30,6 +34,8 @@ func _run_contracts() -> void:
 	_check_main_connects_server_disconnected()
 	_check_menu_shows_network_message()
 	_check_menu_close_network_clears_peer()
+	_check_network_lost_without_session()
+	_check_failed_host_clears_scene_peer()
 
 	if _failures == 0:
 		print("ETAPA 20 NET CONTRACT TESTS: ALL PASSED")
@@ -148,6 +154,50 @@ func _check_menu_close_network_clears_peer() -> void:
 		_expect(root.multiplayer.multiplayer_peer == null, "Contrato N6.3b: close_network deja multiplayer.multiplayer_peer en null")
 	else:
 		_expect(false, "Contrato N6.3a: Host deja un peer ENet activo antes de cerrar (faltan nodos)")
+	_free_menu(menu)
+
+
+# N8: a lost host (server_disconnected) with no active session runs the real main.tscn handler:
+# it closes the network, shows the notice in the menu and leaves multiplayer.multiplayer_peer null.
+func _check_network_lost_without_session() -> void:
+	var main: Node = (load(MAIN_SCENE_PATH) as PackedScene).instantiate()
+	root.add_child(main)
+	var idle_peer := ENetMultiplayerPeer.new()
+	var peer_err: Error = idle_peer.create_server(IDLE_PORT)
+	_expect(peer_err == OK, "Contrato N8 (precondicion): hay un peer ENet activo antes de perder la conexion")
+	root.multiplayer.multiplayer_peer = idle_peer
+	_expect(main.get("_session_active") == false, "Contrato N8 (precondicion): no hay sesion activa")
+	main.call("_on_network_lost")
+	_expect(is_instance_valid(main), "Contrato N8a: _on_network_lost sin sesion no crashea y Main sigue vivo")
+	var error_label: Label = main.get_node_or_null("MainMenu/Control/NetPanel/NetErrorLabel") as Label
+	_expect(error_label != null and error_label.text == NETWORK_LOST_TEXT, "Contrato N8b: el menu muestra el aviso de conexion perdida en NetErrorLabel")
+	_expect(root.multiplayer.multiplayer_peer == null, "Contrato N8c: tras perder la conexion multiplayer.multiplayer_peer queda null")
+	idle_peer.close()
+	root.remove_child(main)
+	main.free()
+
+
+# N9: a Host that fails after a successful Host must not leave multiplayer.multiplayer_peer on the closed peer.
+func _check_failed_host_clears_scene_peer() -> void:
+	var blocker := ENetMultiplayerPeer.new()
+	var blocker_err: Error = blocker.create_server(BLOCKED_PORT)
+	_expect(blocker_err == OK, "Contrato N9 (precondicion): otro servidor ocupa el puerto %d" % BLOCKED_PORT)
+	var menu: CanvasLayer = _instantiate_menu()
+	var port_field: LineEdit = menu.get_node_or_null("Control/NetPanel/AddressRow/PortField") as LineEdit
+	var host_button: Button = menu.get_node_or_null("Control/NetPanel/ButtonRow/HostButton") as Button
+	var error_label: Label = menu.get_node_or_null("Control/NetPanel/NetErrorLabel") as Label
+	if port_field != null and host_button != null and error_label != null:
+		port_field.text = str(TEST_PORT)
+		host_button.pressed.emit()
+		_expect(root.multiplayer.multiplayer_peer is ENetMultiplayerPeer, "Contrato N9 (precondicion): el primer Host deja un peer ENet asignado")
+		port_field.text = str(BLOCKED_PORT)
+		host_button.pressed.emit()
+		_expect(error_label.text != "", "Contrato N9a: Host en un puerto ocupado muestra un mensaje de error en el menu")
+		_expect(root.multiplayer.multiplayer_peer == null, "Contrato N9b: tras un Host fallido multiplayer.multiplayer_peer no apunta al peer cerrado (queda null)")
+		menu.call("close_network")
+	else:
+		_expect(false, "Contrato N9a: Host en un puerto ocupado muestra un mensaje de error en el menu (faltan nodos)")
+	blocker.close()
 	_free_menu(menu)
 
 

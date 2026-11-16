@@ -121,6 +121,8 @@ func _on_host_button_pressed() -> void:
 		return
 	var err: Error = _lobby.host(port)
 	if err != OK:
+		# The lobby closed its previous peer before failing; never leave the scene on that closed peer.
+		multiplayer.multiplayer_peer = null
 		_show_net_error("No se pudo abrir el servidor: %s" % error_string(err))
 		return
 	multiplayer.multiplayer_peer = _lobby.get_peer()
@@ -138,6 +140,7 @@ func _on_join_button_pressed() -> void:
 		return
 	var err: Error = _lobby.join(address, port)
 	if err != OK:
+		multiplayer.multiplayer_peer = null
 		_show_net_error("No se pudo conectar a %s:%d: %s" % [address, port, error_string(err)])
 		return
 	multiplayer.multiplayer_peer = _lobby.get_peer()
