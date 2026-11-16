@@ -5,8 +5,7 @@
 # keys) to the host and applies the state and shots the host sends; it never simulates ships, enemies or the boss,
 # and never applies damage. Explicit RPCs, not MultiplayerSynchronizer (decision L5). Shot events live in
 # net_sync_shots.gd; enemies and the boss in net_sync_enemies.gd and net_sync_boss.gd.
-# Loot, asteroids, score and the end of the match: net_sync_loot.gd, net_sync_asteroids.gd, net_sync_score.gd.
-# Laser beams of both ships (firing, level, origin, length) ride in the state: net_sync_laser.gd.
+# Loot, asteroids, score, the end of the match and laser beams: net_sync_loot, _asteroids, _score, _laser.gd.
 
 extends Node
 
@@ -18,6 +17,7 @@ const NetSyncAsteroids: GDScript = preload("res://scripts/net/net_sync_asteroids
 const NetSyncScore: GDScript = preload("res://scripts/net/net_sync_score.gd")
 const NetSyncBullets: GDScript = preload("res://scripts/net/net_sync_bullets.gd")
 const NetSyncLaser: GDScript = preload("res://scripts/net/net_sync_laser.gd")
+const NetSyncDisconnect: GDScript = preload("res://scripts/net/net_sync_disconnect.gd")
 ## Seconds between state packets (host) or input packets (client): 20 per second.
 const SEND_INTERVAL: float = 0.05
 
@@ -45,6 +45,7 @@ func setup(main: Node2D, is_host: bool) -> void:
 	_main._enemy_spawner.set("replica", not is_host)
 	if _is_host:
 		_main._player_two.set("remote_driven", true)
+		multiplayer.peer_disconnected.connect(handle_peer_lost)
 		_main._player.volley_fired.connect(_on_volley.bind(1))
 		_main._player_two.volley_fired.connect(_on_volley.bind(2))
 	else:
@@ -283,6 +284,10 @@ func _flush_outbox() -> void:
 		return
 	for entry: Variant in pending:
 		rpc(String((entry as Array)[0]), (entry as Array)[1])
+
+## Host side: a peer left the match. Only the J2 client counts (Etapa 20 T5); see net_sync_disconnect.gd.
+func handle_peer_lost(peer_id: int) -> void:
+	NetSyncDisconnect.host_peer_left(_main, _is_host, _remote_peer, peer_id)
 
 
 func _exit_tree() -> void:

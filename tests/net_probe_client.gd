@@ -22,6 +22,7 @@ const RETRY_MS: int = 1000
 const WAIT_INPUT_SECONDS: float = 20.0
 const WAIT_END_SECONDS: float = 40.0
 const SESSION_STATE_MAIN_MENU: int = 0
+const LEAVE_FLUSH_SECONDS: float = 1.0
 
 var _failures: int = 0
 
@@ -65,8 +66,33 @@ func _run() -> void:
 	var label: Label = menu.get_node(NET_ERROR_LABEL) as Label
 	var in_menu: bool = main.get("_session_state") == SESSION_STATE_MAIN_MENU and menu.visible and label.text == NOTICE_GAME_OVER
 	_check(in_menu, "host session end returns client to the menu with a notice", "state=%s menu_visible=%s notice=\"%s\"" % [main.get("_session_state"), menu.visible, label.text])
+	await _run_leave_match(main, menu)
 	_finish()
 
+
+## Second network match on the same connection; then this client leaves mid-match (its peer closes while the host plays on).
+func _run_leave_match(main: Node, menu: CanvasLayer) -> void:
+	(menu.get_node(NET_COOP_BUTTON) as Button).pressed.emit()
+	var p2: CharacterBody2D = main.get("_player_two") as CharacterBody2D
+	var again: bool = main.get("_session_active") == true and p2 != null and p2.get("replica") == true
+	_check(again, "client starts a second network match (J2 is a replica)", "active=%s J2=%s" % [main.get("_session_active"), p2 != null])
+	if not again:
+		return
+	var left: String = PLAYER_INPUT.input_action_name("move_left", 2)
+	var start_x: float = p2.position.x
+	Input.action_press(left)
+	var moved: bool = await _wait_for(func() -> bool: return p2.position.x <= start_x - MIN_MOVE_PX, WAIT_INPUT_SECONDS)
+	Input.action_release(left)
+	_check(moved, "host state reaches client again: J2 moves on the client", "J2 x %.1f -> %.1f (need %.1f px left)" % [start_x, p2.position.x, MIN_MOVE_PX])
+	if not moved:
+		return
+	menu.call("close_network")
+	await _wait_seconds(LEAVE_FLUSH_SECONDS)
+	_check(root.multiplayer.multiplayer_peer == null and main.get("_session_active") == true, "client leaves mid-match: its peer closes while the match runs", "peer=%s active=%s" % [root.multiplayer.multiplayer_peer, main.get("_session_active")])
+
+
+func _wait_seconds(seconds: float) -> void:
+	await create_timer(seconds).timeout
 
 func _open_main() -> Node:
 	var main: Node = (load(MAIN_SCENE_PATH) as PackedScene).instantiate()

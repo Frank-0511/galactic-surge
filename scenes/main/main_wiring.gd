@@ -8,6 +8,7 @@ extends RefCounted
 
 const NetSyncMode: GDScript = preload("res://scripts/net/net_sync_mode.gd")
 const NetSyncNode: GDScript = preload("res://scripts/net/net_sync_node.gd")
+const NetSyncDisconnect: GDScript = preload("res://scripts/net/net_sync_disconnect.gd")
 const NET_NODE_NAME: String = "NetSync"
 
 var _main: Node2D
@@ -102,6 +103,7 @@ func setup() -> void:
 ## Etapa 20 (S4): a lost connection closes the network, returns to the menu and shows a notice.
 ## Safe without an active session: it only closes the lobby and shows the menu.
 func on_network_lost() -> void:
+	NetSyncDisconnect.clean_client(_main)
 	if _main._main_menu.has_method(&"close_network"):
 		_main._main_menu.close_network()
 	_main._enter_main_menu()

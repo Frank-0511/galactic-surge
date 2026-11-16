@@ -18,6 +18,11 @@ const SETTLE_SECONDS: float = 2.0
 ## Seconds the host keeps running after the session end, so the reliable packet leaves the socket.
 const FLUSH_SECONDS: float = 1.0
 const SESSION_STATE_GAME_OVER: int = 5
+const SESSION_STATE_PLAYING: int = 1
+const NOTICE_NAME := "NetNoticeLabel"
+const LEAVE_NOTICE: String = "El otro jugador se desconecto."
+## Seconds the host waits for the client to leave mid-match (second match, Etapa 20 T5).
+const WAIT_LEAVE_SECONDS: float = 20.0
 
 var _failures: int = 0
 
@@ -60,7 +65,38 @@ func _run() -> void:
 	var ended: bool = main.get("_session_state") == SESSION_STATE_GAME_OVER and main.get("_session_active") == false
 	_check(ended, "host session end is sent: game over on the host", "state=%s active=%s" % [main.get("_session_state"), main.get("_session_active")])
 	await _wait_seconds(FLUSH_SECONDS)
+	await _run_client_leaves(main)
 	_finish()
+
+
+## Second network match on the same connection: the client leaves mid-match and the host keeps playing with J2 cleared.
+func _run_client_leaves(main: Node) -> void:
+	main.call("return_to_main_menu")
+	var menu: CanvasLayer = main.get_node("MainMenu") as CanvasLayer
+	(menu.get_node(NET_COOP_BUTTON) as Button).pressed.emit()
+	var sync: Node = main.get_node_or_null("NetSync")
+	var p2: CharacterBody2D = main.get("_player_two") as CharacterBody2D
+	var again: bool = main.get("_session_active") == true and sync != null and sync.get("_is_host") == true and p2 != null
+	_check(again, "host starts a second network match", "active=%s NetSync=%s J2=%s" % [main.get("_session_active"), sync != null, p2 != null])
+	if not again:
+		return
+	var start_x: float = p2.position.x
+	var moved: bool = await _wait_for(func() -> bool: return p2.position.x <= start_x - MIN_MOVE_PX, WAIT_INPUT_SECONDS)
+	_check(moved, "client input reaches host again before it leaves", "J2 x %.1f -> %.1f (need %.1f px left)" % [start_x, p2.position.x, MIN_MOVE_PX])
+	if not moved:
+		return
+	var left: bool = await _wait_for(func() -> bool: return p2.get("remote_driven") == false, WAIT_LEAVE_SECONDS)
+	_check(left, "client leaves mid-match: host notices the lost peer", "J2 still remote %d s after the client left" % int(WAIT_LEAVE_SECONDS))
+	if not left:
+		return
+	await _wait_seconds(SETTLE_SECONDS)
+	var active: bool = main.get("_session_active") == true and main.get("_session_state") == SESSION_STATE_PLAYING
+	_check(active, "client leaves mid-match: host keeps the match active", "state=%s active=%s" % [main.get("_session_state"), main.get("_session_active")])
+	var cleared: bool = int(main.get("_player_two_lives")) == 0 and p2.visible == false
+	_check(cleared, "client leaves mid-match: host clears J2 (no lives, hidden)", "J2 lives=%s visible=%s" % [main.get("_player_two_lives"), p2.visible])
+	var notice: Label = (main.get("_hud") as Node).get_node_or_null(NOTICE_NAME) as Label
+	var shown: bool = notice != null and notice.visible and notice.text == LEAVE_NOTICE
+	_check(shown, "client leaves mid-match: host shows the disconnect notice", "notice=\"%s\"" % (notice.text if notice != null else ""))
 
 
 func _open_main() -> Node:
