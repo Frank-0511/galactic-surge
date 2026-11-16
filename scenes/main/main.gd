@@ -279,6 +279,7 @@ func _enter_main_menu() -> void:
 	get_tree().paused = false
 	_end_belt_camera_follow()
 	_enemy_spawner.stop()
+	_enemy_spawner.difficulty_level = 1
 	_enemy_spawner.clear_formation()
 	_clear_boss()
 	_clear_combat_transients()
@@ -1133,6 +1134,7 @@ func reset_session() -> void:
 	_starfield.reset_scroll()
 	_update_hud()
 	_audio_feedback.start_combat_music()
+	_enemy_spawner.difficulty_level = _chapter
 	_enemy_spawner.start_wave(0)
 
 

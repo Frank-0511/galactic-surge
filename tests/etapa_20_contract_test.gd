@@ -46,6 +46,7 @@ func _run_contracts() -> void:
 	_check_eliminated_ship_stays_hidden()
 	_check_dead_ship_has_no_collision()
 	_check_targets_skip_dead_ship()
+	_check_session_reset_difficulty()
 	_check_weapon_icon_by_type()
 	_check_active_weapon_text_hidden()
 	_check_p2_panels_follow_session()
@@ -631,6 +632,17 @@ func _check_targets_skip_dead_ship() -> void:
 	probe.free()
 	dead.queue_free()
 	alive.queue_free()
+
+
+# Contract 38: a new session or the main menu restarts the spawner's difficulty level.
+# Without it, the first wave of a new session keeps the difficulty of the previous chapter.
+func _check_session_reset_difficulty() -> void:
+	var src: String = FileAccess.get_file_as_string("res://scenes/main/main.gd")
+	for fn: String in ["reset_session", "_enter_main_menu"]:
+		var start: int = src.find("func %s(" % fn)
+		var finish: int = src.find("\nfunc ", start + 1)
+		var body: String = src.substr(start, finish - start) if finish > start else src.substr(start)
+		_expect(start != -1 and body.find("_enemy_spawner.difficulty_level = ") != -1, "Contrato 38: %s reinicia difficulty_level del spawner" % fn)
 
 
 func _check_eliminated_ship_stays_hidden() -> void:
