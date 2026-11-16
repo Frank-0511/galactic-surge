@@ -29,6 +29,7 @@ func _run_contracts() -> void:
 		_check_hidden_without_touch(touch_script)
 		_check_visible_after_touch(touch_script)
 		_check_scene_root_has_script()
+		_check_touch_reaches_joystick_in_tree()
 		controls.free()
 
 	if _failures == 0:
@@ -114,6 +115,28 @@ func _check_scene_root_has_script() -> void:
 	var root: Node = scene.instantiate()
 	_expect(root.get_script() != null and root.get_script().resource_path == TOUCH_SCRIPT_PATH, "Contrato T21.9b: la raiz de la escena usa touch_controls.gd")
 	root.free()
+
+
+# T21.10 (S2): un toque real en el viewport, con la escena montada en el arbol, mueve el joystick.
+func _check_touch_reaches_joystick_in_tree() -> void:
+	_release_move_actions()
+	var scene: PackedScene = load(TOUCH_SCENE_PATH) as PackedScene
+	if scene == null:
+		_expect(false, "Contrato T21.10: la escena de controles carga para montarla en el arbol")
+		return
+	var controls: Node = scene.instantiate()
+	get_root().add_child(controls)
+	var size: Vector2 = get_root().get_visible_rect().size
+	var center: Vector2 = Vector2(size.x * 0.2, size.y * 0.8)
+	var drag := InputEventScreenDrag.new()
+	drag.index = 0
+	# Touch positions arrive in window space: the viewport applies its final transform to them.
+	drag.position = get_root().get_final_transform() * (center + Vector2(-60.0, 0.0))
+	get_root().push_input(drag)
+	_expect(Input.is_action_pressed("move_left"), "Contrato T21.10a: toque real a la izquierda del joystick presiona move_left")
+	get_root().remove_child(controls)
+	controls.free()
+	_release_move_actions()
 
 
 func _release_move_actions() -> void:
