@@ -62,9 +62,9 @@ func _assert_scene(path: String) -> bool:
 
 
 func _assert_game_over_contract() -> bool:
-	var packed_scene: PackedScene = load("res://scenes/ui/game_over.tscn") as PackedScene
+	var packed_scene: PackedScene = load("res://features/ui/game_over.tscn") as PackedScene
 	if packed_scene == null:
-		push_error("Missing scene: res://scenes/ui/game_over.tscn")
+		push_error("Missing scene: res://features/ui/game_over.tscn")
 		return false
 	var game_over: CanvasLayer = packed_scene.instantiate() as CanvasLayer
 	if game_over == null:

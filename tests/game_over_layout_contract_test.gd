@@ -3,7 +3,7 @@
 # populated with one name/value label pair per enemy type.
 extends SceneTree
 
-const GAME_OVER_SCENE := preload("res://scenes/ui/game_over.tscn")
+const GAME_OVER_SCENE := preload("res://features/ui/game_over.tscn")
 
 
 func _init() -> void:

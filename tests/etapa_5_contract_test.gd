@@ -5,7 +5,7 @@ extends SceneTree
 
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const AUDIO_FEEDBACK_SCENE_PATH := "res://features/audio/audio_feedback.tscn"
-const HUD_SCENE_PATH := "res://scenes/ui/hud.tscn"
+const HUD_SCENE_PATH := "res://features/ui/hud.tscn"
 const BOSS_SCENE_PATH := "res://features/boss/boss.tscn"
 const BOSS_BULLET_SCENE_PATH := "res://features/boss/boss_bullet.tscn"
 const BOSS_MUSIC_PATH := "res://assets/audio/music/boss_battle_8bit.mp3"

@@ -3,8 +3,8 @@ extends SceneTree
 # Verifies the network module that the Host/Join lobby will use (S1, S2, S3).
 # Calls go through dynamic dispatch so a missing module reports a failed contract, not a parse error.
 
-const NET_SCRIPT_PATH := "res://scripts/net/lobby_net.gd"
-const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
+const NET_SCRIPT_PATH := "res://features/net/lobby_net.gd"
+const MAIN_MENU_SCENE_PATH := "res://features/ui/main_menu.tscn"
 const MAIN_SCRIPT_PATH := "res://scenes/main/main.gd"
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const TEST_PORT: int = 7788

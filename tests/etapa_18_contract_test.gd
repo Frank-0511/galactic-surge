@@ -24,10 +24,10 @@ extends SceneTree
 
 const DS := preload("res://core/settings/difficulty_settings.gd")
 const SESSION_STATS := preload("res://core/session/session_stats.gd")
-const GAME_OVER_SCENE := preload("res://scenes/ui/game_over.tscn")
+const GAME_OVER_SCENE := preload("res://features/ui/game_over.tscn")
 const SPAWNER_SCENE := preload("res://features/spawning/enemy_spawner.tscn")
 const PLAYER_SCENE := preload("res://features/player/player.tscn")
-const MENU_SCENE := preload("res://scenes/ui/main_menu.tscn")
+const MENU_SCENE := preload("res://features/ui/main_menu.tscn")
 const HULL_FRAGMENT_SCRIPT := preload("res://features/effects/hull_fragment.gd")
 const VISUAL_FEEDBACK_SCENE := preload("res://features/effects/visual_feedback.tscn")
 const FLOAT_TOLERANCE := 0.0001

@@ -11,9 +11,9 @@ extends CanvasLayer
 
 const DS := preload("res://core/settings/difficulty_settings.gd")
 ## Session modes (Etapa 20, S6): LOCAL_COOP (J2 on this PC) or NETWORK (J2 is the remote peer).
-const NetSyncMode := preload("res://scripts/net/net_sync_mode.gd")
+const NetSyncMode := preload("res://features/net/net_sync_mode.gd")
 ## Red section (Etapa 20, S2/T1): Host, Join and Coop en red, with IP/port validation.
-const LobbyMenu := preload("res://scripts/net/lobby_menu.gd")
+const LobbyMenu := preload("res://features/net/lobby_menu.gd")
 
 ## Switch to true to disable the title pulse and the entrance fade (reduced motion).
 const REDUCED_MOTION := false

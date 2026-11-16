@@ -12,7 +12,7 @@
 extends CanvasLayer
 
 const SETTINGS := preload("res://core/settings/settings.gd")
-const STYLE := preload("res://scripts/ui/settings_menu_style.gd")
+const STYLE := preload("res://features/ui/settings_menu_style.gd")
 const TOGGLE_VARIATION := &"ToggleButton"
 const PRIMARY_VARIATION := &"PrimaryButton"
 const TITLE_VARIATION := &"TitleLabel"

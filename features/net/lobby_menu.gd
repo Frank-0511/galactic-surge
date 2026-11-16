@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const LobbyNet: GDScript = preload("res://scripts/net/lobby_net.gd")
+const LobbyNet: GDScript = preload("res://features/net/lobby_net.gd")
 const NO_PEER_TEXT: String = "Primero abre Host o conecta con Join."
 
 var _menu: CanvasLayer

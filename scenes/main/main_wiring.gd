@@ -6,9 +6,9 @@
 
 extends RefCounted
 
-const NetSyncMode: GDScript = preload("res://scripts/net/net_sync_mode.gd")
-const NetSyncNode: GDScript = preload("res://scripts/net/net_sync_node.gd")
-const NetSyncDisconnect: GDScript = preload("res://scripts/net/net_sync_disconnect.gd")
+const NetSyncMode: GDScript = preload("res://features/net/net_sync_mode.gd")
+const NetSyncNode: GDScript = preload("res://features/net/net_sync_node.gd")
+const NetSyncDisconnect: GDScript = preload("res://features/net/net_sync_disconnect.gd")
 const NET_NODE_NAME: String = "NetSync"
 
 var _main: Node2D

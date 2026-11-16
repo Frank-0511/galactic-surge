@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/wave_announcement.gd" id="1_wave_announcement"]
+[ext_resource type="Script" path="res://features/ui/wave_announcement.gd" id="1_wave_announcement"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_wave"]
 font_size = 32

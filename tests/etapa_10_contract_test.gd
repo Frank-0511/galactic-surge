@@ -12,7 +12,7 @@ extends SceneTree
 
 const PLAYER_PATH := "res://features/player/player.tscn"
 const LOOT_PATH := "res://features/loot/loot_drop.tscn"
-const HUD_PATH := "res://scenes/ui/hud.tscn"
+const HUD_PATH := "res://features/ui/hud.tscn"
 const MAIN_PATH := "res://scenes/main/main.tscn"
 
 

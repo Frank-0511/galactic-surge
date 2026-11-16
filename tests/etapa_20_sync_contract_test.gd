@@ -4,7 +4,7 @@ extends SceneTree
 # checked through the node's RPC configuration.
 
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
-const MODE_SCRIPT_PATH := "res://scripts/net/net_sync_mode.gd"
+const MODE_SCRIPT_PATH := "res://features/net/net_sync_mode.gd"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT_A: int = 7793
 const HOST_PORT_B: int = 7794

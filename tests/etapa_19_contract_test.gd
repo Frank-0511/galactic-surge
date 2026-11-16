@@ -155,7 +155,7 @@ func _assert_apply_audio() -> bool:
 
 # 8. Settings menu scene exposes its controls and emits back_requested
 func _assert_settings_menu_scene() -> bool:
-	var scene: Node = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	var scene: Node = load("res://features/ui/settings_menu.tscn").instantiate()
 	var ok: bool = true
 	for path: String in ["Control/Center/Content/MasterBlock/MasterSlider", "Control/Center/Content/MusicBlock/MusicSlider", "Control/Center/Content/SfxBlock/SfxSlider", "Control/Center/Content/DisplayOptions/FullscreenToggle", "Control/Center/Content/DisplayOptions/VsyncToggle", "Control/Center/Content/BackButton"]:
 		if scene.get_node_or_null(path) == null:
@@ -172,7 +172,7 @@ func _assert_settings_menu_scene() -> bool:
 
 # 9. Both display toggles share the same theme overrides (font size and color)
 func _assert_toggles_share_style() -> bool:
-	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	var menu: CanvasLayer = load("res://features/ui/settings_menu.tscn").instantiate()
 	root.add_child(menu)
 	var fullscreen: Button = menu.get_node("Control/Center/Content/DisplayOptions/FullscreenToggle")
 	var vsync: Button = menu.get_node("Control/Center/Content/DisplayOptions/VsyncToggle")
@@ -190,7 +190,7 @@ func _assert_toggles_share_style() -> bool:
 
 # 10. Focus on open: show_menu() gives focus to the first control so gamepad navigation works
 func _assert_settings_focus_on_open() -> bool:
-	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	var menu: CanvasLayer = load("res://features/ui/settings_menu.tscn").instantiate()
 	root.add_child(menu)
 	menu.show_menu()
 	var owner: Control = root.get_viewport().gui_get_focus_owner()
@@ -207,7 +207,7 @@ func _assert_settings_focus_on_open() -> bool:
 # 11. Layout: centered container, constant separations, label above slider, Theme variations
 # and no per-node style or font overrides on the buttons and labels.
 func _assert_settings_layout() -> bool:
-	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	var menu: CanvasLayer = load("res://features/ui/settings_menu.tscn").instantiate()
 	root.add_child(menu)
 	var ok: bool = true
 	var control: Control = menu.get_node_or_null("Control") as Control
@@ -282,7 +282,7 @@ func _assert_rebind_kit_contract() -> bool:
 		if script == null or script.get_global_name() != StringName(class_file):
 			push_error("Falta la clase %s de Rebind Kit en %s" % [class_file, REBIND_DIR])
 			ok = false
-	var menu: CanvasLayer = load("res://scenes/ui/settings_menu.tscn").instantiate()
+	var menu: CanvasLayer = load("res://features/ui/settings_menu.tscn").instantiate()
 	if menu.get_node_or_null("Control/Center/Content/ControlsButton") == null:
 		push_error("settings_menu.tscn debe tener Control/Center/Content/ControlsButton")
 		ok = false

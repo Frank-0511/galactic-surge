@@ -6,7 +6,7 @@ extends SceneTree
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const AUDIO_FEEDBACK_SCENE_PATH := "res://features/audio/audio_feedback.tscn"
 const POWER_UP_SCENE_PATH := "res://features/powerups/power_up.tscn"
-const WAVE_ANNOUNCEMENT_SCENE_PATH := "res://scenes/ui/wave_announcement.tscn"
+const WAVE_ANNOUNCEMENT_SCENE_PATH := "res://features/ui/wave_announcement.tscn"
 const PLAYER_SCENE_PATH := "res://features/player/player.tscn"
 
 const MUSIC_PATH := "res://assets/audio/music/combat_8bit_space_shooter.mp3"

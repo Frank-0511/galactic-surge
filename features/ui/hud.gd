@@ -6,12 +6,12 @@
 
 extends CanvasLayer
 
-const HudWaveBanner: Script = preload("res://scenes/ui/hud_wave_banner.gd")
-const HudBossBar: Script = preload("res://scenes/ui/hud_boss_bar.gd")
-const HudLayout: Script = preload("res://scenes/ui/hud_layout.gd")
-const HudWeapons: Script = preload("res://scenes/ui/hud_weapons.gd")
-const HudHeat: Script = preload("res://scenes/ui/hud_heat.gd")
-const HudStatus: Script = preload("res://scenes/ui/hud_status.gd")
+const HudWaveBanner: Script = preload("res://features/ui/hud_wave_banner.gd")
+const HudBossBar: Script = preload("res://features/ui/hud_boss_bar.gd")
+const HudLayout: Script = preload("res://features/ui/hud_layout.gd")
+const HudWeapons: Script = preload("res://features/ui/hud_weapons.gd")
+const HudHeat: Script = preload("res://features/ui/hud_heat.gd")
+const HudStatus: Script = preload("res://features/ui/hud_status.gd")
 
 signal lives_changed(lives: int)
 signal score_changed(score: int)

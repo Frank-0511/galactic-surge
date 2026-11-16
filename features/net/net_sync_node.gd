@@ -11,16 +11,16 @@
 extends Node
 
 const PlayerInput: GDScript = preload("res://features/player/player_input.gd")
-const NetSyncShots: GDScript = preload("res://scripts/net/net_sync_shots.gd")
-const NetSyncEnemies: GDScript = preload("res://scripts/net/net_sync_enemies.gd")
-const NetSyncLoot: GDScript = preload("res://scripts/net/net_sync_loot.gd")
-const NetSyncAsteroids: GDScript = preload("res://scripts/net/net_sync_asteroids.gd")
-const NetSyncScore: GDScript = preload("res://scripts/net/net_sync_score.gd")
-const NetSyncBullets: GDScript = preload("res://scripts/net/net_sync_bullets.gd")
-const NetSyncLaser: GDScript = preload("res://scripts/net/net_sync_laser.gd")
-const NetSyncDisconnect: GDScript = preload("res://scripts/net/net_sync_disconnect.gd")
-const NetSyncWaves: GDScript = preload("res://scripts/net/net_sync_waves.gd")
-const NetSyncShips: GDScript = preload("res://scripts/net/net_sync_ships.gd")
+const NetSyncShots: GDScript = preload("res://features/net/net_sync_shots.gd")
+const NetSyncEnemies: GDScript = preload("res://features/net/net_sync_enemies.gd")
+const NetSyncLoot: GDScript = preload("res://features/net/net_sync_loot.gd")
+const NetSyncAsteroids: GDScript = preload("res://features/net/net_sync_asteroids.gd")
+const NetSyncScore: GDScript = preload("res://features/net/net_sync_score.gd")
+const NetSyncBullets: GDScript = preload("res://features/net/net_sync_bullets.gd")
+const NetSyncLaser: GDScript = preload("res://features/net/net_sync_laser.gd")
+const NetSyncDisconnect: GDScript = preload("res://features/net/net_sync_disconnect.gd")
+const NetSyncWaves: GDScript = preload("res://features/net/net_sync_waves.gd")
+const NetSyncShips: GDScript = preload("res://features/net/net_sync_ships.gd")
 ## Seconds between state packets (host) or input packets (client): 20 per second.
 const SEND_INTERVAL: float = 0.05
 

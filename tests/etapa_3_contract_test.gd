@@ -1,10 +1,10 @@
 # Contract harness for the Etapa 3 waves, scoring, and HUD systems.
 extends SceneTree
 
-const HUD_SCENE_PATH := "res://scenes/ui/hud.tscn"
+const HUD_SCENE_PATH := "res://features/ui/hud.tscn"
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const SPAWNER_SCENE_PATH := "res://features/spawning/enemy_spawner.tscn"
-const GAME_OVER_SCENE_PATH := "res://scenes/ui/game_over.tscn"
+const GAME_OVER_SCENE_PATH := "res://features/ui/game_over.tscn"
 
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500

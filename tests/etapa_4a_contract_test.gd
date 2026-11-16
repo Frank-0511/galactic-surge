@@ -2,8 +2,8 @@
 extends SceneTree
 
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
-const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
-const PAUSE_MENU_SCENE_PATH := "res://scenes/ui/pause_menu.tscn"
+const MAIN_MENU_SCENE_PATH := "res://features/ui/main_menu.tscn"
+const PAUSE_MENU_SCENE_PATH := "res://features/ui/pause_menu.tscn"
 const STARFIELD_SCENE_PATH := "res://features/background/starfield.tscn"
 const VISUAL_FEEDBACK_SCENE_PATH := "res://features/effects/visual_feedback.tscn"
 
@@ -124,9 +124,9 @@ func _assert_pause_menu_contract() -> bool:
 
 
 func _assert_game_over_menu_contract() -> bool:
-	var packed_scene: PackedScene = load("res://scenes/ui/game_over.tscn") as PackedScene
+	var packed_scene: PackedScene = load("res://features/ui/game_over.tscn") as PackedScene
 	if packed_scene == null:
-		push_error("Missing scene: res://scenes/ui/game_over.tscn")
+		push_error("Missing scene: res://features/ui/game_over.tscn")
 		return false
 	var game_over: CanvasLayer = packed_scene.instantiate() as CanvasLayer
 	if game_over == null:

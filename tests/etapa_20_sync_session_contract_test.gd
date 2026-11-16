@@ -5,7 +5,7 @@ extends SceneTree
 # outbox (the payloads it would send). Drops are checked in etapa_20_sync_loot_contract_test.gd.
 
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
-const NET_SYNC_PATH := "res://scripts/net/net_sync_node.gd"
+const NET_SYNC_PATH := "res://features/net/net_sync_node.gd"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT_I: int = 7802
 const HOST_PORT_J: int = 7803

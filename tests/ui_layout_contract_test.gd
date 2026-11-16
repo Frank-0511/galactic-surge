@@ -6,10 +6,10 @@
 extends SceneTree
 
 const STARFIELD_SCENE_PATH := "res://features/background/starfield.tscn"
-const HUD_SCENE_PATH := "res://scenes/ui/hud.tscn"
-const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
-const GAME_OVER_SCENE_PATH := "res://scenes/ui/game_over.tscn"
-const PAUSE_MENU_SCENE_PATH := "res://scenes/ui/pause_menu.tscn"
+const HUD_SCENE_PATH := "res://features/ui/hud.tscn"
+const MAIN_MENU_SCENE_PATH := "res://features/ui/main_menu.tscn"
+const GAME_OVER_SCENE_PATH := "res://features/ui/game_over.tscn"
+const PAUSE_MENU_SCENE_PATH := "res://features/ui/pause_menu.tscn"
 
 
 func _init() -> void:

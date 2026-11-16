@@ -11,7 +11,7 @@ const PLAYER_PATH := "res://features/player/player.tscn"
 const BOSS_PATH := "res://features/boss/boss.tscn"
 const ENEMY_PATH := "res://features/enemy/enemy.tscn"
 const COMBO_SYSTEM_PATH := "res://core/session/combo_system.gd"
-const HUD_PATH := "res://scenes/ui/hud.tscn"
+const HUD_PATH := "res://features/ui/hud.tscn"
 const MAIN_PATH := "res://scenes/main/main.tscn"
 const AUDIO_FEEDBACK_PATH := "res://features/audio/audio_feedback.tscn"
 

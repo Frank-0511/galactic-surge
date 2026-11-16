@@ -14,7 +14,7 @@
 
 extends SceneTree
 
-const MAIN_MENU_SCENE := preload("res://scenes/ui/main_menu.tscn")
+const MAIN_MENU_SCENE := preload("res://features/ui/main_menu.tscn")
 const MENU_CONTAINER_PATH := "Control/Menu"
 const EXPECTED_SEPARATION := 14
 const MIN_BUTTON_HEIGHT := 34.0

@@ -152,7 +152,7 @@ func _check_ballistic_and_cluster_replicas_follow_host() -> void:
 
 # T35 (S2, task T5): the bullet RPCs are host-authority; a malformed payload creates no replica and does not fail.
 func _check_bullet_rpcs_are_host_authority_and_guarded() -> void:
-	var config: Dictionary = (load("res://scripts/net/net_sync_node.gd") as Script).get_rpc_config()
+	var config: Dictionary = (load("res://features/net/net_sync_node.gd") as Script).get_rpc_config()
 	var authority: bool = true
 	for rpc_name: StringName in [&"rpc_host_bullet_spawned", &"rpc_host_bullets_removed"]:
 		authority = authority and config.has(rpc_name) and config[rpc_name]["rpc_mode"] == MultiplayerAPI.RPC_MODE_AUTHORITY

@@ -6,7 +6,7 @@
 
 extends RefCounted
 
-const HudIcons: Script = preload("res://scenes/ui/hud_icons.gd")
+const HudIcons: Script = preload("res://features/ui/hud_icons.gd")
 
 var _hud: CanvasLayer
 var _p2_bottom_panel: VBoxContainer = null

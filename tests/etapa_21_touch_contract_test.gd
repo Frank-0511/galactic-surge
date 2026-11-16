@@ -3,9 +3,9 @@ extends SceneTree
 # interface: the touch joystick drives the same input actions as the keyboard.
 # Calls go through dynamic dispatch so a missing module reports a failed contract, not a parse error.
 
-const TOUCH_SCRIPT_PATH := "res://scenes/ui/touch_controls.gd"
-const TOUCH_SCENE_PATH := "res://scenes/ui/touch_controls.tscn"
-const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
+const TOUCH_SCRIPT_PATH := "res://features/ui/touch_controls.gd"
+const TOUCH_SCENE_PATH := "res://features/ui/touch_controls.tscn"
+const MAIN_MENU_SCENE_PATH := "res://features/ui/main_menu.tscn"
 const WEB_NET_NOTICE := "El coop en red no está disponible en el navegador."
 
 var _failures: int = 0

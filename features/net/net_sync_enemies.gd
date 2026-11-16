@@ -8,7 +8,7 @@
 
 extends RefCounted
 
-const NetSyncBoss: GDScript = preload("res://scripts/net/net_sync_boss.gd")
+const NetSyncBoss: GDScript = preload("res://features/net/net_sync_boss.gd")
 
 ## Spawner phases sent in the state.
 const PHASE_STOPPED: int = 0

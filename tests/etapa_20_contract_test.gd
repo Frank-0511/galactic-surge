@@ -129,7 +129,7 @@ func _check_second_ship_lives() -> void:
 # 5. HUD: indicador de vidas de J2, oculto en singleplayer
 # ---------------------------------------------------------------------------
 func _check_hud_lives_p2() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	_expect(hud.has_method("set_lives_p2"), "Contrato 5a: HUD expone set_lives_p2()")
 	_expect(not hud.call("is_lives_p2_visible") if hud.has_method("is_lives_p2_visible") else false, "Contrato 5b: indicador de J2 oculto en singleplayer")
@@ -143,7 +143,7 @@ func _check_hud_lives_p2() -> void:
 # 6. Menú: botón "Coop local" entre Jugar y Dificultad (Etapa 20, T3)
 # ---------------------------------------------------------------------------
 func _check_coop_menu_button() -> void:
-	var menu: Node = (load("res://scenes/ui/main_menu.tscn") as PackedScene).instantiate()
+	var menu: Node = (load("res://features/ui/main_menu.tscn") as PackedScene).instantiate()
 	var coop: Button = menu.get_node_or_null("Control/Menu/CoopButton") as Button
 	_expect(coop != null and coop.text == "Coop local", "Contrato 6a: menú tiene botón \"Coop local\"")
 	if coop != null:
@@ -157,7 +157,7 @@ func _check_coop_menu_button() -> void:
 # 7. Menú principal: el menú no tapa "Mejor puntaje" (crece solo hacia abajo y su alto cubre el contenido)
 # ---------------------------------------------------------------------------
 func _check_menu_does_not_cover_high_score() -> void:
-	var menu: Node = (load("res://scenes/ui/main_menu.tscn") as PackedScene).instantiate()
+	var menu: Node = (load("res://features/ui/main_menu.tscn") as PackedScene).instantiate()
 	var box: Control = menu.get_node("Control/Menu") as Control
 	_expect(box.grow_vertical == Control.GROW_DIRECTION_END, "Contrato 7a: el menú crece solo hacia abajo (no tapa el puntaje)")
 	var height: float = box.offset_bottom - box.offset_top
@@ -284,7 +284,7 @@ func _check_p2_overheat_wiring() -> void:
 # 13. HUD de dos naves: J1 a la izquierda, J2 a la derecha, sin superponerse
 # ---------------------------------------------------------------------------
 func _check_hud_two_player_layout() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	var heat_p1: Control = hud.get("_heat_container") as Control
 	_expect(heat_p1.anchor_left == 0.0 and heat_p1.anchor_right == 0.0, "Contrato 13a: calor de J1 a la izquierda")
@@ -342,7 +342,7 @@ func _check_score_per_player() -> void:
 # 15. HUD: score de J2 en su panel, con el mismo estilo que las vidas de J2
 # ---------------------------------------------------------------------------
 func _check_hud_score_p2() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	_expect(hud.has_method("set_score_p2"), "Contrato 15a: HUD expone set_score_p2()")
 	if hud.has_method("set_score_p2"):
@@ -358,7 +358,7 @@ func _check_hud_score_p2() -> void:
 # 16. HUD pasivo: los wrappers no capturan el mouse (skill scenario-godot-ui, regla 7)
 # ---------------------------------------------------------------------------
 func _check_hud_is_passive() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_lives_p2", 2)
 	hud.call("set_score_p2", 0)
@@ -373,7 +373,7 @@ func _check_hud_is_passive() -> void:
 # 17. Estilo: las etiquetas de J2 usan los mismos colores que las de J1
 # ---------------------------------------------------------------------------
 func _check_hud_p2_matches_p1_style() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_lives_p2", 2)
 	hud.call("set_score_p2", 10)
@@ -391,7 +391,7 @@ func _check_hud_p2_matches_p1_style() -> void:
 # 18. HUD (spec S7): vidas de J2 abajo a la derecha
 # ---------------------------------------------------------------------------
 func _check_hud_p2_lives_bottom_right() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_lives_p2", 2)
 	var lives_p2: Label = hud.get("_lives_p2_label") as Label
@@ -405,7 +405,7 @@ func _check_hud_p2_lives_bottom_right() -> void:
 # 19. HUD (spec S7): vidas de J1 abajo a la izquierda
 # ---------------------------------------------------------------------------
 func _check_hud_p1_lives_bottom_left() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	var lives_p1: Label = hud.get("_lives_label") as Label
 	var bottom: Control = hud.get_node_or_null("P1BottomPanel") as Control
@@ -418,7 +418,7 @@ func _check_hud_p1_lives_bottom_left() -> void:
 # 20. HUD (spec S7): nivel del arma abajo en la esquina de cada jugador
 # ---------------------------------------------------------------------------
 func _check_hud_weapon_level_bottom() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_weapon_level", 3, 0)
 	_expect(hud.has_method("set_weapon_level_p2"), "Contrato 20c: HUD expone set_weapon_level_p2()")
@@ -439,7 +439,7 @@ func _check_hud_weapon_level_bottom() -> void:
 # 21. HUD (spec S8): score y calor de J1 arriba a la izquierda
 # ---------------------------------------------------------------------------
 func _check_hud_p1_score_heat_top_left() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	var top: Control = hud.get_node_or_null("P1TopPanel") as Control
 	var score_p1: Label = hud.get("_score_label") as Label
@@ -454,7 +454,7 @@ func _check_hud_p1_score_heat_top_left() -> void:
 # 22. HUD (spec S9): la barra del jefe queda centrada y ningún panel la pisa
 # ---------------------------------------------------------------------------
 func _check_boss_bar_center_free() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_lives_p2", 2)
 	hud.call("set_score_p2", 0)
@@ -582,7 +582,7 @@ func _check_legacy_bullet_kill_attribution() -> void:
 # 28. HUD: iconos para vidas y arma, y la oleada sale del HUD (la muestra el anuncio)
 # ---------------------------------------------------------------------------
 func _check_hud_icons_and_wave_out() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_lives", 3)
 	_expect(hud.get("_lives_label").text == "3", "Contrato 28a: vidas de J1 como numero (el icono es un corazon dibujado)")
@@ -662,7 +662,7 @@ func _check_eliminated_ship_stays_hidden() -> void:
 # 30. Icono del arma: cambia segun el tipo de arma (0 blaster, 1 misil, 2 laser)
 # ---------------------------------------------------------------------------
 func _check_weapon_icon_by_type() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_weapon_level", 3, 1)
 	_expect(hud.get("_weapon_icon").get("weapon_type") == 1, "Contrato 30a: arma misil de J1 con medallon de misil")
@@ -677,7 +677,7 @@ func _check_weapon_icon_by_type() -> void:
 # 31. HUD: la linea "ARMA: ..." no se muestra; el icono del arma la reemplaza
 # ---------------------------------------------------------------------------
 func _check_active_weapon_text_hidden() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_active_weapon", 2)
 	var label: Label = hud.get("_active_weapon_label") as Label
@@ -689,7 +689,7 @@ func _check_active_weapon_text_hidden() -> void:
 # 32. HUD: los paneles de J2 se ocultan fuera de la sesion coop (bug: quedaban visibles en singleplayer)
 # ---------------------------------------------------------------------------
 func _check_p2_panels_follow_session() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_score_p2", 500)
 	hud.call("set_lives_p2", 2)
@@ -710,7 +710,7 @@ func _check_p2_panels_follow_session() -> void:
 func _check_weapon_icon_is_drop_medallion() -> void:
 	var loot_script: Script = load("res://features/loot/loot_drop.gd")
 	_expect(loot_script.has_method("paint_medallion"), "Contrato 33a: LootDrop expone paint_medallion() para reutilizar el dibujo")
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_weapon_level", 3, 1)
 	var icon_p1: Control = hud.get("_weapon_icon") as Control
@@ -726,7 +726,7 @@ func _check_weapon_icon_is_drop_medallion() -> void:
 # 34. Icono del arma: tamano acorde al texto del nivel (no mas alto que una linea de 20 px)
 # ---------------------------------------------------------------------------
 func _check_weapon_icon_size() -> void:
-	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	var hud: Node = (load("res://features/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)
 	hud.call("set_weapon_level", 3, 0)
 	var icon: Control = hud.get("_weapon_icon") as Control

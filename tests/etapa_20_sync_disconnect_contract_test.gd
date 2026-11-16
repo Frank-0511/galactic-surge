@@ -6,7 +6,7 @@ extends SceneTree
 # in one process; RPC handlers are called with an arity check, never a silent pass.
 
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
-const NET_SYNC_PATH := "res://scripts/net/net_sync_node.gd"
+const NET_SYNC_PATH := "res://features/net/net_sync_node.gd"
 const SYNC_NODE_NAME := "NetSync"
 const HOST_PORT: int = 7804
 const CLIENT_TARGET_PORT: int = 7805
