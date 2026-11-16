@@ -5,7 +5,7 @@ extends SceneTree
 # 2. J2 uses its own action names (p2_move_left, p2_move_right, p2_shoot), never J1's.
 # No real-time dependencies: pure static function on the player script.
 
-const PLAYER_SCRIPT := preload("res://scenes/entities/player/player.gd")
+const PLAYER_SCRIPT := preload("res://features/player/player.gd")
 
 var _failures: int = 0
 
@@ -603,7 +603,7 @@ func _check_hud_icons_and_wave_out() -> void:
 # Dead ship: enemies and bullets must not collide with an invisible, eliminated ship.
 # Contract 36: the ship's collision layer and mask are off while eliminated and back on after respawn.
 func _check_dead_ship_has_no_collision() -> void:
-	var ship: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	var ship: CharacterBody2D = (load("res://features/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
 	get_root().add_child(ship)
 	ship.set_gameplay_enabled(false)
 	ship.visible = false
@@ -617,8 +617,8 @@ func _check_dead_ship_has_no_collision() -> void:
 
 # Contract 37: enemies and the boss aim at a living ship, never at an eliminated one.
 func _check_targets_skip_dead_ship() -> void:
-	var dead: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
-	var alive: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	var dead: CharacterBody2D = (load("res://features/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	var alive: CharacterBody2D = (load("res://features/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
 	get_root().add_child(dead)
 	get_root().add_child(alive)
 	dead.set_gameplay_enabled(false)
@@ -646,7 +646,7 @@ func _check_session_reset_difficulty() -> void:
 
 
 func _check_eliminated_ship_stays_hidden() -> void:
-	var ship: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	var ship: CharacterBody2D = (load("res://features/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
 	get_root().add_child(ship)
 	ship.set_gameplay_enabled(false)
 	ship.visible = false

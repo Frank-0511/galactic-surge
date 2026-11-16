@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const PlayerShip: Script = preload("res://scenes/entities/player/player.gd")
+const PlayerShip: Script = preload("res://features/player/player.gd")
 const EnemyAI: Script = preload("res://features/enemy/enemy_ai.gd")
 const EnemyVariants: Script = preload("res://features/enemy/enemy_variants.gd")
 

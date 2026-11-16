@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const WeaponsModule: GDScript = preload("res://scenes/entities/player/player_weapons.gd")
+const WeaponsModule: GDScript = preload("res://features/player/player_weapons.gd")
 const EVENT_KEYS: Array = ["ship", "weapon", "level", "x", "y", "dx", "dy", "double"]
 const WEAPON_COUNT: int = 3
 

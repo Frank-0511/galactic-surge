@@ -5,7 +5,7 @@
 
 extends RefCounted
 
-const PlayerShip: Script = preload("res://scenes/entities/player/player.gd")
+const PlayerShip: Script = preload("res://features/player/player.gd")
 
 var _boss: Area2D
 

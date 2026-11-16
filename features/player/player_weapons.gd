@@ -8,8 +8,8 @@
 
 extends RefCounted
 
-const InputModule: GDScript = preload("res://scenes/entities/player/player_input.gd")
-const WeaponPatterns: GDScript = preload("res://scenes/entities/player/player_weapon_patterns.gd")
+const InputModule: GDScript = preload("res://features/player/player_input.gd")
+const WeaponPatterns: GDScript = preload("res://features/player/player_weapon_patterns.gd")
 const SESSION_STATS := preload("res://core/session/session_stats.gd")
 
 var _player: CharacterBody2D

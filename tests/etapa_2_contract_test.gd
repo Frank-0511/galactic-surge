@@ -26,9 +26,9 @@ func _run_contracts() -> void:
 
 
 func _assert_player_contract() -> bool:
-	var packed_scene: PackedScene = load("res://scenes/entities/player/player.tscn") as PackedScene
+	var packed_scene: PackedScene = load("res://features/player/player.tscn") as PackedScene
 	if packed_scene == null:
-		push_error("Missing scene: res://scenes/entities/player/player.tscn")
+		push_error("Missing scene: res://features/player/player.tscn")
 		return false
 	var player: CharacterBody2D = packed_scene.instantiate() as CharacterBody2D
 	if player == null:

@@ -9,7 +9,7 @@
 
 extends SceneTree
 
-const PLAYER_PATH := "res://scenes/entities/player/player.tscn"
+const PLAYER_PATH := "res://features/player/player.tscn"
 const ENEMY_PATH := "res://features/enemy/enemy.tscn"
 const MISSILE_PATH := "res://features/bullet/missile.tscn"
 const LASER_PATH := "res://features/bullet/laser_beam.tscn"

@@ -30,14 +30,14 @@ signal heat_changed(current_heat: float, max_heat: float)
 ## Emitted when thermal lock activates or clears.
 signal overheat_state_changed(is_overheated: bool)
 
-const InputModule: GDScript = preload("res://scenes/entities/player/player_input.gd")
-const HeatModule: GDScript = preload("res://scenes/entities/player/player_heat.gd")
-const ArsenalModule: GDScript = preload("res://scenes/entities/player/player_arsenal.gd")
-const WeaponsModule: GDScript = preload("res://scenes/entities/player/player_weapons.gd")
-const WeaponPatternsModule: GDScript = preload("res://scenes/entities/player/player_weapon_patterns.gd")
-const DamageModule: GDScript = preload("res://scenes/entities/player/player_damage.gd")
-const PowerUpsModule: GDScript = preload("res://scenes/entities/player/player_power_ups.gd")
-const VisualsModule: GDScript = preload("res://scenes/entities/player/player_visuals.gd")
+const InputModule: GDScript = preload("res://features/player/player_input.gd")
+const HeatModule: GDScript = preload("res://features/player/player_heat.gd")
+const ArsenalModule: GDScript = preload("res://features/player/player_arsenal.gd")
+const WeaponsModule: GDScript = preload("res://features/player/player_weapons.gd")
+const WeaponPatternsModule: GDScript = preload("res://features/player/player_weapon_patterns.gd")
+const DamageModule: GDScript = preload("res://features/player/player_damage.gd")
+const PowerUpsModule: GDScript = preload("res://features/player/player_power_ups.gd")
+const VisualsModule: GDScript = preload("res://features/player/player_visuals.gd")
 
 ## Available weapon systems in the modular arsenal.
 enum WeaponType {

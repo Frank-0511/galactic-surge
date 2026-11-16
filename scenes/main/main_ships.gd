@@ -16,7 +16,7 @@ func enable_coop_local() -> void:
 	if _main._player_two != null:
 		return
 	_main.PlayerScript.ensure_p2_input_actions()
-	var packed: PackedScene = load("res://scenes/entities/player/player.tscn") as PackedScene
+	var packed: PackedScene = load("res://features/player/player.tscn") as PackedScene
 	_main._player_two = packed.instantiate() as CharacterBody2D
 	_main._player_two.player_index = 2
 	_main._player_two.bullet_scene = _main.bullet_scene

@@ -10,7 +10,7 @@
 
 extends Node
 
-const PlayerInput: GDScript = preload("res://scenes/entities/player/player_input.gd")
+const PlayerInput: GDScript = preload("res://features/player/player_input.gd")
 const NetSyncShots: GDScript = preload("res://scripts/net/net_sync_shots.gd")
 const NetSyncEnemies: GDScript = preload("res://scripts/net/net_sync_enemies.gd")
 const NetSyncLoot: GDScript = preload("res://scripts/net/net_sync_loot.gd")

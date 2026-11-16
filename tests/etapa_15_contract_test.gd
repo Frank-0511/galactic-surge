@@ -47,7 +47,7 @@ func _run_contracts() -> void:
 # Picking up a shield while one is active raises its level (1 -> 3): each level has
 # its own ring color and lasts longer; once it expires the next pickup is level 1 again.
 func _assert_stacking_shield_contract() -> bool:
-	var player: CharacterBody2D = (load("res://scenes/entities/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
+	var player: CharacterBody2D = (load("res://features/player/player.tscn") as PackedScene).instantiate() as CharacterBody2D
 	root.add_child(player)
 	await process_frame
 	var passed: bool = true

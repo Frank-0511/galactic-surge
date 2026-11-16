@@ -5,7 +5,7 @@
 extends Node2D
 
 const STARTING_LIVES: int = 3
-const PlayerScript: Script = preload("res://scenes/entities/player/player.gd")
+const PlayerScript: Script = preload("res://features/player/player.gd")
 const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 10

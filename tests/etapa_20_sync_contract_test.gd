@@ -241,7 +241,7 @@ func _has_arity(obj: Object, method: String, arity: int) -> bool:
 
 # Precondition: J2 actions are registered as the game does when a coop ship is created.
 func _ensure_p2_actions() -> void:
-	var player_script: Script = load("res://scenes/entities/player/player.gd") as Script
+	var player_script: Script = load("res://features/player/player.gd") as Script
 	player_script.call("ensure_p2_input_actions")
 
 

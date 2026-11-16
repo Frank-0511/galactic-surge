@@ -7,7 +7,7 @@ extends SceneTree
 const SPREAD_BULLET_PATH := "res://features/bullet/spread_bullet.tscn"
 const MISSILE_PATH := "res://features/bullet/missile.tscn"
 const LASER_BEAM_PATH := "res://features/bullet/laser_beam.tscn"
-const PLAYER_PATH := "res://scenes/entities/player/player.tscn"
+const PLAYER_PATH := "res://features/player/player.tscn"
 const BOSS_PATH := "res://features/boss/boss.tscn"
 const ENEMY_PATH := "res://features/enemy/enemy.tscn"
 const COMBO_SYSTEM_PATH := "res://core/session/combo_system.gd"
