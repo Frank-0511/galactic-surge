@@ -6,14 +6,13 @@
 # Controles hides that content and shows the Rebind Kit RemapPanel in a dark host (Center/RemapHost),
 # built here; closing it brings Ajustes back with focus on Controles. The InputRemap is created in _ready,
 # so saved bindings reach the InputMap at game start, not only when Ajustes opens.
-# All styling comes from one Theme built in code (_build_settings_theme) and assigned
-# to the root Control; buttons use the ToggleButton and PrimaryButton variations and the
-# title uses TitleLabel. Focus and hover share the solid cyan fill, as in the main menu.
+# The Theme lives in settings_menu_style.gd (built in _ready, assigned to the root Control).
 # Emits back_requested so the owner can return to the main menu.
 
 extends CanvasLayer
 
 const SETTINGS := preload("res://scripts/systems/settings.gd")
+const STYLE := preload("res://scripts/ui/settings_menu_style.gd")
 const TOGGLE_VARIATION := &"ToggleButton"
 const PRIMARY_VARIATION := &"PrimaryButton"
 const TITLE_VARIATION := &"TitleLabel"
@@ -71,6 +70,7 @@ var remap: InputRemap
 var _remap_panel: RemapPanel
 var _remap_host: PanelContainer
 var _remap_column: VBoxContainer
+var _style: RefCounted
 
 @onready var _root: Control = $Control
 @onready var _content: VBoxContainer = $Control/Center/Content
@@ -84,12 +84,13 @@ var _remap_column: VBoxContainer
 
 
 func _ready() -> void:
-	_root.theme = _build_settings_theme()
+	_style = STYLE.new(self)
+	_root.theme = _style.build_theme()
 	remap = InputRemap.new(RebindAdapter.new(CATALOG, REMAP_SAVE_PATH))
 	remap.name = "InputRemap"
 	add_child(remap)
 	_remap_host = PanelContainer.new()
-	var host_style := _make_box(REMAP_PANEL_FILL, Color(CYAN, 0.6), BORDER_WIDTH)
+	var host_style: StyleBoxFlat = _style.make_box(REMAP_PANEL_FILL, Color(CYAN, 0.6), BORDER_WIDTH)
 	host_style.content_margin_left = 16.0
 	host_style.content_margin_right = 16.0
 	host_style.content_margin_top = 16.0
@@ -105,7 +106,7 @@ func _ready() -> void:
 	remap_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_remap_column.add_child(remap_title)
 	_remap_host.add_child(_remap_column)
-	_remap_host.theme = _build_remap_theme()
+	_remap_host.theme = _style.build_remap_theme()
 	_content.get_parent().add_child(_remap_host)
 	_controls_button.pressed.connect(_on_controls_pressed)
 	_values = SETTINGS.load_settings()
@@ -187,119 +188,6 @@ func _refresh_toggle_texts() -> void:
 
 func _yes_no(on: bool) -> String:
 	return "Sí" if on else "No"
-
-
-# ---------------------------------------------------------------------------
-# Theme: one Theme for the whole screen, assigned to the root Control.
-# Buttons: ToggleButton (display options) and PrimaryButton (Volver). Hover and focus
-# share a solid cyan fill with dark text, so the selection is the highest-contrast item.
-# Sliders: cyan grabber and cyan focus ring. Title: TitleLabel. Spacing is theme constants.
-# ---------------------------------------------------------------------------
-func _build_settings_theme() -> Theme:
-	var settings_theme := Theme.new()
-	settings_theme.set_constant(&"separation", &"VBoxContainer", COLUMN_SEPARATION)
-	settings_theme.set_type_variation(FIELD_VARIATION, &"VBoxContainer")
-	settings_theme.set_constant(&"separation", FIELD_VARIATION, FIELD_SEPARATION)
-	settings_theme.set_type_variation(TOGGLE_COLUMN_VARIATION, &"VBoxContainer")
-	settings_theme.set_constant(&"separation", TOGGLE_COLUMN_VARIATION, TOGGLE_SEPARATION)
-	settings_theme.set_color(&"font_color", &"Label", TEXT_SOFT)
-	settings_theme.set_type_variation(TITLE_VARIATION, &"Label")
-	settings_theme.set_font_size(&"font_size", TITLE_VARIATION, TITLE_FONT_SIZE)
-	settings_theme.set_color(&"font_color", TITLE_VARIATION, TITLE_FILL)
-	_theme_button_variation(settings_theme, TOGGLE_VARIATION, TOGGLE_FONT_SIZE)
-	_theme_button_variation(settings_theme, PRIMARY_VARIATION, PRIMARY_FONT_SIZE)
-	# Rebind Kit's panel: its listening and save buttons, and its small captions.
-	_theme_button_variation(settings_theme, &"ActionButton", TOGGLE_FONT_SIZE)
-	settings_theme.set_type_variation(&"CaptionLabel", &"Label")
-	settings_theme.set_font_size(&"font_size", &"CaptionLabel", 16)
-	# Plain Buttons and the scheme OptionButton of the panel share the same cyan look.
-	_theme_plain_control(settings_theme, &"Button")
-	_theme_plain_control(settings_theme, &"OptionButton")
-	_theme_slider(settings_theme)
-	return settings_theme
-
-
-# Theme only for the Rebind Kit panel (its host): the focused key cell is a dark fill with a
-# thick cyan border, so the key text stays readable. The rest of the menu keeps the solid cyan focus.
-func _build_remap_theme() -> Theme:
-	var remap_theme: Theme = _root.theme.duplicate()
-	var focus_box: StyleBoxFlat = _make_box(REMAP_FOCUS_FILL, FOCUS_FILL, REMAP_FOCUS_BORDER)
-	remap_theme.set_stylebox(&"hover", &"Button", focus_box)
-	remap_theme.set_stylebox(&"focus", &"Button", focus_box)
-	remap_theme.set_color(&"font_hover_color", &"Button", TEXT_SOFT)
-	remap_theme.set_color(&"font_focus_color", &"Button", TEXT_SOFT)
-	return remap_theme
-
-
-func _theme_plain_control(settings_theme: Theme, type: StringName) -> void:
-	settings_theme.set_stylebox(&"normal", type, _make_box(Color(0.04, 0.07, 0.16, 0.92), Color(CYAN, 0.8), BORDER_WIDTH))
-	settings_theme.set_stylebox(&"hover", type, _make_box(FOCUS_FILL, FOCUS_FILL, BORDER_WIDTH))
-	settings_theme.set_stylebox(&"pressed", type, _make_box(Color(0.02, 0.04, 0.1, 1.0), Color(CYAN, 0.5), BORDER_WIDTH))
-	settings_theme.set_stylebox(&"focus", type, _make_box(FOCUS_FILL, FOCUS_FILL, BORDER_WIDTH))
-	settings_theme.set_font_size(&"font_size", type, 16)
-	settings_theme.set_color(&"font_color", type, TEXT_SOFT)
-	settings_theme.set_color(&"font_hover_color", type, FOCUS_TEXT)
-	settings_theme.set_color(&"font_focus_color", type, FOCUS_TEXT)
-
-
-func _theme_button_variation(settings_theme: Theme, variation: StringName, font_size: int) -> void:
-	settings_theme.set_type_variation(variation, &"Button")
-	settings_theme.set_stylebox(&"normal", variation, _make_box(Color(0.04, 0.07, 0.16, 0.92), Color(CYAN, 0.8), BORDER_WIDTH))
-	settings_theme.set_stylebox(&"hover", variation, _make_box(FOCUS_FILL, FOCUS_FILL, BORDER_WIDTH))
-	settings_theme.set_stylebox(&"pressed", variation, _make_box(Color(0.02, 0.04, 0.1, 1.0), Color(CYAN, 0.5), BORDER_WIDTH))
-	settings_theme.set_stylebox(&"focus", variation, _make_box(FOCUS_FILL, FOCUS_FILL, BORDER_WIDTH))
-	settings_theme.set_font_size(&"font_size", variation, font_size)
-	settings_theme.set_color(&"font_color", variation, TEXT_SOFT)
-	settings_theme.set_color(&"font_pressed_color", variation, Color(0.6, 0.8, 0.9))
-	settings_theme.set_color(&"font_hover_color", variation, FOCUS_TEXT)
-	settings_theme.set_color(&"font_hover_pressed_color", variation, FOCUS_TEXT)
-	settings_theme.set_color(&"font_focus_color", variation, FOCUS_TEXT)
-
-
-func _theme_slider(settings_theme: Theme) -> void:
-	var track: StyleBoxFlat = _make_box(Color(0.04, 0.07, 0.16, 0.92), Color(CYAN, 0.6), 1)
-	track.content_margin_left = 0.0
-	track.content_margin_right = 0.0
-	track.content_margin_top = 3.0
-	track.content_margin_bottom = 3.0
-	settings_theme.set_stylebox(&"slider", &"HSlider", track)
-	var filled: StyleBoxFlat = _make_box(Color(CYAN, 0.45), Color(CYAN, 0.45), 0)
-	settings_theme.set_stylebox(&"grabber_area", &"HSlider", filled)
-	settings_theme.set_stylebox(&"grabber_area_highlight", &"HSlider", _make_box(FOCUS_FILL, FOCUS_FILL, 0))
-	# Focus ring on the whole slider: solid cyan border, no fill.
-	var ring: StyleBoxFlat = _make_box(Color(0.0, 0.0, 0.0, 0.0), FOCUS_FILL, BORDER_WIDTH)
-	ring.content_margin_left = 0.0
-	ring.content_margin_right = 0.0
-	ring.content_margin_top = 0.0
-	ring.content_margin_bottom = 0.0
-	settings_theme.set_stylebox(&"focus", &"HSlider", ring)
-	settings_theme.set_icon(&"grabber", &"HSlider", _circle_icon(Color(CYAN, 0.6)))
-	settings_theme.set_icon(&"grabber_highlight", &"HSlider", _circle_icon(FOCUS_FILL))
-
-
-func _circle_icon(color: Color) -> ImageTexture:
-	var image := Image.create(GRABBER_SIZE, GRABBER_SIZE, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0.0, 0.0, 0.0, 0.0))
-	var center := Vector2(GRABBER_SIZE, GRABBER_SIZE) * 0.5
-	for x: int in range(GRABBER_SIZE):
-		for y: int in range(GRABBER_SIZE):
-			if Vector2(x + 0.5, y + 0.5).distance_to(center) <= GRABBER_SIZE * 0.5:
-				image.set_pixel(x, y, color)
-	return ImageTexture.create_from_image(image)
-
-
-func _make_box(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.bg_color = fill
-	box.border_color = border
-	box.set_border_width_all(border_width)
-	box.set_corner_radius_all(CORNER_RADIUS)
-	box.content_margin_left = BUTTON_PADDING_X
-	box.content_margin_right = BUTTON_PADDING_X
-	box.content_margin_top = BUTTON_PADDING_Y
-	box.content_margin_bottom = BUTTON_PADDING_Y
-	box.anti_aliasing = true
-	return box
 
 
 # ---------------------------------------------------------------------------
