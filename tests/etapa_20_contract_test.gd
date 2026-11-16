@@ -205,7 +205,7 @@ func _has_button(action: String, button: JoyButton) -> bool:
 # 9. Drops: el magnetismo va a la nave visible más cercana (Etapa 20, opción 1)
 # ---------------------------------------------------------------------------
 func _check_loot_nearest_ship() -> void:
-	var loot_script: Script = load("res://scenes/loot/loot_drop.gd")
+	var loot_script: Script = load("res://features/loot/loot_drop.gd")
 	_expect(loot_script.has_method("nearest_ship"), "Contrato 9d: LootDrop expone nearest_ship()")
 	if not loot_script.has_method("nearest_ship"):
 		return
@@ -228,7 +228,7 @@ func _check_loot_nearest_ship() -> void:
 # 10. Recogida: el efecto se aplica a la nave que recogió el drop (Etapa 20)
 # ---------------------------------------------------------------------------
 func _check_loot_collector_routing() -> void:
-	var loot_script: Script = load("res://scenes/loot/loot_drop.gd")
+	var loot_script: Script = load("res://features/loot/loot_drop.gd")
 	var packed: PackedScene = load("res://scenes/main/main.tscn") as PackedScene
 	var main: Node = packed.instantiate()
 	get_root().add_child(main)
@@ -499,7 +499,7 @@ func _check_kill_attribution() -> void:
 # 24. Balas: el impacto marca al enemigo con la nave que disparó (feature L13)
 # ---------------------------------------------------------------------------
 func _check_bullet_propagates_shooter() -> void:
-	var bullet_packed: PackedScene = load("res://scenes/entities/bullet/spread_bullet.tscn") as PackedScene
+	var bullet_packed: PackedScene = load("res://features/bullet/spread_bullet.tscn") as PackedScene
 	var bullet: Node = bullet_packed.instantiate()
 	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
 	var shooter: Node2D = Node2D.new()
@@ -524,7 +524,7 @@ func _check_bullet_propagates_shooter() -> void:
 # 25. Misiles: el impacto marca al enemigo con la nave que disparó
 # ---------------------------------------------------------------------------
 func _check_missile_propagates_shooter() -> void:
-	var missile_packed: PackedScene = load("res://scenes/entities/bullet/missile.tscn") as PackedScene
+	var missile_packed: PackedScene = load("res://features/bullet/missile.tscn") as PackedScene
 	var missile: Node = missile_packed.instantiate()
 	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
 	var shooter: Node2D = Node2D.new()
@@ -549,7 +549,7 @@ func _check_missile_propagates_shooter() -> void:
 # 26. Láser: el haz declara su nave y el daño marca al objetivo (feature L13)
 # ---------------------------------------------------------------------------
 func _check_laser_declares_shooter() -> void:
-	var beam: Node = (load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene).instantiate()
+	var beam: Node = (load("res://features/bullet/laser_beam.tscn") as PackedScene).instantiate()
 	_expect("shooter" in beam, "Contrato 26a: el láser declara su nave (shooter)")
 	beam.free()
 
@@ -558,7 +558,7 @@ func _check_laser_declares_shooter() -> void:
 # 27. Blaster base (bala legacy): el impacto marca al enemigo con la nave que disparó
 # ---------------------------------------------------------------------------
 func _check_legacy_bullet_kill_attribution() -> void:
-	var bullet: Area2D = (load("res://scenes/entities/bullet/bullet.tscn") as PackedScene).instantiate() as Area2D
+	var bullet: Area2D = (load("res://features/bullet/bullet.tscn") as PackedScene).instantiate() as Area2D
 	var enemy: Node = (load("res://scenes/entities/enemy/enemy.tscn") as PackedScene).instantiate()
 	var shooter: Node2D = Node2D.new()
 	get_root().add_child(enemy)
@@ -708,7 +708,7 @@ func _check_p2_panels_follow_session() -> void:
 # 33. Icono del arma: el mismo dibujo del medallon que cae (LootDrop.paint_medallion)
 # ---------------------------------------------------------------------------
 func _check_weapon_icon_is_drop_medallion() -> void:
-	var loot_script: Script = load("res://scenes/loot/loot_drop.gd")
+	var loot_script: Script = load("res://features/loot/loot_drop.gd")
 	_expect(loot_script.has_method("paint_medallion"), "Contrato 33a: LootDrop expone paint_medallion() para reutilizar el dibujo")
 	var hud: Node = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
 	get_root().add_child(hud)

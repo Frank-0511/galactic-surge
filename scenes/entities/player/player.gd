@@ -69,10 +69,10 @@ const OVERHEAT_SECONDS: Dictionary = {
 @export var speed: float = 480.0
 
 ## Default blaster projectile scene.
-@export var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tscn")
+@export var bullet_scene: PackedScene = preload("res://features/bullet/bullet.tscn")
 
 ## Directional projectile used by the Ion Blaster.
-@export var ion_bullet_scene: PackedScene = preload("res://scenes/entities/bullet/spread_bullet.tscn")
+@export var ion_bullet_scene: PackedScene = preload("res://features/bullet/spread_bullet.tscn")
 
 ## Backward compatibility property alias for tests expecting spread_bullet_scene.
 var spread_bullet_scene: PackedScene:
@@ -82,10 +82,10 @@ var spread_bullet_scene: PackedScene:
 		ion_bullet_scene = value
 
 ## Homing missile projectile scene.
-@export var missile_scene: PackedScene = preload("res://scenes/entities/bullet/missile.tscn")
+@export var missile_scene: PackedScene = preload("res://features/bullet/missile.tscn")
 
 ## Continuous laser beam scene.
-@export var laser_beam_scene: PackedScene = preload("res://scenes/entities/bullet/laser_beam.tscn")
+@export var laser_beam_scene: PackedScene = preload("res://features/bullet/laser_beam.tscn")
 
 ## Duration in seconds after respawning during which damage is ignored.
 @export var invulnerability_duration: float = 1.5
@@ -159,13 +159,13 @@ var _horizontal_limits: Vector2 = Vector2.ZERO
 
 func _ready() -> void:
 	if bullet_scene == null:
-		bullet_scene = load("res://scenes/entities/bullet/bullet.tscn") as PackedScene
+		bullet_scene = load("res://features/bullet/bullet.tscn") as PackedScene
 	if ion_bullet_scene == null:
-		ion_bullet_scene = load("res://scenes/entities/bullet/spread_bullet.tscn") as PackedScene
+		ion_bullet_scene = load("res://features/bullet/spread_bullet.tscn") as PackedScene
 	if missile_scene == null:
-		missile_scene = load("res://scenes/entities/bullet/missile.tscn") as PackedScene
+		missile_scene = load("res://features/bullet/missile.tscn") as PackedScene
 	if laser_beam_scene == null:
-		laser_beam_scene = load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene
+		laser_beam_scene = load("res://features/bullet/laser_beam.tscn") as PackedScene
 
 	if _laser_beam == null and laser_beam_scene != null:
 		_laser_beam = laser_beam_scene.instantiate() as Area2D

@@ -111,7 +111,7 @@ func _assert_audio_buses() -> bool:
 	if not ("Master" in names and "Music" in names and "SFX" in names):
 		push_error("Bus layout must contain Master, Music and SFX, got %s" % str(names))
 		return false
-	var scene: Node = load("res://scenes/audio/audio_feedback.tscn").instantiate()
+	var scene: Node = load("res://features/audio/audio_feedback.tscn").instantiate()
 	var ok: bool = true
 	for child: Node in scene.get_children():
 		if not child is AudioStreamPlayer:

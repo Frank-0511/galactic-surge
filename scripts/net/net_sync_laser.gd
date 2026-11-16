@@ -6,7 +6,7 @@
 
 extends RefCounted
 
-const LaserReplicaScript: GDScript = preload("res://scenes/entities/bullet/laser_replica.gd")
+const LaserReplicaScript: GDScript = preload("res://features/bullet/laser_replica.gd")
 const REPLICA_NAME: String = "LaserReplica"
 const ENTRY_KEYS: Array = ["ship", "firing", "level", "x", "y", "length"]
 

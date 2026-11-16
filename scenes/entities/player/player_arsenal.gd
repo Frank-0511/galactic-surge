@@ -79,7 +79,7 @@ func ensure_laser_beam() -> Area2D:
 			_player._laser_beam.call(&"set_power_level", _player.weapon_level)
 		return _player._laser_beam
 	if _player.laser_beam_scene == null:
-		_player.laser_beam_scene = load("res://scenes/entities/bullet/laser_beam.tscn") as PackedScene
+		_player.laser_beam_scene = load("res://features/bullet/laser_beam.tscn") as PackedScene
 	if _player.laser_beam_scene != null:
 		_player._laser_beam = _player.laser_beam_scene.instantiate() as Area2D
 		_player._laser_beam.set("shooter", _player)

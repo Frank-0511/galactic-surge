@@ -10,11 +10,11 @@
 class_name Asteroid
 extends Area2D
 
-const ShapeModule: GDScript = preload("res://scenes/entities/asteroid/asteroid_shape.gd")
-const FragmentationModule: GDScript = preload("res://scenes/entities/asteroid/asteroid_fragmentation.gd")
-const MotionModule: GDScript = preload("res://scenes/entities/asteroid/asteroid_motion.gd")
-const VisualsModule: GDScript = preload("res://scenes/entities/asteroid/asteroid_visuals.gd")
-const DamageModule: GDScript = preload("res://scenes/entities/asteroid/asteroid_damage.gd")
+const ShapeModule: GDScript = preload("res://features/asteroid/asteroid_shape.gd")
+const FragmentationModule: GDScript = preload("res://features/asteroid/asteroid_fragmentation.gd")
+const MotionModule: GDScript = preload("res://features/asteroid/asteroid_motion.gd")
+const VisualsModule: GDScript = preload("res://features/asteroid/asteroid_visuals.gd")
+const DamageModule: GDScript = preload("res://features/asteroid/asteroid_damage.gd")
 
 enum Size {
 	LARGE = 0,

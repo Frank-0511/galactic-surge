@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scenes/entities/bullet/spread_bullet.gd" id="1"]
+[ext_resource type="Script" path="res://features/bullet/spread_bullet.gd" id="1"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_spread"]
 size = Vector2(8, 14)

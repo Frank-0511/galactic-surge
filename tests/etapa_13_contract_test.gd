@@ -15,12 +15,12 @@
 
 extends SceneTree
 
-const ASTEROID_SCENE_PATH := "res://scenes/entities/asteroid/asteroid.tscn"
+const ASTEROID_SCENE_PATH := "res://features/asteroid/asteroid.tscn"
 const ASTEROID_SPAWNER_PATH := "res://scenes/systems/asteroid_spawner.tscn"
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const CAMERA_SHAKE_SCRIPT_PATH := "res://scenes/main/camera_shake.gd"
 
-const AsteroidScript: Script = preload("res://scenes/entities/asteroid/asteroid.gd")
+const AsteroidScript: Script = preload("res://features/asteroid/asteroid.gd")
 
 
 func _init() -> void:

@@ -3,9 +3,9 @@
 
 extends Node2D
 
-const EXPLOSION_BURST_SCRIPT: Script = preload("res://scenes/effects/explosion_burst.gd")
-const SCORE_POPUP_SCRIPT: Script = preload("res://scenes/effects/score_popup.gd")
-const HULL_FRAGMENT_SCRIPT: Script = preload("res://scenes/effects/hull_fragment.gd")
+const EXPLOSION_BURST_SCRIPT: Script = preload("res://features/effects/explosion_burst.gd")
+const SCORE_POPUP_SCRIPT: Script = preload("res://features/effects/score_popup.gd")
+const HULL_FRAGMENT_SCRIPT: Script = preload("res://features/effects/hull_fragment.gd")
 const HULL_FRAGMENT_COLOR: Color = Color(0.4, 1.0, 0.8)
 
 @onready var _explosion_layer: Node2D = $ExplosionLayer

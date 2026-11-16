@@ -14,7 +14,7 @@
 extends SceneTree
 
 const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
-const MISSILE_PATH := "res://scenes/entities/bullet/missile.tscn"
+const MISSILE_PATH := "res://features/bullet/missile.tscn"
 const SPAWNER_PATH := "res://scenes/systems/enemy_spawner.tscn"
 const EnemyAIScript: Script = preload("res://scripts/components/enemy_ai.gd")
 const EnemyVariantsScript: Script = preload("res://scripts/systems/enemy_variants.gd")

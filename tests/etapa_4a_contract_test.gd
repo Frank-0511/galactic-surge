@@ -4,8 +4,8 @@ extends SceneTree
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
 const PAUSE_MENU_SCENE_PATH := "res://scenes/ui/pause_menu.tscn"
-const STARFIELD_SCENE_PATH := "res://scenes/background/starfield.tscn"
-const VISUAL_FEEDBACK_SCENE_PATH := "res://scenes/effects/visual_feedback.tscn"
+const STARFIELD_SCENE_PATH := "res://features/background/starfield.tscn"
+const VISUAL_FEEDBACK_SCENE_PATH := "res://features/effects/visual_feedback.tscn"
 
 
 func _init() -> void:
@@ -227,7 +227,7 @@ func _assert_starfield_contract() -> bool:
 			if first_reset.get("far") != second_reset.get("far") or first_reset.get("near") != second_reset.get("near"):
 				push_error("Starfield reset_scroll() must restore deterministic positions")
 				passed = false
-	var source: String = FileAccess.get_file_as_string("res://scenes/background/starfield.gd")
+	var source: String = FileAccess.get_file_as_string("res://features/background/starfield.gd")
 	for forbidden_api: String in ["load(", "preload(", "Texture2D", "Sprite2D"]:
 		if source.contains(forbidden_api):
 			push_error("Starfield must not use %s" % forbidden_api)

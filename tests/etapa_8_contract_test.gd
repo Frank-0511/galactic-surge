@@ -10,7 +10,7 @@ extends SceneTree
 
 const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
 const SPAWNER_PATH := "res://scenes/systems/enemy_spawner.tscn"
-const STARFIELD_PATH := "res://scenes/background/starfield.tscn"
+const STARFIELD_PATH := "res://features/background/starfield.tscn"
 const MAIN_PATH := "res://scenes/main/main.tscn"
 
 const VectorMath: Script = preload("res://core/math/vector_math.gd")

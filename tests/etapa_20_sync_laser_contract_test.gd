@@ -10,7 +10,7 @@ const NET_COOP_BUTTON := "Control/NetPanel/ButtonRow/NetCoopButton"
 const HOST_PORT_A: int = 7801
 const CLIENT_TARGET_PORT: int = 7802
 const WEAPON_LASER: int = 2
-const LASER_BEAM_PATH: String = "res://scenes/entities/bullet/laser_beam.tscn"
+const LASER_BEAM_PATH: String = "res://features/bullet/laser_beam.tscn"
 const DUMMY_ENEMY_SOURCE := "extends Area2D\nvar hits := 0\nfunc supports_fractional_damage() -> void: pass\nfunc take_damage(_amount) -> void: hits += 1\n"
 
 var _failures: int = 0

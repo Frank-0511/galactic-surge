@@ -11,8 +11,8 @@ extends SceneTree
 
 const PLAYER_PATH := "res://scenes/entities/player/player.tscn"
 const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
-const MISSILE_PATH := "res://scenes/entities/bullet/missile.tscn"
-const LASER_PATH := "res://scenes/entities/bullet/laser_beam.tscn"
+const MISSILE_PATH := "res://features/bullet/missile.tscn"
+const LASER_PATH := "res://features/bullet/laser_beam.tscn"
 const SPAWNER_PATH := "res://scenes/systems/enemy_spawner.tscn"
 const MAIN_SCRIPT_PATH := "res://scenes/main/main.gd"
 
@@ -107,7 +107,7 @@ func _assert_blaster_damage_scaling() -> bool:
 		_free_all(shots)
 
 	# Level 1 stays as in the original contract (SpreadBullet default damage = 1).
-	var bullet_default: Area2D = (load("res://scenes/entities/bullet/spread_bullet.tscn") as PackedScene).instantiate() as Area2D
+	var bullet_default: Area2D = (load("res://features/bullet/spread_bullet.tscn") as PackedScene).instantiate() as Area2D
 	ok = _check(int(bullet_default.get("damage")) == 1, "SpreadBullet default damage must stay 1") and ok
 	bullet_default.free()
 

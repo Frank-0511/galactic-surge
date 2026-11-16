@@ -3,11 +3,11 @@
 # bomb scope restricted to enemy_bullets, and Main loot weights and collection effects.
 extends SceneTree
 
-const LOOT_SCENE_PATH := "res://scenes/loot/loot_drop.tscn"
+const LOOT_SCENE_PATH := "res://features/loot/loot_drop.tscn"
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
 const ENEMY_BULLET_SCENE_PATH := "res://scenes/entities/enemy/enemy_bullet.tscn"
 const BOSS_BULLET_SCENE_PATH := "res://scenes/entities/boss/boss_bullet.tscn"
-const PLAYER_BULLET_SCENE_PATH := "res://scenes/entities/bullet/bullet.tscn"
+const PLAYER_BULLET_SCENE_PATH := "res://features/bullet/bullet.tscn"
 
 const STARTING_LIVES: int = 3
 const SCORE_LOOT_POINTS: int = 250

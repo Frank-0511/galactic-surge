@@ -6,7 +6,7 @@
 
 extends RefCounted
 
-const DROP_SCENE_PATH: String = "res://scenes/loot/loot_drop.tscn"
+const DROP_SCENE_PATH: String = "res://features/loot/loot_drop.tscn"
 
 var _main: Node2D
 var _node: Node

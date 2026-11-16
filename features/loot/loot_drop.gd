@@ -6,8 +6,8 @@
 class_name LootDrop
 extends Area2D
 
-const MedallionModule: GDScript = preload("res://scenes/loot/loot_drop_medallion.gd")
-const DrawModule: GDScript = preload("res://scenes/loot/loot_drop_draw.gd")
+const MedallionModule: GDScript = preload("res://features/loot/loot_drop_medallion.gd")
+const DrawModule: GDScript = preload("res://features/loot/loot_drop_draw.gd")
 
 enum Type {
 	SCORE,

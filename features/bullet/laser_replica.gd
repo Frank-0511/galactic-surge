@@ -6,7 +6,7 @@
 
 extends Area2D
 
-const LaserBeamScript: GDScript = preload("res://scenes/entities/bullet/laser_beam.gd")
+const LaserBeamScript: GDScript = preload("res://features/bullet/laser_beam.gd")
 
 ## Reach of the replica in pixels, as the host reported it.
 var length: float = 0.0

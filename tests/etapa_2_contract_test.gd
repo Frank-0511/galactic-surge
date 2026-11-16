@@ -11,7 +11,7 @@ func _run_contracts() -> void:
 	passed = _assert_scene("res://scenes/entities/enemy/enemy.tscn") and passed
 	passed = _assert_scene("res://scenes/entities/enemy/enemy_bullet.tscn") and passed
 	passed = _assert_collision_contract(
-		"res://scenes/entities/bullet/bullet.tscn", 2, 4, "enemy_hit"
+		"res://features/bullet/bullet.tscn", 2, 4, "enemy_hit"
 	) and passed
 	passed = _assert_collision_contract(
 		"res://scenes/entities/enemy/enemy_bullet.tscn", 8, 1, "player_hit"

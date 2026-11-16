@@ -39,9 +39,9 @@ const ASTEROID_WAVE_INDEX: int = 8
 const ASTEROID_LARGE_POINTS: int = 150
 const ASTEROID_MEDIUM_POINTS: int = 75
 const ASTEROID_SMALL_POINTS: int = 30
-const LOOT_DROP_SCENE: PackedScene = preload("res://scenes/loot/loot_drop.tscn")
+const LOOT_DROP_SCENE: PackedScene = preload("res://features/loot/loot_drop.tscn")
 const SCORE_LOOT_POINTS: int = 250
-const POWER_UP_SCENE: PackedScene = preload("res://scenes/powerups/power_up.tscn")
+const POWER_UP_SCENE: PackedScene = preload("res://features/powerups/power_up.tscn")
 const BOSS_SCENE: PackedScene = preload("res://scenes/entities/boss/boss.tscn")
 const HighScore: Script = preload("res://core/session/high_score.gd")
 const Settings: Script = preload("res://core/settings/settings.gd")
@@ -71,7 +71,7 @@ const _RADAR_PHRASES: Array[String] = [
 enum SessionState { MAIN_MENU, PLAYING, PAUSED, WAVE_TRANSITION, BOSS_BATTLE, GAME_OVER, MISSION_COMPLETE, BONUS_WAVE }
 
 ## Bullet scene to provide to the player.
-var bullet_scene: PackedScene = preload("res://scenes/entities/bullet/bullet.tscn")
+var bullet_scene: PackedScene = preload("res://features/bullet/bullet.tscn")
 
 @onready var _player: CharacterBody2D = $Player
 @onready var _enemy_spawner: Node2D = $EnemySpawner

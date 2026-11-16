@@ -3,7 +3,7 @@
 # routes damage through take_damage, and stays silent when the beam is not firing.
 extends SceneTree
 
-const LASER_BEAM_PATH := "res://scenes/entities/bullet/laser_beam.tscn"
+const LASER_BEAM_PATH := "res://features/bullet/laser_beam.tscn"
 
 const FAKE_TARGET_SOURCE := "extends Area2D
 var hits := 0

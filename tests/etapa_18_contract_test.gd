@@ -28,8 +28,8 @@ const GAME_OVER_SCENE := preload("res://scenes/ui/game_over.tscn")
 const SPAWNER_SCENE := preload("res://scenes/systems/enemy_spawner.tscn")
 const PLAYER_SCENE := preload("res://scenes/entities/player/player.tscn")
 const MENU_SCENE := preload("res://scenes/ui/main_menu.tscn")
-const HULL_FRAGMENT_SCRIPT := preload("res://scenes/effects/hull_fragment.gd")
-const VISUAL_FEEDBACK_SCENE := preload("res://scenes/effects/visual_feedback.tscn")
+const HULL_FRAGMENT_SCRIPT := preload("res://features/effects/hull_fragment.gd")
+const VISUAL_FEEDBACK_SCENE := preload("res://features/effects/visual_feedback.tscn")
 const FLOAT_TOLERANCE := 0.0001
 const SPEED_TOLERANCE := 0.001
 

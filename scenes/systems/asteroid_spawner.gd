@@ -7,7 +7,7 @@
 class_name AsteroidSpawner
 extends Node2D
 
-const AsteroidScript: Script = preload("res://scenes/entities/asteroid/asteroid.gd")
+const AsteroidScript: Script = preload("res://features/asteroid/asteroid.gd")
 
 ## Emitted when any asteroid (initial or fragment) is spawned into the scene.
 signal asteroid_spawned(asteroid: Area2D)
@@ -21,7 +21,7 @@ signal all_asteroids_cleared
 ## Emitted to request sensory (visual banner/audio siren) warning of incoming impact.
 signal warning_requested(duration: float, message: String)
 
-@export var asteroid_scene: PackedScene = preload("res://scenes/entities/asteroid/asteroid.tscn")
+@export var asteroid_scene: PackedScene = preload("res://features/asteroid/asteroid.tscn")
 @export var wave_asteroid_count: int = 24
 @export var spawn_interval: float = 2.25
 @export var min_speed: float = 80.0

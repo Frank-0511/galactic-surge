@@ -4,16 +4,16 @@
 # Main combo scoring integration, and AudioFeedback weapon sounds.
 extends SceneTree
 
-const SPREAD_BULLET_PATH := "res://scenes/entities/bullet/spread_bullet.tscn"
-const MISSILE_PATH := "res://scenes/entities/bullet/missile.tscn"
-const LASER_BEAM_PATH := "res://scenes/entities/bullet/laser_beam.tscn"
+const SPREAD_BULLET_PATH := "res://features/bullet/spread_bullet.tscn"
+const MISSILE_PATH := "res://features/bullet/missile.tscn"
+const LASER_BEAM_PATH := "res://features/bullet/laser_beam.tscn"
 const PLAYER_PATH := "res://scenes/entities/player/player.tscn"
 const BOSS_PATH := "res://scenes/entities/boss/boss.tscn"
 const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
 const COMBO_SYSTEM_PATH := "res://core/session/combo_system.gd"
 const HUD_PATH := "res://scenes/ui/hud.tscn"
 const MAIN_PATH := "res://scenes/main/main.tscn"
-const AUDIO_FEEDBACK_PATH := "res://scenes/audio/audio_feedback.tscn"
+const AUDIO_FEEDBACK_PATH := "res://features/audio/audio_feedback.tscn"
 
 
 func _init() -> void:

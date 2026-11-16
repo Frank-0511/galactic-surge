@@ -4,8 +4,8 @@
 extends SceneTree
 
 const MAIN_SCENE_PATH := "res://scenes/main/main.tscn"
-const AUDIO_FEEDBACK_SCENE_PATH := "res://scenes/audio/audio_feedback.tscn"
-const POWER_UP_SCENE_PATH := "res://scenes/powerups/power_up.tscn"
+const AUDIO_FEEDBACK_SCENE_PATH := "res://features/audio/audio_feedback.tscn"
+const POWER_UP_SCENE_PATH := "res://features/powerups/power_up.tscn"
 const WAVE_ANNOUNCEMENT_SCENE_PATH := "res://scenes/ui/wave_announcement.tscn"
 const PLAYER_SCENE_PATH := "res://scenes/entities/player/player.tscn"
 

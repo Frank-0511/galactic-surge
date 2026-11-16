@@ -33,7 +33,7 @@ func split() -> Array[Area2D]:
 	var angles: Array[float] = [-deg_to_rad(dispersion_angle_deg), deg_to_rad(dispersion_angle_deg)]
 	var spins: Array[float] = [-2.2, 2.2]
 
-	var asteroid_scene: PackedScene = load("res://scenes/entities/asteroid/asteroid.tscn") as PackedScene
+	var asteroid_scene: PackedScene = load("res://features/asteroid/asteroid.tscn") as PackedScene
 	if asteroid_scene == null:
 		return fragments
 

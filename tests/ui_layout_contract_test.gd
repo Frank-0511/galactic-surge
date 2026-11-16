@@ -5,7 +5,7 @@
 # from the historical 600×800 reference. Preserves the Etapa 4A contracts.
 extends SceneTree
 
-const STARFIELD_SCENE_PATH := "res://scenes/background/starfield.tscn"
+const STARFIELD_SCENE_PATH := "res://features/background/starfield.tscn"
 const HUD_SCENE_PATH := "res://scenes/ui/hud.tscn"
 const MAIN_MENU_SCENE_PATH := "res://scenes/ui/main_menu.tscn"
 const GAME_OVER_SCENE_PATH := "res://scenes/ui/game_over.tscn"
@@ -27,7 +27,7 @@ func _run_contracts() -> void:
 
 
 func _assert_starfield_full_viewport() -> bool:
-	var source: String = FileAccess.get_file_as_string("res://scenes/background/starfield.gd")
+	var source: String = FileAccess.get_file_as_string("res://features/background/starfield.gd")
 	var passed: bool = true
 	# The star generator must not subtract a fixed offset from the viewport end,
 	# which would leave a gap derived from a historical speed constant.

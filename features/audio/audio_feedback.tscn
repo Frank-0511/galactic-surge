@@ -1,6 +1,6 @@
 [gd_scene load_steps=10 format=3]
 
-[ext_resource type="Script" path="res://scenes/audio/audio_feedback.gd" id="1"]
+[ext_resource type="Script" path="res://features/audio/audio_feedback.gd" id="1"]
 [ext_resource type="AudioStream" path="res://assets/audio/music/combat_8bit_space_shooter.mp3" id="2"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/player_shoot.wav" id="3"]
 [ext_resource type="AudioStream" path="res://assets/audio/sfx/player_double_shoot.wav" id="4"]

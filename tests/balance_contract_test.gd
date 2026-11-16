@@ -13,7 +13,7 @@
 extends SceneTree
 
 const ENEMY_PATH := "res://scenes/entities/enemy/enemy.tscn"
-const LASER_PATH := "res://scenes/entities/bullet/laser_beam.tscn"
+const LASER_PATH := "res://features/bullet/laser_beam.tscn"
 const SPAWNER_PATH := "res://scenes/systems/enemy_spawner.tscn"
 const BULLET_PATH := "res://scenes/entities/enemy/enemy_bullet.tscn"
 const PLAYER_PATH := "res://scenes/entities/player/player.tscn"
