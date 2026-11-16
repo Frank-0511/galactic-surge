@@ -10,6 +10,8 @@
 extends CanvasLayer
 
 const DS := preload("res://scripts/systems/difficulty_settings.gd")
+## Network lobby module (Etapa 20, S2): validates IP/port and opens the ENet host or client.
+const LobbyNet := preload("res://scripts/net/lobby_net.gd")
 
 ## Switch to true to disable the title pulse and the entrance fade (reduced motion).
 const REDUCED_MOTION := false
@@ -42,6 +44,9 @@ var selected_difficulty: int = DS.Tier.COMMANDER
 ## True when the player pressed "Coop local" instead of "Jugar" (Etapa 20).
 var coop_selected: bool = false
 
+## Lobby instance shared by the Red section's Host and Join buttons.
+var _lobby = LobbyNet.new()
+
 @onready var _content: Control = $Control
 @onready var _vignette: TextureRect = $Control/Vignette
 @onready var _high_score_label: Label = $Control/HighScoreLabel
@@ -50,6 +55,9 @@ var coop_selected: bool = false
 @onready var _play_button: Button = $Control/Menu/PlayButton
 @onready var _quit_button: Button = $Control/Menu/QuitButton
 @onready var _ajustes_button: Button = $Control/Menu/AjustesButton
+@onready var _ip_field: LineEdit = $Control/NetPanel/AddressRow/IpField
+@onready var _port_field: LineEdit = $Control/NetPanel/AddressRow/PortField
+@onready var _net_error_label: Label = $Control/NetPanel/NetErrorLabel
 
 var _entrance_tween: Tween
 var _pulse_tween: Tween
@@ -100,6 +108,58 @@ func _on_quit_button_pressed() -> void:
 
 func _on_ajustes_button_pressed() -> void:
 	settings_requested.emit()
+
+
+# ---------------------------------------------------------------------------
+# Red (Etapa 20, S2): Host and Join by IP + port. Invalid input shows a message and never assigns a peer.
+# ---------------------------------------------------------------------------
+func _on_host_button_pressed() -> void:
+	_net_error_label.text = ""
+	var port: int = _read_port()
+	if not _lobby.validate_port(port):
+		_show_net_error("Puerto inválido: usa un valor entre %d y %d." % [LobbyNet.MIN_PORT, LobbyNet.MAX_PORT])
+		return
+	var err: Error = _lobby.host(port)
+	if err != OK:
+		_show_net_error("No se pudo abrir el servidor: %s" % error_string(err))
+		return
+	multiplayer.multiplayer_peer = _lobby.get_peer()
+
+
+func _on_join_button_pressed() -> void:
+	_net_error_label.text = ""
+	var address: String = _ip_field.text.strip_edges()
+	var port: int = _read_port()
+	if not _lobby.validate_ip(address):
+		_show_net_error("IP inválida: escribe una IPv4 válida o \"localhost\".")
+		return
+	if not _lobby.validate_port(port):
+		_show_net_error("Puerto inválido: usa un valor entre %d y %d." % [LobbyNet.MIN_PORT, LobbyNet.MAX_PORT])
+		return
+	var err: Error = _lobby.join(address, port)
+	if err != OK:
+		_show_net_error("No se pudo conectar a %s:%d: %s" % [address, port, error_string(err)])
+		return
+	multiplayer.multiplayer_peer = _lobby.get_peer()
+
+
+func _read_port() -> int:
+	return _port_field.text.strip_edges().to_int()
+
+
+func _show_net_error(message: String) -> void:
+	_net_error_label.text = message
+
+
+## Public: shows a network notice (for example, a lost host) in the Red section.
+func show_network_message(text: String) -> void:
+	_net_error_label.text = text
+
+
+## Public: closes the lobby and clears the scene multiplayer peer. Safe when nothing is open.
+func close_network() -> void:
+	_lobby.close()
+	multiplayer.multiplayer_peer = null
 
 
 # ---------------------------------------------------------------------------

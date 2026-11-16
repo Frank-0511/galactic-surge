@@ -173,8 +173,69 @@ layout_mode = 2
 theme_type_variation = &"SecondaryButton"
 text = "Salir"
 
+[node name="NetPanel" type="VBoxContainer" parent="Control"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -124.0
+offset_right = 200.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 4
+
+[node name="AddressRow" type="HBoxContainer" parent="Control/NetPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="IpField" type="LineEdit" parent="Control/NetPanel/AddressRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "127.0.0.1"
+placeholder_text = "IP"
+select_all_on_focus = true
+
+[node name="PortField" type="LineEdit" parent="Control/NetPanel/AddressRow"]
+custom_minimum_size = Vector2(110, 0)
+layout_mode = 2
+text = "7777"
+placeholder_text = "Puerto"
+max_length = 5
+select_all_on_focus = true
+
+[node name="ButtonRow" type="HBoxContainer" parent="Control/NetPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HostButton" type="Button" parent="Control/NetPanel/ButtonRow"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+text = "Host"
+
+[node name="JoinButton" type="Button" parent="Control/NetPanel/ButtonRow"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+text = "Join"
+
+[node name="NetErrorLabel" type="Label" parent="Control/NetPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1.0, 0.45, 0.45, 1.0)
+theme_override_font_sizes/font_size = 13
+horizontal_alignment = 1
+autowrap_mode = 3
+
 [connection signal="pressed" from="Control/Menu/AjustesButton" to="." method="_on_ajustes_button_pressed"]
 [connection signal="pressed" from="Control/Menu/DificultadButton" to="." method="_on_dificultad_button_pressed"]
 [connection signal="pressed" from="Control/Menu/PlayButton" to="." method="_on_play_button_pressed"]
 [connection signal="pressed" from="Control/Menu/CoopButton" to="." method="_on_coop_button_pressed"]
 [connection signal="pressed" from="Control/Menu/QuitButton" to="." method="_on_quit_button_pressed"]
+[connection signal="pressed" from="Control/NetPanel/ButtonRow/HostButton" to="." method="_on_host_button_pressed"]
+[connection signal="pressed" from="Control/NetPanel/ButtonRow/JoinButton" to="." method="_on_join_button_pressed"]

@@ -219,7 +219,19 @@ func _ready() -> void:
 	Settings.apply_display(Settings.load_settings())
 	_configure_game_layout()
 	_update_hud()
+	if not multiplayer.server_disconnected.is_connected(_on_network_lost):
+		multiplayer.server_disconnected.connect(_on_network_lost)
 	_enter_main_menu()
+
+
+## Etapa 20 (S4): a lost connection closes the network, returns to the menu and shows a notice.
+## Safe without an active session: it only closes the lobby and shows the menu.
+func _on_network_lost() -> void:
+	if _main_menu.has_method(&"close_network"):
+		_main_menu.close_network()
+	_enter_main_menu()
+	if _main_menu.has_method(&"show_network_message"):
+		_main_menu.show_network_message("Se perdio la conexion con el host.")
 
 
 func _unhandled_input(event: InputEvent) -> void:
