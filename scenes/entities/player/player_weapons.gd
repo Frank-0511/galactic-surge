@@ -19,6 +19,10 @@ func _init(player: CharacterBody2D) -> void:
 
 ## Fires according to the trigger: the laser holds a beam while held, other weapons fire on cooldown.
 func handle_shooting(delta: float) -> void:
+	if _player.remote_driven:
+		# Network J2 (Etapa 20 T1): its trigger is not a local key; firing is replicated in T2.
+		_player._set_laser_active(false)
+		return
 	var shoot_action: String = InputModule.input_action_name("shoot", _player.player_index)
 	if _player.current_weapon == _player.WeaponType.LASER:
 		if Input.is_action_pressed(shoot_action) and not _player.is_overheated:

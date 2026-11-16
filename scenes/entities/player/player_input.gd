@@ -61,7 +61,10 @@ static func ignores_arrow_keys(player_index: int, coop_active: bool) -> bool:
 ## Moves the ship horizontally from its slot's input, then clamps it to the horizontal limits.
 func move_and_clamp() -> void:
 	var direction: float = 0.0
-	if ignores_arrow_keys(_player.player_index, _player.coop_active):
+	if _player.remote_driven:
+		# Network J2 (Etapa 20 T1): its direction is the client's input, never the local keys.
+		direction = _player.remote_direction
+	elif ignores_arrow_keys(_player.player_index, _player.coop_active):
 		direction = (1.0 if Input.is_physical_key_pressed(KEY_D) else 0.0) - (1.0 if Input.is_physical_key_pressed(KEY_A) else 0.0)
 	else:
 		direction = Input.get_axis(input_action_name("move_left", _player.player_index), input_action_name("move_right", _player.player_index))

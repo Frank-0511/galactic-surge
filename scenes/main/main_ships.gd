@@ -55,8 +55,9 @@ func set_player_two_active(active: bool) -> void:
 		_main._player_two.visible = false
 
 
+## A replica (network client) never applies damage: the host decides it (Etapa 20 T1).
 func request_player_damage(player: Node2D) -> void:
-	if not _main._session_active:
+	if not _main._session_active or _main._player.replica:
 		return
 	if player == _main._player or (player != null and player == _main._player_two):
 		player.take_damage()
@@ -64,7 +65,7 @@ func request_player_damage(player: Node2D) -> void:
 
 ## ship: the ship that requested damage; null means J1 (keeps the singleplayer path).
 func on_player_damage_requested(ship: Node2D = null) -> void:
-	if not _main._session_active:
+	if not _main._session_active or _main._player.replica:
 		return
 	if ship != null and ship == _main._player_two:
 		on_player_two_damage_requested()

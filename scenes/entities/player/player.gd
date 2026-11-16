@@ -117,6 +117,15 @@ var overheat_duration: float = 2.5
 ## Set by Main while a coop local session runs (J1 then reads A/D only).
 var coop_active: bool = false
 
+## Network roles (Etapa 20 T1). remote_driven: the host moves this ship from the client's input, not local keys.
+## replica: the client only shows the host's state (no simulation, no damage).
+var remote_driven: bool = false
+var replica: bool = false
+## Move direction (-1, 0 or 1) received from the client while remote_driven.
+var remote_direction: float = 0.0
+## Horizontal facing from the last replicated state (-1, 0 or 1).
+var facing: int = 0
+
 ## Local clock used only to animate engine flicker, lights, and heat pulsation.
 var _time: float = 0.0
 
@@ -182,7 +191,7 @@ func _process(delta: float) -> void:
 	_heat.tick(delta)
 	queue_redraw()
 
-	if not _gameplay_enabled:
+	if not _gameplay_enabled or replica:
 		velocity = Vector2.ZERO
 		_set_laser_active(false)
 		return
@@ -277,6 +286,8 @@ func has_shield() -> bool:
 	return _power_ups.has_shield()
 func get_shield_level() -> int:
 	return _power_ups.get_shield_level()
+func apply_replicated_shield(level: int) -> void:
+	_power_ups.apply_replicated_shield(level)
 func clear_power_ups() -> void:
 	_power_ups.clear_power_ups()
 func _on_shield_timer_timeout() -> void:

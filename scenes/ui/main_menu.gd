@@ -10,8 +10,10 @@
 extends CanvasLayer
 
 const DS := preload("res://scripts/systems/difficulty_settings.gd")
-## Network lobby module (Etapa 20, S2): validates IP/port and opens the ENet host or client.
-const LobbyNet := preload("res://scripts/net/lobby_net.gd")
+## Session modes (Etapa 20, S6): LOCAL_COOP (J2 on this PC) or NETWORK (J2 is the remote peer).
+const NetSyncMode := preload("res://scripts/net/net_sync_mode.gd")
+## Red section (Etapa 20, S2/T1): Host, Join and Coop en red, with IP/port validation.
+const LobbyMenu := preload("res://scripts/net/lobby_menu.gd")
 
 ## Switch to true to disable the title pulse and the entrance fade (reduced motion).
 const REDUCED_MOTION := false
@@ -41,11 +43,14 @@ signal settings_requested
 ## Tier chosen in the menu; read by Main when play_requested fires and fixed for the session.
 var selected_difficulty: int = DS.Tier.COMMANDER
 
-## True when the player pressed "Coop local" instead of "Jugar" (Etapa 20).
+## True when the player pressed a coop button instead of "Jugar" (Etapa 20).
 var coop_selected: bool = false
 
-## Lobby instance shared by the Red section's Host and Join buttons.
-var _lobby = LobbyNet.new()
+## Mode of the coop session (Etapa 20 T1); read by Main with coop_selected. Only the network button sets NETWORK.
+var session_mode: int = NetSyncMode.DEFAULT_MODE
+
+## Red section logic (Host, Join, Coop en red); created in _ready once the Red nodes exist.
+var _lobby_menu: RefCounted
 
 @onready var _content: Control = $Control
 @onready var _vignette: TextureRect = $Control/Vignette
@@ -55,15 +60,13 @@ var _lobby = LobbyNet.new()
 @onready var _play_button: Button = $Control/Menu/PlayButton
 @onready var _quit_button: Button = $Control/Menu/QuitButton
 @onready var _ajustes_button: Button = $Control/Menu/AjustesButton
-@onready var _ip_field: LineEdit = $Control/NetPanel/AddressRow/IpField
-@onready var _port_field: LineEdit = $Control/NetPanel/AddressRow/PortField
-@onready var _net_error_label: Label = $Control/NetPanel/NetErrorLabel
 
 var _entrance_tween: Tween
 var _pulse_tween: Tween
 
 
 func _ready() -> void:
+	_lobby_menu = LobbyMenu.new(self)
 	_content.theme = _build_menu_theme()
 	_apply_vignette()
 	_apply_title_style()
@@ -89,7 +92,16 @@ func _on_play_button_pressed() -> void:
 
 func _on_coop_button_pressed() -> void:
 	coop_selected = true
+	session_mode = NetSyncMode.LOCAL_COOP
 	play_requested.emit()
+
+
+# Coop en red (Etapa 20 T1): needs a Host or Join peer first; otherwise the Red section shows a notice.
+func _on_net_coop_button_pressed() -> void:
+	if _lobby_menu.can_start_network():
+		coop_selected = true
+		session_mode = NetSyncMode.NETWORK
+		play_requested.emit()
 
 
 # Cycles CADET -> COMMANDER -> ELITE -> CADET.
@@ -111,57 +123,24 @@ func _on_ajustes_button_pressed() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Red (Etapa 20, S2): Host and Join by IP + port. Invalid input shows a message and never assigns a peer.
+# Red (Etapa 20, S2/S4): Host, Join and Coop en red are handled by lobby_menu.gd; these are the signal entry points.
 # ---------------------------------------------------------------------------
 func _on_host_button_pressed() -> void:
-	_net_error_label.text = ""
-	var port: int = _read_port()
-	var input_error: String = _lobby.host_input_error(port)
-	if input_error != "":
-		_show_net_error(input_error)
-		return
-	var err: Error = _lobby.host(port)
-	if err != OK:
-		# The lobby closed its previous peer before failing; never leave the scene on that closed peer.
-		multiplayer.multiplayer_peer = null
-		_show_net_error("No se pudo abrir el servidor: %s" % error_string(err))
-		return
-	multiplayer.multiplayer_peer = _lobby.get_peer()
+	_lobby_menu.host_pressed()
 
 
 func _on_join_button_pressed() -> void:
-	_net_error_label.text = ""
-	var address: String = _ip_field.text.strip_edges()
-	var port: int = _read_port()
-	var input_error: String = _lobby.join_input_error(address, port)
-	if input_error != "":
-		_show_net_error(input_error)
-		return
-	var err: Error = _lobby.join(address, port)
-	if err != OK:
-		multiplayer.multiplayer_peer = null
-		_show_net_error("No se pudo conectar a %s:%d: %s" % [address, port, error_string(err)])
-		return
-	multiplayer.multiplayer_peer = _lobby.get_peer()
-
-
-func _read_port() -> int:
-	return _port_field.text.strip_edges().to_int()
-
-
-func _show_net_error(message: String) -> void:
-	_net_error_label.text = message
+	_lobby_menu.join_pressed()
 
 
 ## Public: shows a network notice (for example, a lost host) in the Red section.
 func show_network_message(text: String) -> void:
-	_net_error_label.text = text
+	_lobby_menu.show_message(text)
 
 
 ## Public: closes the lobby and clears the scene multiplayer peer. Safe when nothing is open.
 func close_network() -> void:
-	_lobby.close()
-	multiplayer.multiplayer_peer = null
+	_lobby_menu.close()
 
 
 # ---------------------------------------------------------------------------

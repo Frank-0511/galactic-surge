@@ -6,6 +6,10 @@
 
 extends RefCounted
 
+const NetSyncMode: GDScript = preload("res://scripts/net/net_sync_mode.gd")
+const NetSyncNode: GDScript = preload("res://scripts/net/net_sync_node.gd")
+const NET_NODE_NAME: String = "NetSync"
+
 var _main: Node2D
 
 
@@ -125,8 +129,28 @@ func on_main_menu_play_requested() -> void:
 	_main.session_coop = _main._main_menu.coop_selected
 	if _main.session_coop:
 		_main._ships.enable_coop_local()
+	_begin_net_sync(_main.session_coop and NetSyncMode.is_network(_main._main_menu.session_mode))
 	_main._session.start_session()
 	_main._ships.set_player_two_active(_main.session_coop)
+
+
+## Etapa 20 T1: every session starts from clean roles; only a NETWORK coop session adds the NetSync node.
+## J2 persists between sessions, so its remote/replica flags are reset here, not only set.
+func _begin_net_sync(network: bool) -> void:
+	var old: Node = _main.get_node_or_null(NET_NODE_NAME)
+	if old != null:
+		_main.remove_child(old)
+		old.queue_free()
+	for ship: Variant in [_main._player, _main._player_two]:
+		if ship != null:
+			ship.set("remote_driven", false)
+			ship.set("replica", false)
+	if not network:
+		return
+	var sync: Node = NetSyncNode.new()
+	sync.name = NET_NODE_NAME
+	_main.add_child(sync)
+	sync.setup(_main, _main.multiplayer.is_server())
 
 
 func on_main_menu_quit_requested() -> void:

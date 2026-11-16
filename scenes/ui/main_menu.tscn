@@ -225,6 +225,13 @@ size_flags_horizontal = 3
 theme_type_variation = &"SecondaryButton"
 text = "Join"
 
+[node name="NetCoopButton" type="Button" parent="Control/NetPanel/ButtonRow"]
+custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"SecondaryButton"
+text = "Coop red"
+
 [node name="NetErrorLabel" type="Label" parent="Control/NetPanel"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1.0, 0.45, 0.45, 1.0)
@@ -239,3 +246,4 @@ autowrap_mode = 3
 [connection signal="pressed" from="Control/Menu/QuitButton" to="." method="_on_quit_button_pressed"]
 [connection signal="pressed" from="Control/NetPanel/ButtonRow/HostButton" to="." method="_on_host_button_pressed"]
 [connection signal="pressed" from="Control/NetPanel/ButtonRow/JoinButton" to="." method="_on_join_button_pressed"]
+[connection signal="pressed" from="Control/NetPanel/ButtonRow/NetCoopButton" to="." method="_on_net_coop_button_pressed"]

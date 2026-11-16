@@ -51,6 +51,16 @@ func get_shield_level() -> int:
 	return _player._shield_level if _player._shield_active else 0
 
 
+## Client side of the replicated shield (Etapa 20 T1): sets the level and ring without timers; 0 clears it.
+func apply_replicated_shield(level: int) -> void:
+	_player._shield_active = level > 0
+	_player._shield_level = clampi(level, 0, MAX_SHIELD_LEVEL)
+	if _player._shield_ring != null:
+		_player._shield_ring.visible = level > 0
+		if level > 0 and _player._shield_ring.has_method(&"set_level"):
+			_player._shield_ring.call(&"set_level", level)
+
+
 func clear_power_ups() -> void:
 	_player._double_shot_enabled = false
 	_player._shield_active = false
