@@ -6,6 +6,8 @@
 
 extends RefCounted
 
+const NET_SYNC_NAME: String = "NetSync"
+
 var _main: Node2D
 
 
@@ -118,6 +120,8 @@ func try_spawn_enemy_loot(spawn_position: Vector2) -> void:
 
 
 func spawn_loot(loot_type: int, spawn_position: Vector2) -> void:
+	if _is_network_client():
+		return
 	var loot: Area2D = _main.LOOT_DROP_SCENE.instantiate() as Area2D
 	if loot == null:
 		return
@@ -126,6 +130,19 @@ func spawn_loot(loot_type: int, spawn_position: Vector2) -> void:
 	if loot.has_method(&"configure"):
 		loot.configure(loot_type, spawn_position, _main._player)
 	_main.add_child(loot)
+	announce_net_spawn(loot, loot_type, spawn_position)
+
+
+## Etapa 20 T4: the host reports a new drop to the client (id, type, position). No-op without a network match.
+func announce_net_spawn(loot: Area2D, loot_type: int, spawn_position: Vector2) -> void:
+	var net: Node = _main.get_node_or_null(NET_SYNC_NAME)
+	if net != null and net.has_method(&"announce_loot_spawn"):
+		net.call("announce_loot_spawn", loot, loot_type, spawn_position)
+
+
+## Etapa 20 T4: a network client never creates drops; the host sends them.
+func _is_network_client() -> bool:
+	return _main._player != null and _main._player.get("replica") == true
 
 
 ## collector: the ship that picked the drop up (Etapa 20); null means J1 (singleplayer).

@@ -24,7 +24,8 @@ func local_index(global_index: int) -> int:
 
 
 func on_wave_cleared(_wave_index: int) -> void:
-	if not _main._session_active:
+	# Etapa 20 T4: a network client never scores or starts a wave; the host sends them.
+	if not _main._session_active or _main._player.get("replica") == true:
 		return
 	if _main._starfield != null and _main._starfield.has_method(&"trigger_warp_boost"):
 		_main._starfield.trigger_warp_boost(3.0, 10.0)

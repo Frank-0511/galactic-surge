@@ -38,6 +38,16 @@ var _elapsed: float = 0.0
 var _collected: bool = false
 var _painter: RefCounted
 
+## Host-given network id (Etapa 20 T4); 0 when not networked.
+var net_id: int = 0
+## Client replica (Etapa 20 T4): no pickup, no magnet, no collision; the host decides the pickup.
+var replica: bool = false:
+	set(value):
+		replica = value
+		monitoring = not value
+## Client replica: the ship (1 or 2) the host reports as the collector.
+var collected_by: int = 0
+
 
 func _init() -> void:
 	_painter = DrawModule.new(self)
@@ -79,7 +89,7 @@ func _process(delta: float) -> void:
 		target = nearest_ship(global_position, get_tree().get_nodes_in_group(&"player"))
 	if target == null and _target != null and is_instance_valid(_target):
 		target = _target
-	if target != null:
+	if target != null and not replica:
 		var to_target: Vector2 = target.global_position - global_position
 		var dist: float = to_target.length()
 		if dist <= magnet_radius and dist > 0.001:
@@ -133,7 +143,7 @@ func get_lifetime() -> float:
 
 
 func _on_body_entered(body: Node2D) -> void:
-	if _collected:
+	if _collected or replica:
 		return
 	if body.is_in_group(&"player") or body is CharacterBody2D:
 		_collected = true

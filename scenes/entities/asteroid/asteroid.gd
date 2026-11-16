@@ -72,6 +72,15 @@ signal fragment_spawned(fragment: Area2D)
 @export var contains_loot: bool = false
 @export var loot_type: int = -1
 
+## Host-given network id (Etapa 20 T4); 0 when not networked.
+var net_id: int = 0
+## Client replica (Etapa 20 T4): no motion of its own, no collision, no damage; the host decides all of it.
+var replica: bool = false:
+	set(value):
+		replica = value
+		monitoring = not value
+		monitorable = not value
+
 var _destroyed: bool = false
 var _hit_flash_timer: float = 0.0
 var _polygon_points: PackedVector2Array = PackedVector2Array()
@@ -117,16 +126,22 @@ func set_size(new_size: Size) -> void:
 
 
 func _process(delta: float) -> void:
+	if replica:
+		return
 	_motion.advance(delta)
 
 
 ## Accepts damage, reducing current_health. Triggers destroy() if depleted.
 func take_damage(amount: int = 1) -> bool:
+	if replica:
+		return false
 	return _damage.take_damage(amount)
 
 
 ## Fractional damage interface for laser beams and splash damage.
 func take_damage_from(amount: float, _travel_direction: Vector2 = Vector2.ZERO) -> bool:
+	if replica:
+		return false
 	return _damage.take_damage_from(amount)
 
 
@@ -146,10 +161,14 @@ func destroy() -> void:
 
 
 func _on_body_entered(body: Node2D) -> void:
+	if replica:
+		return
 	_damage.on_body_entered(body)
 
 
 func _on_area_entered(area: Area2D) -> void:
+	if replica:
+		return
 	_damage.on_area_entered(area)
 
 

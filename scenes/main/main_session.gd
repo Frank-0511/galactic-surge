@@ -5,6 +5,8 @@
 
 extends RefCounted
 
+const NET_SYNC_NAME: String = "NetSync"
+
 var _main: Node2D
 
 
@@ -47,6 +49,7 @@ func is_session_active() -> bool:
 
 func enter_main_menu() -> void:
 	_main.get_tree().paused = false
+	_clear_net_replicas()
 	_main._waves.end_belt_camera_follow()
 	_main._enemy_spawner.stop()
 	_main._enemy_spawner.clear_formation()
@@ -101,6 +104,7 @@ func enter_main_menu() -> void:
 
 func reset_session() -> void:
 	_main.get_tree().paused = false
+	_clear_net_replicas()
 	_main.SESSION_STATS.reset()
 	_main.kills_by_type.clear()
 	_main._enemy_spawner.stop()
@@ -185,6 +189,7 @@ func end_session() -> void:
 	var is_new_record: bool = update_high_score_if_needed()
 	_main._game_over.show_session_stats(get_session_accuracy(), _main.kills_by_type)
 	_main._game_over.show_game_over(_main.score, is_new_record)
+	_announce_session_end("game_over")
 
 
 func complete_mission() -> void:
@@ -203,6 +208,21 @@ func complete_mission() -> void:
 	_main._hud.hide_boss_health_bar()
 	var is_new_record: bool = update_high_score_if_needed()
 	_main._hud.show_mission_complete(_main.score, is_new_record)
+	_announce_session_end("mission_complete")
+
+
+## Etapa 20 T4: the host tells the client how the match ended (game over or mission complete).
+func _announce_session_end(kind: String) -> void:
+	var net: Node = _main.get_node_or_null(NET_SYNC_NAME)
+	if net != null and net.has_method(&"announce_session_end"):
+		net.call("announce_session_end", kind)
+
+
+## Etapa 20 T4: frees the client replicas of drops and asteroids when a match starts, ends or is left.
+func _clear_net_replicas() -> void:
+	var net: Node = _main.get_node_or_null(NET_SYNC_NAME)
+	if net != null and net.has_method(&"clear_replicas"):
+		net.call("clear_replicas")
 
 
 func clear_combat_transients() -> void:

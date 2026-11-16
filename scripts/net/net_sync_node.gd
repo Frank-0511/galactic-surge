@@ -1,16 +1,20 @@
 # net_sync_node.gd
-# Replication node of a network match (Etapa 20 T1/T2/T3, S1/S2/S3). Lives at Main/NetSync on both peers.
+# Replication node of a network match (Etapa 20 T1 to T4, S1 to S3). Lives at Main/NetSync on both peers.
 # Host: simulates J1, J2, the enemies and the boss, sends their state to the client, applies the client's input
 # (move and shoot intent) to J2, and broadcasts every volley as a shot event. Client: sends its own input (the J2
 # keys) to the host and applies the state and shots the host sends; it never simulates ships, enemies or the boss,
 # and never applies damage. Explicit RPCs, not MultiplayerSynchronizer (decision L5). Shot events live in
 # net_sync_shots.gd; enemies and the boss in net_sync_enemies.gd and net_sync_boss.gd.
+# Loot, asteroids, score and the end of the match: net_sync_loot.gd, net_sync_asteroids.gd, net_sync_score.gd.
 
 extends Node
 
 const PlayerInput: GDScript = preload("res://scenes/entities/player/player_input.gd")
 const NetSyncShots: GDScript = preload("res://scripts/net/net_sync_shots.gd")
 const NetSyncEnemies: GDScript = preload("res://scripts/net/net_sync_enemies.gd")
+const NetSyncLoot: GDScript = preload("res://scripts/net/net_sync_loot.gd")
+const NetSyncAsteroids: GDScript = preload("res://scripts/net/net_sync_asteroids.gd")
+const NetSyncScore: GDScript = preload("res://scripts/net/net_sync_score.gd")
 ## Seconds between state packets (host) or input packets (client): 20 per second.
 const SEND_INTERVAL: float = 0.05
 
@@ -19,6 +23,10 @@ var _is_host: bool = false
 var _remote_peer: int = 0
 var _accumulator: float = 0.0
 var _enemies: RefCounted = null
+var _loot: RefCounted = null
+var _asteroids: RefCounted = null
+## Reliable events the host sends on the next physics frame: [rpc method, payload] pairs.
+var _outbox: Array = []
 
 
 ## Binds the node to Main and sets each ship's role. Call after J2 exists.
@@ -27,6 +35,8 @@ func setup(main: Node2D, is_host: bool) -> void:
 	_is_host = is_host
 	_remote_peer = 0
 	_enemies = NetSyncEnemies.new(main)
+	_loot = NetSyncLoot.new(main, self)
+	_asteroids = NetSyncAsteroids.new(main, self)
 	_main._enemy_spawner.set("replica", not is_host)
 	if _is_host:
 		_main._player_two.set("remote_driven", true)
@@ -38,7 +48,11 @@ func setup(main: Node2D, is_host: bool) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if _main == null or not _main._session_active or not _has_remote_peer():
+	if _main == null:
+		return
+	if _is_host:
+		_flush_outbox()
+	if not _main._session_active or not _has_remote_peer():
 		return
 	_accumulator += delta
 	if _accumulator < SEND_INTERVAL:
@@ -90,14 +104,50 @@ func rpc_host_shot(event: Dictionary) -> void:
 	NetSyncShots.replay(_main, event)
 
 
+## Host -> client: a loot drop appeared (id, type, position). Reliable: its pickup event must find the replica.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_loot_spawned(event: Dictionary) -> void:
+	if _is_host or _loot == null:
+		return
+	_loot.apply_spawn(event)
+
+
+## Host -> client: a loot drop was picked up (id, collector 1 or 2). Reliable.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_loot_picked(event: Dictionary) -> void:
+	if _is_host or _loot == null:
+		return
+	_loot.apply_pickup(event)
+
+
+## Host -> client: the asteroid ids that left since the last state. Reliable: a freed replica must not linger.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_asteroids_removed(ids: Array) -> void:
+	if _is_host or _asteroids == null:
+		return
+	_asteroids.remove_ids(ids)
+
+
+## Host -> client: the match ended (game over or mission complete) with the final scores. Reliable.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_session_end(event: Dictionary) -> void:
+	if _is_host or _main == null:
+		return
+	NetSyncScore.apply_session_end(_main, event)
+
+
 ## Host side: the state of both ships, as sent to the client.
 func build_state() -> Dictionary:
 	var state: Dictionary = {
 		"j1": _ship_state(_main._player, _main.lives),
 		"j2": _ship_state(_main._player_two, _main._player_two_lives),
 	}
-	if _is_host and _enemies != null:
-		_enemies.encode_into(state)
+	if _is_host:
+		if _enemies != null:
+			_enemies.encode_into(state)
+		if _asteroids != null:
+			_asteroids.encode_into(state)
+		NetSyncScore.encode_into(_main, state)
 	return state
 
 
@@ -109,6 +159,42 @@ func apply_host_state(state: Dictionary) -> void:
 	_apply_ship(_main._player_two, state.get("j2", {}) as Dictionary, 2)
 	if _enemies != null:
 		_enemies.apply_state(state)
+	if _asteroids != null:
+		_asteroids.apply_state(state)
+	if _main.get("_session_active") == true:
+		NetSyncScore.apply(_main, state)
+
+
+## Queues a reliable event for the client; the host sends it on the next physics frame.
+func queue_reliable(method: String, payload: Variant) -> void:
+	_outbox.append([method, payload])
+
+
+## Returns the queued reliable events as [method, payload] pairs and empties the queue.
+func take_outbox() -> Array:
+	var pending: Array = _outbox
+	_outbox = []
+	return pending
+
+
+## Host side: a loot drop was created and configured on the host; queues its spawn event and reports its pickup.
+func announce_loot_spawn(loot: Node, loot_type: int, spawn_position: Vector2) -> void:
+	if _is_host and _loot != null:
+		_loot.announce_spawn(loot, loot_type, spawn_position)
+
+
+## Host side: the match ended (kind "game_over" or "mission_complete"); queues the reliable event for the client.
+func announce_session_end(kind: String) -> void:
+	if _is_host and _main != null:
+		queue_reliable("rpc_host_session_end", NetSyncScore.session_end_event(_main, kind))
+
+
+## Frees the client replicas of loot and asteroids (session end, new session or leaving the match).
+func clear_replicas() -> void:
+	if _loot != null:
+		_loot.clear()
+	if _asteroids != null:
+		_asteroids.clear()
 
 
 ## The client's own move direction, read from the J2 actions (arrows or left stick).
@@ -154,6 +240,19 @@ func _apply_ship(ship: CharacterBody2D, data: Dictionary, index: int) -> void:
 	else:
 		_main._player_two_lives = lives
 		_main._hud.set_lives_p2(lives)
+
+
+## Sends the queued reliable events in order. The queue is emptied even when no client is connected.
+func _flush_outbox() -> void:
+	var pending: Array = take_outbox()
+	if not _has_remote_peer():
+		return
+	for entry: Variant in pending:
+		rpc(String((entry as Array)[0]), (entry as Array)[1])
+
+
+func _exit_tree() -> void:
+	clear_replicas()
 
 
 func _has_remote_peer() -> bool:
