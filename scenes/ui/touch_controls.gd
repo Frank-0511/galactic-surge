@@ -27,6 +27,11 @@ func _ready() -> void:
 	set_joystick_center(Vector2(size.x * 0.2, size.y * 0.8))
 
 
+# Raw touch events reach the joystick here: a CanvasLayer does not receive them through its children.
+func _input(event: InputEvent) -> void:
+	handle_input_event(event)
+
+
 # Controls appear only once the device has produced touch input (S6).
 func is_visible_for_touch() -> bool:
 	return _touch_seen

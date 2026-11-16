@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/entities/player/player.tscn" id="2"]
@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/main_menu.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/audio/audio_feedback.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/ui/touch_controls.tscn" id="15_touch"]
 [ext_resource type="PackedScene" path="res://scenes/ui/wave_announcement.tscn" id="11"]
 [ext_resource type="Script" path="res://scenes/main/camera_shake.gd" id="12_camera_shake"]
 [ext_resource type="Script" path="res://scripts/systems/combo_system.gd" id="13_combo_system"]
@@ -61,3 +62,5 @@ script = ExtResource("13_combo_system")
 [node name="MainMenu" parent="." instance=ExtResource("8")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("9")]
+
+[node name="TouchControls" parent="." instance=ExtResource("15_touch")]
