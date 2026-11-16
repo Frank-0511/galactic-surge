@@ -20,6 +20,11 @@ func _run_contracts() -> void:
 		_check_joystick_left_presses_move_left(controls)
 		_check_joystick_right_presses_move_right(controls)
 		_check_joystick_release_clears_both(controls)
+		var has_touch_api: bool = controls.has_method("set_joystick_center") and controls.has_method("handle_input_event")
+		_expect(has_touch_api, "Contrato T21.5-0: el modulo expone set_joystick_center y handle_input_event")
+		if has_touch_api:
+			_check_touch_drag_left_presses_move_left(controls)
+			_check_touch_release_clears_move(controls)
 		controls.free()
 
 	if _failures == 0:
@@ -52,6 +57,29 @@ func _check_joystick_release_clears_both(controls: Node) -> void:
 	controls.call("apply_joystick_axis", 0.0)
 	_expect(not Input.is_action_pressed("move_left"), "Contrato T21.4a: soltar el joystick libera move_left")
 	_expect(not Input.is_action_pressed("move_right"), "Contrato T21.4b: soltar el joystick libera move_right")
+
+
+# T21.5 (S2): un arrastre tactil a la izquierda del centro del joystick presiona move_left.
+func _check_touch_drag_left_presses_move_left(controls: Node) -> void:
+	_release_move_actions()
+	controls.call("set_joystick_center", Vector2(200.0, 700.0))
+	var drag := InputEventScreenDrag.new()
+	drag.index = 0
+	drag.position = Vector2(140.0, 700.0)
+	controls.call("handle_input_event", drag)
+	_expect(Input.is_action_pressed("move_left"), "Contrato T21.5a: arrastre tactil a la izquierda presiona move_left")
+	_expect(not Input.is_action_pressed("move_right"), "Contrato T21.5b: arrastre tactil a la izquierda no presiona move_right")
+
+
+# T21.6 (S2): al levantar el dedo del joystick se liberan las acciones de movimiento.
+func _check_touch_release_clears_move(controls: Node) -> void:
+	var release := InputEventScreenTouch.new()
+	release.index = 0
+	release.pressed = false
+	release.position = Vector2(140.0, 700.0)
+	controls.call("handle_input_event", release)
+	_expect(not Input.is_action_pressed("move_left"), "Contrato T21.6a: levantar el dedo libera move_left")
+	_expect(not Input.is_action_pressed("move_right"), "Contrato T21.6b: levantar el dedo libera move_right")
 
 
 func _release_move_actions() -> void:
