@@ -70,6 +70,7 @@ var remap: InputRemap
 var _remap_panel: RemapPanel
 var _remap_host: PanelContainer
 var _remap_column: VBoxContainer
+var _remap_save: Button
 var _style: RefCounted
 
 @onready var _root: Control = $Control
@@ -162,13 +163,27 @@ func _on_controls_pressed() -> void:
 	_remap_panel = RemapPanel.new(remap, REMAP_COLORS, InputKey.KEYBOARD, REMAP_TABLE_HEIGHT)
 	_remap_panel.closed.connect(_on_remap_closed)
 	_remap_column.add_child(_remap_panel)
+	# In a fixed family the addon drops its own SAVE AND CLOSE (the host window closes it), so Ajustes provides it.
+	_remap_save = Button.new()
+	_remap_save.text = "GUARDAR Y CERRAR"
+	_remap_save.theme_type_variation = PRIMARY_VARIATION
+	_remap_save.pressed.connect(_on_remap_save_pressed)
+	_remap_column.add_child(_remap_save)
 	_remap_panel.focus_first()
 
 
 # The panel saved and closed: back to Ajustes, focus on the Controles button.
+func _on_remap_save_pressed() -> void:
+	if _remap_panel != null:
+		_remap_panel.save_and_close()
+
+
 func _on_remap_closed() -> void:
 	_remap_panel.queue_free()
 	_remap_panel = null
+	if _remap_save != null:
+		_remap_save.queue_free()
+		_remap_save = null
 	_remap_host.visible = false
 	_content.visible = true
 	_controls_button.grab_focus()
