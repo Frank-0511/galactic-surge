@@ -25,6 +25,8 @@ func _run_contracts() -> void:
 		if has_touch_api:
 			_check_touch_drag_left_presses_move_left(controls)
 			_check_touch_release_clears_move(controls)
+		_check_hidden_without_touch(touch_script)
+		_check_visible_after_touch(touch_script)
 		controls.free()
 
 	if _failures == 0:
@@ -80,6 +82,25 @@ func _check_touch_release_clears_move(controls: Node) -> void:
 	controls.call("handle_input_event", release)
 	_expect(not Input.is_action_pressed("move_left"), "Contrato T21.6a: levantar el dedo libera move_left")
 	_expect(not Input.is_action_pressed("move_right"), "Contrato T21.6b: levantar el dedo libera move_right")
+
+
+# T21.7 (S6): sin entrada tactil los controles estan ocultos (escritorio sin cambios).
+func _check_hidden_without_touch(touch_script: Script) -> void:
+	var controls: Node = touch_script.new() as Node
+	_expect(controls.has_method("is_visible_for_touch") and not controls.call("is_visible_for_touch"), "Contrato T21.7: sin toque los controles estan ocultos")
+	controls.free()
+
+
+# T21.8 (S6): al recibir un toque los controles pasan a visibles.
+func _check_visible_after_touch(touch_script: Script) -> void:
+	var controls: Node = touch_script.new() as Node
+	var press := InputEventScreenTouch.new()
+	press.index = 0
+	press.pressed = true
+	press.position = Vector2(140.0, 700.0)
+	controls.call("handle_input_event", press)
+	_expect(controls.has_method("is_visible_for_touch") and controls.call("is_visible_for_touch"), "Contrato T21.8: tras un toque los controles son visibles")
+	controls.free()
 
 
 func _release_move_actions() -> void:

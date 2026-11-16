@@ -9,6 +9,12 @@ const NO_TOUCH: int = -1
 
 var _joystick_center: Vector2 = Vector2.ZERO
 var _touch_index: int = NO_TOUCH
+var _touch_seen: bool = false
+
+
+# Controls appear only once the device has produced touch input (S6).
+func is_visible_for_touch() -> bool:
+	return _touch_seen
 
 
 func set_joystick_center(center: Vector2) -> void:
@@ -17,6 +23,8 @@ func set_joystick_center(center: Vector2) -> void:
 
 # Routes a screen touch or drag event to the joystick. Other events are ignored.
 func handle_input_event(event: InputEvent) -> void:
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		_touch_seen = true
 	if event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
 		if _touch_index == NO_TOUCH:
