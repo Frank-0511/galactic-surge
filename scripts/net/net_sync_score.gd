@@ -2,7 +2,8 @@
 # Score and end of a network match (Etapa 20 T4, S1). Host: adds the score of J1 and J2 to the state (20 Hz) and
 # builds the reliable session-end event (game over or mission complete) with the final scores. Client: shows the
 # host's scores on its HUD and ends its own session through the existing session path, back to the menu with a
-# notice. Lives travel with each ship in the state (net_sync_node.gd). Stateless: every function is static.
+# notice. The session-end event also carries the host's final kills by type and shot accuracy (Etapa 20 T42), which
+# fill the client's game-over panel. Lives travel with each ship in the state (net_sync_node.gd). Stateless: static.
 
 extends RefCounted
 
@@ -26,9 +27,24 @@ static func apply(main: Node2D, state: Dictionary) -> void:
 	main._hud.set_score_p2(int(state["score_p2"]))
 
 
-## Host side: the event that ends the match on the client: kind ("game_over" or "mission_complete") and final scores.
+## Host side: the event that ends the match on the client: kind ("game_over" or "mission_complete"), final scores,
+## kills by type and the session accuracy percentage (the host's own stats; the client never computes them).
 static func session_end_event(main: Node2D, kind: String) -> Dictionary:
-	return {"kind": kind, "score": int(main.get("score")), "score_p2": int(main.get("score_p2"))}
+	return {
+		"kind": kind,
+		"score": int(main.get("score")),
+		"score_p2": int(main.get("score_p2")),
+		"kills": (main.get("kills_by_type") as Dictionary).duplicate(),
+		"accuracy": float(main._session.get_session_accuracy()),
+	}
+
+
+## Client side: the stats the game-over panel shows, from the host's session-end event (kills keys as StringName).
+static func panel_stats_from_event(event: Dictionary) -> Dictionary:
+	var kills: Dictionary = {}
+	for key: Variant in event.get("kills", {}) as Dictionary:
+		kills[StringName(String(key))] = int((event["kills"] as Dictionary)[key])
+	return {"kills": kills, "accuracy": float(event.get("accuracy", 0.0))}
 
 
 ## Client side: takes the host's final scores, ends the local session through the existing session path and goes
@@ -42,7 +58,7 @@ static func apply_session_end(main: Node2D, event: Dictionary) -> void:
 	if mission:
 		main._session.complete_mission()
 	else:
-		main._session.end_session()
+		main._session.end_session(panel_stats_from_event(event))
 	main._enter_main_menu()
 	if main._main_menu.has_method(&"show_network_message"):
 		main._main_menu.show_network_message(NOTICE_MISSION_COMPLETE if mission else NOTICE_GAME_OVER)

@@ -170,7 +170,8 @@ func reset_session() -> void:
 	_main._enemy_spawner.start_wave(0)
 
 
-func end_session() -> void:
+## host_stats: the host's final kills and accuracy (Etapa 20 T42) on a client; empty on the host, which shows its own.
+func end_session(host_stats: Dictionary = {}) -> void:
 	if not _main._session_active:
 		return
 	_main._session_active = false
@@ -187,7 +188,10 @@ func end_session() -> void:
 	_main._audio_feedback.stop_boss_music()
 	_main._hud.hide_boss_health_bar()
 	var is_new_record: bool = update_high_score_if_needed()
-	_main._game_over.show_session_stats(get_session_accuracy(), _main.kills_by_type)
+	if host_stats.is_empty():
+		_main._game_over.show_session_stats(get_session_accuracy(), _main.kills_by_type)
+	else:
+		_main._game_over.show_session_stats(float(host_stats["accuracy"]), host_stats["kills"] as Dictionary)
 	_main._game_over.show_game_over(_main.score, is_new_record)
 	_announce_session_end("game_over")
 

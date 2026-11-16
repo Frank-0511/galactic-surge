@@ -83,7 +83,14 @@ func reset_wave_cleared_feedback() -> void:
 	_main._hud.hide_wave_cleared_banner()
 
 
+## Etapa 20 T4: a network client never starts a wave; the host decides and sends the result.
+func is_replica() -> bool:
+	return _main._player != null and _main._player.get("replica") == true
+
+
 func on_wave_announcement_finished() -> void:
+	if is_replica():
+		return
 	if _main._session_state != _main.SessionState.WAVE_TRANSITION or not _main._session_active:
 		return
 	if _main._boss_pending:
@@ -118,6 +125,8 @@ func get_bonus_drops_spawned() -> int:
 
 ## Peaceful wave: no fighters, loot rains down, then the wave is cleared.
 func start_bonus_wave() -> void:
+	if is_replica():
+		return
 	_main._enemy_spawner.stop()
 	_main._enemy_spawner.clear_formation()
 	_main._bonus_active = true
@@ -193,7 +202,10 @@ func is_asteroid_wave_active() -> bool:
 	return _main._asteroid_spawner != null and _main._asteroid_spawner.has_method(&"is_wave_active") and _main._asteroid_spawner.is_wave_active()
 
 
+## Etapa 20 T4 (gap 4): on a network client this does nothing; only the host starts asteroid waves.
 func start_asteroid_wave_direct(count: int = 4) -> void:
+	if is_replica():
+		return
 	_main._session_state = _main.SessionState.PLAYING
 	_main._enemy_spawner.stop()
 	_main._enemy_spawner.clear_formation()
