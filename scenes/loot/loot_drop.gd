@@ -1,9 +1,13 @@
 # loot_drop.gd
 # Collectible loot item with autonomous fall, sine wave drift, player magnetism,
 # and procedural vector rendering for 5 distinct powerup/score types.
+# Behavior lives in sibling modules (loot_drop_*.gd) that read this node through _drop.
 
 class_name LootDrop
 extends Area2D
+
+const MedallionModule: GDScript = preload("res://scenes/loot/loot_drop_medallion.gd")
+const DrawModule: GDScript = preload("res://scenes/loot/loot_drop_draw.gd")
 
 enum Type {
 	SCORE,
@@ -32,6 +36,11 @@ var _target: Node2D = null
 var _velocity: Vector2 = Vector2.ZERO
 var _elapsed: float = 0.0
 var _collected: bool = false
+var _painter: RefCounted
+
+
+func _init() -> void:
+	_painter = DrawModule.new(self)
 
 
 func _ready() -> void:
@@ -133,235 +142,14 @@ func _on_body_entered(body: Node2D) -> void:
 
 
 func _draw() -> void:
-	# Subtle pulsing background halo for visibility against dark space
-	var halo_pulse: float = 0.5 + 0.5 * sin(_elapsed * 4.0)
-	var glow_color: Color = _get_type_glow_color()
-	draw_circle(Vector2.ZERO, 15.0 + 2.5 * halo_pulse, Color(glow_color.r, glow_color.g, glow_color.b, 0.16 + 0.08 * halo_pulse))
-
-	# High contrast backing disc and outer neon rim
-	draw_circle(Vector2.ZERO, 12.0, Color(0.04, 0.06, 0.12, 0.85))
-	draw_arc(Vector2.ZERO, 12.0, 0.0, TAU, 24, glow_color, 1.5, true)
-
-	match _type:
-		Type.SCORE:
-			_draw_score()
-		Type.DOUBLE_SHOT:
-			_draw_double_shot()
-		Type.SHIELD:
-			_draw_shield()
-		Type.EXTRA_LIFE:
-			_draw_extra_life()
-		Type.BOMB:
-			_draw_bomb()
-		Type.MEDALLION_BLASTER:
-			_draw_medallion_blaster()
-		Type.MEDALLION_MISSILE:
-			_draw_medallion_missile()
-		Type.MEDALLION_LASER:
-			_draw_medallion_laser()
-		Type.POWER_ATOM:
-			_draw_power_atom()
-		Type.RECOVERY_CAPSULE:
-			_draw_recovery_capsule()
+	_painter.draw_all()
 
 
 func _get_type_glow_color() -> Color:
-	match _type:
-		Type.SCORE:
-			return Color(1.0, 0.84, 0.0) # Yellow / Gold
-		Type.DOUBLE_SHOT:
-			return Color(0.0, 0.9, 1.0) # Cyan
-		Type.SHIELD:
-			return Color(0.0, 0.9, 0.46) # Emerald Green
-		Type.EXTRA_LIFE:
-			return Color(1.0, 0.09, 0.27) # Red / Magenta
-		Type.BOMB:
-			return Color(1.0, 0.57, 0.0) # Orange / Amber
-		Type.MEDALLION_BLASTER:
-			return Color(0.2, 0.6, 1.0) # Neon Blue
-		Type.MEDALLION_MISSILE:
-			return Color(1.0, 0.55, 0.1) # Neon Orange
-		Type.MEDALLION_LASER:
-			return Color(1.0, 0.2, 0.25) # Neon Crimson
-		Type.POWER_ATOM:
-			return Color(1.0, 0.85, 0.2) # Neon Golden
-		Type.RECOVERY_CAPSULE:
-			return Color(0.1, 0.95, 1.0) # Radiant Cyan
-		_:
-			return Color.WHITE
-
-
-
-func _draw_score() -> void:
-	# Golden diamond star with glistening inner gleams
-	var outer_diamond: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -9), Vector2(7, 0), Vector2(0, 9), Vector2(-7, 0)
-	])
-	var inner_diamond: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -4.5), Vector2(3.5, 0), Vector2(0, 4.5), Vector2(-3.5, 0)
-	])
-	draw_colored_polygon(outer_diamond, Color(1.0, 0.84, 0.0))
-	draw_colored_polygon(inner_diamond, Color(1.0, 0.98, 0.7))
-	# Subtle sparkle axes
-	draw_line(Vector2(-9, 0), Vector2(9, 0), Color(1.0, 1.0, 0.85, 0.8), 1.0, true)
-	draw_line(Vector2(0, -9), Vector2(0, 9), Color(1.0, 1.0, 0.85, 0.8), 1.0, true)
-
-
-func _draw_double_shot() -> void:
-	# Twin cyan chevrons representing dual blaster power
-	var cyan: Color = Color(0.0, 0.9, 1.0)
-	var left_chevron: PackedVector2Array = PackedVector2Array([
-		Vector2(-7, 4), Vector2(-4, -5), Vector2(-1, 4)
-	])
-	var right_chevron: PackedVector2Array = PackedVector2Array([
-		Vector2(1, 4), Vector2(4, -5), Vector2(7, 4)
-	])
-	draw_polyline(left_chevron, cyan, 2.2, true)
-	draw_polyline(right_chevron, cyan, 2.2, true)
-	draw_line(Vector2(-4, -4), Vector2(-4, 2), Color.WHITE, 1.2, true)
-	draw_line(Vector2(4, -4), Vector2(4, 2), Color.WHITE, 1.2, true)
-
-
-func _draw_shield() -> void:
-	# Emerald concentric shield with rotating orbital arc
-	var emerald: Color = Color(0.0, 0.9, 0.46)
-	draw_arc(Vector2.ZERO, 7.5, 0.0, TAU, 24, Color(0.0, 0.9, 0.46, 0.6), 1.5, true)
-	var sweep: float = fmod(_elapsed * 3.2, TAU)
-	draw_arc(Vector2.ZERO, 7.5, sweep, sweep + 1.5, 12, Color(0.6, 1.0, 0.8), 2.5, true)
-	var crest: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -4.5), Vector2(3.5, -2.5), Vector2(2.5, 2.5),
-		Vector2(0, 4.5), Vector2(-2.5, 2.5), Vector2(-3.5, -2.5)
-	])
-	draw_colored_polygon(crest, emerald)
-	draw_circle(Vector2.ZERO, 1.5, Color.WHITE)
-
-
-func _draw_extra_life() -> void:
-	# Vibrant red / magenta medical cross with white core
-	var red: Color = Color(1.0, 0.09, 0.27)
-	draw_rect(Rect2(-6.5, -2.5, 13.0, 5.0), red)
-	draw_rect(Rect2(-2.5, -6.5, 5.0, 13.0), red)
-	draw_rect(Rect2(-4.5, -1.2, 9.0, 2.4), Color(1.0, 0.92, 0.95))
-	draw_rect(Rect2(-1.2, -4.5, 2.4, 9.0), Color(1.0, 0.92, 0.95))
-
-
-func _draw_bomb() -> void:
-	# Radiant orange detonator with radial spikes and bright core
-	var orange: Color = Color(1.0, 0.57, 0.0)
-	var base_angle: float = _elapsed * 1.8
-	for i in range(8):
-		var a: float = base_angle + i * (TAU / 8.0)
-		var dir_v: Vector2 = Vector2(cos(a), sin(a))
-		draw_line(dir_v * 5.5, dir_v * 9.5, orange, 1.8, true)
-	draw_circle(Vector2.ZERO, 5.0, orange)
-	draw_circle(Vector2.ZERO, 2.2, Color(1.0, 0.95, 0.8))
-
-
-func _draw_medallion_blaster() -> void:
-	paint_medallion(self, 0)
-
-
-func _draw_medallion_missile() -> void:
-	paint_medallion(self, 1)
-
-
-func _draw_medallion_laser() -> void:
-	paint_medallion(self, 2)
+	return DrawModule.glow_color_for(_type)
 
 
 ## Paints the medallion of a weapon (0 blaster, 1 misil, 2 laser) on any CanvasItem.
-## Shared by the falling drops and the HUD weapon icon, so both look the same (Etapa 20).
+## Delegates to loot_drop_medallion.gd; kept here because hud_icons.gd calls it by name.
 static func paint_medallion(canvas: CanvasItem, weapon_type: int) -> void:
-	match weapon_type:
-		1:
-			_paint_missile(canvas)
-		2:
-			_paint_laser(canvas)
-		_:
-			_paint_blaster(canvas)
-
-
-## Dark badge with a colored ring; keeps every weapon readable on the drop and at HUD size.
-static func _paint_badge(canvas: CanvasItem, color: Color) -> void:
-	canvas.draw_circle(Vector2.ZERO, 9.0, Color(0.03, 0.05, 0.1, 0.92))
-	canvas.draw_arc(Vector2.ZERO, 9.0, 0.0, TAU, 24, color, 1.6, true)
-
-
-## Blaster: a pistol silhouette (barrel, body and grip).
-static func _paint_blaster(canvas: CanvasItem) -> void:
-	var blue: Color = Color(0.3, 0.7, 1.0)
-	_paint_badge(canvas, blue)
-	var pistol: PackedVector2Array = PackedVector2Array([
-		Vector2(-5, -3), Vector2(4, -3), Vector2(4, -1), Vector2(1, -1),
-		Vector2(1, 1), Vector2(3, 1), Vector2(3, 5), Vector2(-1, 5),
-		Vector2(-1, 1), Vector2(-5, 1)
-	])
-	canvas.draw_colored_polygon(pistol, blue)
-	canvas.draw_circle(Vector2(5, -2), 1.2, Color.WHITE)
-
-
-## Missile: a rocket with a nose cone, fins and a flame.
-static func _paint_missile(canvas: CanvasItem) -> void:
-	var orange: Color = Color(1.0, 0.6, 0.15)
-	_paint_badge(canvas, orange)
-	var body: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -6), Vector2(2.5, -2), Vector2(2.5, 3), Vector2(-2.5, 3), Vector2(-2.5, -2)
-	])
-	canvas.draw_colored_polygon(body, Color.WHITE)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-2.5, 0), Vector2(-5, 4), Vector2(-2.5, 3)]), orange)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(2.5, 0), Vector2(5, 4), Vector2(2.5, 3)]), orange)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-1.5, 3), Vector2(1.5, 3), Vector2(0, 7)]), Color(1.0, 0.9, 0.4))
-
-
-## Laser: an energy bolt (lightning), the usual sign of an energy weapon.
-static func _paint_laser(canvas: CanvasItem) -> void:
-	var red: Color = Color(1.0, 0.25, 0.3)
-	_paint_badge(canvas, red)
-	var bolt: PackedVector2Array = PackedVector2Array([
-		Vector2(1.5, -6), Vector2(-3, 0.5), Vector2(0, 0.5),
-		Vector2(-1.5, 6), Vector2(3, -0.5), Vector2(0, -0.5)
-	])
-	canvas.draw_colored_polygon(bolt, red)
-	canvas.draw_colored_polygon(PackedVector2Array([
-		Vector2(0.8, -4.5), Vector2(-1.5, 0.2), Vector2(0.2, 0.2), Vector2(0.6, -2)
-	]), Color(1.0, 0.9, 0.9))
-
-
-func _draw_power_atom() -> void:
-	var gold: Color = Color(1.0, 0.85, 0.2)
-	var pulse: float = 0.8 + 0.2 * sin(_elapsed * 6.0)
-	draw_circle(Vector2.ZERO, 3.8 * pulse, gold)
-	draw_circle(Vector2.ZERO, 2.0 * pulse, Color.WHITE)
-	# Orbit 1
-	var a1: float = _elapsed * 3.0
-	var pts1: PackedVector2Array = PackedVector2Array()
-	for i in range(16):
-		var t: float = float(i) / 16.0 * TAU
-		var p: Vector2 = Vector2(cos(t) * 8.0, sin(t) * 3.5).rotated(a1)
-		pts1.append(p)
-	pts1.append(pts1[0])
-	draw_polyline(pts1, Color(1.0, 0.9, 0.4, 0.75), 1.2, true)
-	# Orbit 2
-	var a2: float = -_elapsed * 2.5 + PI / 3.0
-	var pts2: PackedVector2Array = PackedVector2Array()
-	for i in range(16):
-		var t: float = float(i) / 16.0 * TAU
-		var p: Vector2 = Vector2(cos(t) * 8.0, sin(t) * 3.5).rotated(a2)
-		pts2.append(p)
-	pts2.append(pts2[0])
-	draw_polyline(pts2, Color(1.0, 0.9, 0.4, 0.75), 1.2, true)
-
-
-func _draw_recovery_capsule() -> void:
-	var cyan: Color = Color(0.1, 0.95, 1.0)
-	var pulse: float = 0.85 + 0.15 * sin(_elapsed * 8.0)
-	var diamond: PackedVector2Array = PackedVector2Array([
-		Vector2(0, -9 * pulse), Vector2(7 * pulse, 0), Vector2(0, 9 * pulse), Vector2(-7 * pulse, 0)
-	])
-	draw_colored_polygon(diamond, Color(0.08, 0.18, 0.32, 0.9))
-	draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), cyan, 2.0, true)
-	# Glowing core chevron
-	draw_line(Vector2(-3.5, 2), Vector2(0, -4), Color.WHITE, 1.8, true)
-	draw_line(Vector2(0, -4), Vector2(3.5, 2), Color.WHITE, 1.8, true)
-	draw_circle(Vector2(0, -4), 1.5, Color.WHITE)
-
+	MedallionModule.paint_medallion(canvas, weapon_type)
