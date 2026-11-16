@@ -25,6 +25,22 @@ func validate_ip(address: String) -> bool:
 	return address.is_valid_ip_address()
 
 
+## Empty when the host request is valid; otherwise the message the player sees.
+func host_input_error(port: int) -> String:
+	if validate_port(port):
+		return ""
+	return "Puerto inválido: usa un valor entre %d y %d." % [MIN_PORT, MAX_PORT]
+
+
+## Empty when the join request is valid; otherwise the message the player sees.
+func join_input_error(address: String, port: int) -> String:
+	if not validate_ip(address):
+		return "IP inválida: escribe una IPv4 válida o \"localhost\"."
+	if not validate_port(port):
+		return "Puerto inválido: usa un valor entre %d y %d." % [MIN_PORT, MAX_PORT]
+	return ""
+
+
 ## Opens a server on the port (the host). Returns OK, or an error without opening anything.
 func host(port: int) -> Error:
 	if not validate_port(port):

@@ -116,8 +116,9 @@ func _on_ajustes_button_pressed() -> void:
 func _on_host_button_pressed() -> void:
 	_net_error_label.text = ""
 	var port: int = _read_port()
-	if not _lobby.validate_port(port):
-		_show_net_error("Puerto inválido: usa un valor entre %d y %d." % [LobbyNet.MIN_PORT, LobbyNet.MAX_PORT])
+	var input_error: String = _lobby.host_input_error(port)
+	if input_error != "":
+		_show_net_error(input_error)
 		return
 	var err: Error = _lobby.host(port)
 	if err != OK:
@@ -132,11 +133,9 @@ func _on_join_button_pressed() -> void:
 	_net_error_label.text = ""
 	var address: String = _ip_field.text.strip_edges()
 	var port: int = _read_port()
-	if not _lobby.validate_ip(address):
-		_show_net_error("IP inválida: escribe una IPv4 válida o \"localhost\".")
-		return
-	if not _lobby.validate_port(port):
-		_show_net_error("Puerto inválido: usa un valor entre %d y %d." % [LobbyNet.MIN_PORT, LobbyNet.MAX_PORT])
+	var input_error: String = _lobby.join_input_error(address, port)
+	if input_error != "":
+		_show_net_error(input_error)
 		return
 	var err: Error = _lobby.join(address, port)
 	if err != OK:
