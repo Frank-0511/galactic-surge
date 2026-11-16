@@ -2,8 +2,16 @@
 # Displays player lives, score, wave, boss health bar,
 # barrel overheat status, and active combo multipliers.
 # Emits semantic signals for player retries and menu navigation.
+# Owns the nodes and state read by tests; logic lives in the hud_*.gd modules.
 
 extends CanvasLayer
+
+const HudWaveBanner: Script = preload("res://scenes/ui/hud_wave_banner.gd")
+const HudBossBar: Script = preload("res://scenes/ui/hud_boss_bar.gd")
+const HudLayout: Script = preload("res://scenes/ui/hud_layout.gd")
+const HudWeapons: Script = preload("res://scenes/ui/hud_weapons.gd")
+const HudHeat: Script = preload("res://scenes/ui/hud_heat.gd")
+const HudStatus: Script = preload("res://scenes/ui/hud_status.gd")
 
 signal lives_changed(lives: int)
 signal score_changed(score: int)
@@ -41,244 +49,77 @@ const WAVE_CLEARED_BANNER_TEXT: String = "¡OLEADA SUPERADA!"
 const WAVE_CLEARED_BANNER_DURATION: float = 2.5
 const WAVE_CLEARED_BANNER_FADE: float = 0.35
 
-var _current_weapon_level: int = 1
-var _current_weapon_type: int = 0
-var _heat_fill_style: StyleBoxFlat = null
-var _overheat_pulse_time: float = 0.0
-var _wave_cleared_label: Label = null
-var _wave_cleared_tween: Tween = null
+var _banner: RefCounted = HudWaveBanner.new(self)
+var _boss_bar: RefCounted = HudBossBar.new(self)
+var _layout: RefCounted = HudLayout.new(self)
+var _weapons: RefCounted = HudWeapons.new(self)
+var _heat: RefCounted = HudHeat.new(self)
+var _status: RefCounted = HudStatus.new(self)
+
 
 
 func _ready() -> void:
-	_make_passive()
-	_move_p1_lives_bottom_left()
-	_move_p1_top_left()
-	_update_weapon_level_label()
-	_init_styles()
-	_init_wave_cleared_banner()
-	set_active_weapon(_current_weapon_type)
-	set_weapon_level(1, 0)
+	_layout.make_passive()
+	_layout.move_p1_lives_bottom_left()
+	_layout.move_p1_top_left()
+	_weapons.update_level_label()
+	_heat.init_styles()
+	_banner.build()
+	_weapons.set_active(_weapons.current_type)
+	_weapons.set_level(1, 0)
 	set_heat(0.0, 100.0, false)
 	set_combo(1, 0, 0.0)
 
 
 func _process(delta: float) -> void:
-	if _overheat_warning_label != null and _overheat_warning_label.visible:
-		_overheat_pulse_time += delta * 12.0
-		var alpha: float = 0.5 + 0.5 * sin(_overheat_pulse_time)
-		_overheat_warning_label.modulate = Color(1.0, 1.0, 1.0, 0.4 + 0.6 * alpha)
-
-
-## Creates the hidden "¡OLEADA SUPERADA!" label centered near the top of the screen.
-func _init_wave_cleared_banner() -> void:
-	_wave_cleared_label = Label.new()
-	_wave_cleared_label.name = "WaveClearedLabel"
-	_wave_cleared_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_wave_cleared_label.offset_left = -300.0
-	_wave_cleared_label.offset_right = 300.0
-	_wave_cleared_label.offset_top = 96.0
-	_wave_cleared_label.offset_bottom = 150.0
-	_wave_cleared_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_wave_cleared_label.add_theme_font_size_override(&"font_size", 36)
-	_wave_cleared_label.add_theme_color_override(&"font_color", Color(0.45, 1.0, 0.6, 1.0))
-	_wave_cleared_label.add_theme_color_override(&"font_outline_color", Color(0.02, 0.05, 0.09, 0.95))
-	_wave_cleared_label.add_theme_constant_override(&"outline_size", 6)
-	_wave_cleared_label.visible = false
-	add_child(_wave_cleared_label)
+	_heat.pulse(delta)
 
 
 ## Shows the wave-cleared banner, then fades and hides it after its display time.
 func show_wave_cleared_banner() -> void:
-	if _wave_cleared_label == null:
-		return
-	if _wave_cleared_tween != null and _wave_cleared_tween.is_valid():
-		_wave_cleared_tween.kill()
-	_wave_cleared_label.text = WAVE_CLEARED_BANNER_TEXT
-	_wave_cleared_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
-	_wave_cleared_label.visible = true
-	_wave_cleared_tween = create_tween()
-	_wave_cleared_tween.tween_interval(WAVE_CLEARED_BANNER_DURATION - WAVE_CLEARED_BANNER_FADE)
-	_wave_cleared_tween.tween_property(_wave_cleared_label, "modulate:a", 0.0, WAVE_CLEARED_BANNER_FADE)
-	_wave_cleared_tween.tween_callback(hide_wave_cleared_banner)
+	_banner.show_banner()
 
 
 ## Hides the wave-cleared banner immediately.
 func hide_wave_cleared_banner() -> void:
-	if _wave_cleared_tween != null and _wave_cleared_tween.is_valid():
-		_wave_cleared_tween.kill()
-	if _wave_cleared_label != null:
-		_wave_cleared_label.visible = false
-		_wave_cleared_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_banner.hide_banner()
 
 
 ## Returns the banner text while it is visible, or an empty string otherwise.
 func get_wave_cleared_banner_text() -> String:
-	if _wave_cleared_label == null or not _wave_cleared_label.visible:
-		return ""
-	return _wave_cleared_label.text
-
-
-func _init_styles() -> void:
-	if _heat_progress_bar != null:
-		var base_fill: StyleBox = _heat_progress_bar.get_theme_stylebox(&"fill")
-		if base_fill is StyleBoxFlat:
-			_heat_fill_style = (base_fill as StyleBoxFlat).duplicate() as StyleBoxFlat
-		else:
-			_heat_fill_style = StyleBoxFlat.new()
-			_heat_fill_style.set_border_width_all(1)
-			_heat_fill_style.set_corner_radius_all(2)
-		_heat_progress_bar.add_theme_stylebox_override(&"fill", _heat_fill_style)
+	return _banner.get_text()
 
 
 ## Updates active weapon text and neon color theme in the HUD.
 func set_active_weapon(weapon_index: int) -> void:
-	_current_weapon_type = weapon_index
-	if _active_weapon_label != null:
-		var weapon_names: Array[String] = ["BLASTER", "MISIL", "LÁSER"]
-		var weapon_colors: Array[Color] = [
-			Color(0.2, 0.6, 1.0),
-			Color(1.0, 0.55, 0.1),
-			Color(1.0, 0.2, 0.25)
-		]
-		var idx: int = clampi(weapon_index, 0, 2)
-		_active_weapon_label.text = "ARMA: %s" % weapon_names[idx]
-		_active_weapon_label.modulate = weapon_colors[idx]
-		# The weapon icon in the bottom corner already shows the weapon (Etapa 20).
-		_active_weapon_label.visible = false
+	_weapons.set_active(weapon_index)
 
 
 ## Maintained for backwards compatibility; weapon power is displayed diegetically through projectiles.
 func set_weapon_level(level: int, weapon_type: int = -1) -> void:
-	if weapon_type >= 0:
-		_current_weapon_type = weapon_type
-	_current_weapon_level = clampi(level, 1, 15)
-	_update_weapon_level_label()
-
-
-## Weapon level of J1, shown in the bottom-left corner (spec S7).
-## Draws the falling medallion of a weapon, so the HUD icon matches the drop (Etapa 20).
-## Heart drawn in code (two circles and a triangle) for the lives counter (Etapa 20).
-class HeartIcon extends Control:
-	func _ready() -> void:
-		custom_minimum_size = Vector2(18.0, 18.0)
-
-	func _draw() -> void:
-		var c: Vector2 = size * 0.5
-		var red: Color = Color(1.0, 0.22, 0.3)
-		draw_circle(c + Vector2(-3.5, -2.5), 4.5, red)
-		draw_circle(c + Vector2(3.5, -2.5), 4.5, red)
-		draw_colored_polygon(PackedVector2Array([
-			c + Vector2(-7.9, -1.2), c + Vector2(7.9, -1.2), c + Vector2(0.0, 8.5)
-		]), red)
-		draw_circle(c + Vector2(-4.5, -4.0), 1.4, Color(1.0, 0.85, 0.9, 0.9))
-
-
-class WeaponIcon extends Control:
-	var weapon_type: int = 0:
-		set(value):
-			weapon_type = value
-			queue_redraw()
-
-	func _ready() -> void:
-		custom_minimum_size = Vector2(20.0, 20.0)
-
-	func _draw() -> void:
-		draw_set_transform(size * 0.5, 0.0, Vector2(1.0, 1.0))
-		LootDrop.paint_medallion(self, weapon_type)
+	_weapons.set_level(level, weapon_type)
 
 
 var _weapon_icon: Control = null
 var _weapon_icon_p2: Control = null
 var _weapon_level_label: Label = null
-
-
-func _update_weapon_level_label() -> void:
-	if _weapon_level_label == null:
-		_weapon_level_label = Label.new()
-		_weapon_level_label.name = "WeaponLevelLabel"
-		_weapon_level_label.custom_minimum_size = Vector2(0.0, 28.0)
-		_weapon_level_label.add_theme_font_size_override("font_size", 20)
-		_weapon_level_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0, 1.0))
-		var panel: Node = get_node_or_null("P1BottomPanel")
-		if panel != null:
-			_weapon_icon = WeaponIcon.new()
-			var row_p1: HBoxContainer = HBoxContainer.new()
-			row_p1.name = "WeaponRowP1"
-			panel.add_child(row_p1)
-			row_p1.add_child(_weapon_icon)
-			row_p1.add_child(_weapon_level_label)
-		else:
-			return
-	_weapon_icon.set("weapon_type", _current_weapon_type)
-	_weapon_level_label.text = str(_current_weapon_level)
-
-
 ## Weapon level of J2, shown in the bottom-right corner (spec S7, Etapa 20).
 var _weapon_level_p2_label: Label = null
 
 
 ## Icon per weapon type (0 blaster, 1 misil, 2 laser); the icon follows the weapon (Etapa 20).
 func weapon_glyph(weapon_type: int) -> String:
-	match weapon_type:
-		1:
-			return "◆"
-		2:
-			return "●"
-		_:
-			return "▲"
-
-
-var _weapon_type_p2: int = 0
+	return _weapons.glyph(weapon_type)
 
 
 func set_weapon_level_p2(level: int, weapon_type: int = -1) -> void:
-	if weapon_type >= 0:
-		_weapon_type_p2 = weapon_type
-	if _weapon_level_p2_label == null:
-		_weapon_level_p2_label = Label.new()
-		_weapon_level_p2_label.name = "WeaponLevelP2Label"
-		_weapon_level_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_weapon_level_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
-		_weapon_level_p2_label.add_theme_font_size_override("font_size", 20)
-		_weapon_level_p2_label.add_theme_color_override("font_color", Color(0.35, 0.92, 1.0, 1.0))
-		_weapon_icon_p2 = WeaponIcon.new()
-		var row_p2: HBoxContainer = HBoxContainer.new()
-		row_p2.name = "WeaponRowP2"
-		row_p2.alignment = BoxContainer.ALIGNMENT_END
-		_ensure_p2_bottom_panel().add_child(row_p2)
-		row_p2.add_child(_weapon_icon_p2)
-		row_p2.add_child(_weapon_level_p2_label)
-	_weapon_icon_p2.set("weapon_type", _weapon_type_p2)
-	_weapon_level_p2_label.text = str(clampi(level, 1, 15))
+	_weapons.set_level_p2(level, weapon_type)
 
 
 
 ## Updates heat level indicator, text label, and thermal overload warning.
 func set_heat(current_heat: float, max_heat: float, is_overheated: bool) -> void:
-	var ratio: float = clampf(current_heat / max_heat, 0.0, 1.0) if max_heat > 0.0 else 0.0
-	var percentage: float = ratio * 100.0
-
-	if _heat_progress_bar != null:
-		_heat_progress_bar.max_value = 100.0
-		_heat_progress_bar.value = percentage
-		if _heat_fill_style != null:
-			if is_overheated or percentage > 85.0:
-				_heat_fill_style.bg_color = Color(1.0, 0.22, 0.22, 1.0)
-				_heat_fill_style.border_color = Color(1.0, 0.6, 0.6, 1.0)
-			elif percentage >= 50.0:
-				_heat_fill_style.bg_color = Color(1.0, 0.62, 0.12, 1.0)
-				_heat_fill_style.border_color = Color(1.0, 0.8, 0.35, 1.0)
-			else:
-				_heat_fill_style.bg_color = Color(0.2, 0.85, 1.0, 1.0)
-				_heat_fill_style.border_color = Color(0.5, 0.95, 1.0, 1.0)
-
-	if _heat_label != null:
-		_heat_label.text = "CALOR: %d%%" % int(round(percentage))
-
-	if _overheat_warning_label != null:
-		_overheat_warning_label.visible = is_overheated
-		if not is_overheated:
-			_overheat_warning_label.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	_heat.set_heat(current_heat, max_heat, is_overheated)
 
 
 ## Updates combo multiplier banner and remaining decay time progress.
@@ -304,171 +145,47 @@ func set_combo(multiplier: int, kills: int, time_ratio: float) -> void:
 
 
 func show_boss_health_bar(boss_name: String, max_health: int) -> void:
-	_boss_name_label.text = "BOSS: %s" % boss_name
-	_boss_progress_bar.max_value = max_health
-	_boss_progress_bar.value = max_health
-	_boss_container.visible = true
+	_boss_bar.show_bar(boss_name, max_health)
 
 
 func update_boss_health(current: int, max_health: int) -> void:
-	_boss_progress_bar.max_value = max_health
-	_boss_progress_bar.value = current
+	_boss_bar.update_bar(current, max_health)
 
 
 func hide_boss_health_bar() -> void:
-	_boss_container.visible = false
+	_boss_bar.hide_bar()
 
 
 func set_lives(lives: int) -> void:
-	_lives_label.text = str(lives)
-	lives_changed.emit(lives)
+	_status.set_lives(lives)
 
 
 ## Coop local (Etapa 20): J2 lives indicator, hidden until set (singleplayer never sets it).
 var _lives_p2_label: Label = null
 
 
-## HUD is passive (skill scenario-godot-ui, regla 7): wrappers must not capture the mouse.
-func _make_passive() -> void:
-	for path: String in ["BossContainer", "Margin", "HeatContainer", "ComboContainer"]:
-		var node: Control = get_node_or_null(path) as Control
-		if node != null:
-			node.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-
-## Right-side panel for J2 (Etapa 20): stacks its labels so they never overlap J1's.
+## Right-side panel for J2 (Etapa 20); created and owned by _layout, read by the tests here.
 var _p2_panel: VBoxContainer = null
 
 
-func _ensure_p2_panel() -> VBoxContainer:
-	if _p2_panel == null:
-		_p2_panel = VBoxContainer.new()
-		_p2_panel.name = "P2Panel"
-		_p2_panel.anchor_left = 1.0
-		_p2_panel.anchor_right = 1.0
-		_p2_panel.offset_left = -260.0
-		_p2_panel.offset_right = -16.0
-		_p2_panel.offset_top = 16.0
-		_p2_panel.grow_horizontal = 0
-		_p2_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(_p2_panel)
-	return _p2_panel
-
-
-## Top-left panel for J1 (spec S8, Etapa 20): score and heat bar, then wave and weapon name.
-func _move_p1_top_left() -> void:
-	if _score_label == null or _heat_container == null:
-		return
-	var panel: VBoxContainer = VBoxContainer.new()
-	panel.name = "P1TopPanel"
-	panel.anchor_left = 0.0
-	panel.anchor_top = 0.0
-	panel.anchor_right = 0.0
-	panel.anchor_bottom = 0.0
-	panel.offset_left = 16.0
-	panel.offset_top = 16.0
-	panel.offset_right = 320.0
-	panel.grow_horizontal = 1
-	panel.grow_vertical = 1
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(panel)
-	_score_label.reparent(panel)
-	_heat_container.custom_minimum_size = Vector2(304.0, 38.0)
-	_heat_container.reparent(panel)
-	if _wave_label != null:
-		_wave_label.reparent(panel)
-	if _active_weapon_label != null:
-		_active_weapon_label.reparent(panel)
-
-
-## Bottom-left panel for J1 lives (spec S7, Etapa 20): J1 lives move out of the top stack.
-func _move_p1_lives_bottom_left() -> void:
-	if _lives_label == null:
-		return
-	var panel: VBoxContainer = VBoxContainer.new()
-	panel.name = "P1BottomPanel"
-	panel.anchor_left = 0.0
-	panel.anchor_top = 1.0
-	panel.anchor_right = 0.0
-	panel.anchor_bottom = 1.0
-	panel.offset_left = 16.0
-	panel.offset_top = -80.0
-	panel.offset_right = 260.0
-	panel.offset_bottom = -16.0
-	panel.grow_horizontal = 1
-	panel.grow_vertical = 0
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(panel)
-	var row: HBoxContainer = HBoxContainer.new()
-	row.name = "LivesRowP1"
-	panel.add_child(row)
-	row.add_child(HeartIcon.new())
-	_lives_label.reparent(row)
-
-
-## Shows or hides both J2 panels; outside coop local they must not appear (Etapa 20).
 func set_p2_visible(on: bool) -> void:
-	if _p2_panel != null:
-		_p2_panel.visible = on
-	if _p2_bottom_panel != null:
-		_p2_bottom_panel.visible = on
-
-
-## Bottom-right panel for J2 lives and weapon level (spec S7, Etapa 20).
-var _p2_bottom_panel: VBoxContainer = null
-
-
-func _ensure_p2_bottom_panel() -> VBoxContainer:
-	if _p2_bottom_panel == null:
-		_p2_bottom_panel = VBoxContainer.new()
-		_p2_bottom_panel.name = "P2BottomPanel"
-		_p2_bottom_panel.anchor_left = 1.0
-		_p2_bottom_panel.anchor_top = 1.0
-		_p2_bottom_panel.anchor_right = 1.0
-		_p2_bottom_panel.anchor_bottom = 1.0
-		_p2_bottom_panel.offset_left = -260.0
-		_p2_bottom_panel.offset_top = -80.0
-		_p2_bottom_panel.offset_right = -16.0
-		_p2_bottom_panel.offset_bottom = -16.0
-		_p2_bottom_panel.grow_horizontal = 0
-		_p2_bottom_panel.grow_vertical = 0
-		_p2_bottom_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(_p2_bottom_panel)
-	return _p2_bottom_panel
+	_layout.set_p2_visible(on)
 
 
 func get_lives_p2_parent() -> Node:
-	return _lives_p2_label.get_parent() if _lives_p2_label != null else null
-
-
-func get_heat_p2_parent() -> Node:
-	return _heat_p2_label.get_parent() if _heat_p2_label != null else null
+	return _status.get_lives_p2_parent()
 
 
 func set_lives_p2(lives: int) -> void:
-	if _lives_p2_label == null:
-		_lives_p2_label = Label.new()
-		_lives_p2_label.name = "LivesP2Label"
-		_lives_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
-		_lives_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_lives_p2_label.add_theme_font_size_override("font_size", 20)
-		_lives_p2_label.add_theme_color_override("font_color", Color(1.0, 0.42, 0.42, 1.0))
-		var row_p2: HBoxContainer = HBoxContainer.new()
-		row_p2.name = "LivesRowP2"
-		row_p2.alignment = BoxContainer.ALIGNMENT_END
-		_ensure_p2_bottom_panel().add_child(row_p2)
-		row_p2.add_child(HeartIcon.new())
-		row_p2.add_child(_lives_p2_label)
-	_lives_p2_label.text = str(lives)
-	_lives_p2_label.visible = true
+	_status.set_lives_p2(lives)
 
 
 func is_lives_p2_visible() -> bool:
-	return _lives_p2_label != null and _lives_p2_label.visible
+	return _status.is_lives_p2_visible()
 
 
 func get_lives_p2_text() -> String:
-	return _lives_p2_label.text if _lives_p2_label != null else ""
+	return _status.get_lives_p2_text()
 
 
 ## Coop local (Etapa 20): J2 score label, in J2's panel with the same style as its lives.
@@ -476,16 +193,7 @@ var _score_p2_label: Label = null
 
 
 func set_score_p2(points: int) -> void:
-	if _score_p2_label == null:
-		_score_p2_label = Label.new()
-		_score_p2_label.name = "ScoreP2Label"
-		_score_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
-		_score_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_score_p2_label.add_theme_font_size_override("font_size", 20)
-		_score_p2_label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.25, 1.0))
-		_ensure_p2_panel().add_child(_score_p2_label)
-	_score_p2_label.text = "Score: %d" % points
-	_score_p2_label.visible = true
+	_status.set_score_p2(points)
 
 
 ## Coop local (Etapa 20): J2 heat indicator, separate from J1's HeatContainer.
@@ -493,47 +201,23 @@ var _heat_p2_label: Label = null
 
 
 func set_heat_p2(current: float, maximum: float, overheated: bool) -> void:
-	if _heat_p2_label == null:
-		_heat_p2_label = Label.new()
-		_heat_p2_label.name = "HeatP2Label"
-		_heat_p2_label.custom_minimum_size = Vector2(0.0, 28.0)
-		_heat_p2_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		_heat_p2_label.add_theme_font_size_override("font_size", 12)
-		_heat_p2_label.add_theme_color_override("font_color", Color(0.85, 0.92, 1.0, 1.0))
-		_ensure_p2_panel().add_child(_heat_p2_label)
-	var percent: int = int(round(current / maximum * 100.0)) if maximum > 0.0 else 0
-	_heat_p2_label.text = "CALOR: %d%%" % percent
-	if overheated:
-		_heat_p2_label.text += " SOBRECARGA"
-	_heat_p2_label.visible = true
-	var bar: ProgressBar = _ensure_p2_panel().get_node_or_null("HeatP2Bar") as ProgressBar
-	if bar == null:
-		bar = ProgressBar.new()
-		bar.name = "HeatP2Bar"
-		bar.custom_minimum_size = Vector2(240.0, 14.0)
-		bar.max_value = 100.0
-		bar.show_percentage = false
-		if _heat_progress_bar != null:
-			bar.add_theme_stylebox_override("background", _heat_progress_bar.get_theme_stylebox("background"))
-			bar.add_theme_stylebox_override("fill", _heat_progress_bar.get_theme_stylebox("fill"))
-		_ensure_p2_panel().add_child(bar)
-	bar.value = percent
+	_heat.set_heat_p2(current, maximum, overheated)
+
+
+func get_heat_p2_parent() -> Node:
+	return _heat.get_heat_p2_parent()
 
 
 func get_heat_p2_text() -> String:
-	return _heat_p2_label.text if _heat_p2_label != null else ""
+	return _heat.get_heat_p2_text()
 
 
 func set_score(score: int) -> void:
-	_score_label.text = "Score: %d" % score
-	score_changed.emit(score)
+	_status.set_score(score)
 
 
 func set_wave(wave: int) -> void:
-	_wave_label.text = "Oleada %d" % wave
-	# The wave number is shown by the between-waves announcement, not in the HUD (Etapa 20).
-	_wave_label.visible = false
-	wave_changed.emit(wave)
+	_status.set_wave(wave)
 
 
 func show_mission_complete(final_score: int, is_new_record: bool = false) -> void:
