@@ -108,7 +108,7 @@ func begin_next_chapter() -> void:
 	# Wave numbering is global: the next chapter continues after the boss wave.
 	_main._pending_wave_index = _main.wave
 	_main._wave_is_clean = true
-	_main._wave_announcement.show_announcement(_main.wave + 1, "¡CAPÍTULO %d INICIADO!" % _main._chapter)
+	_main._waves.show_transition("¡CAPÍTULO %d INICIADO!" % _main._chapter)
 
 
 func clear_boss() -> void:

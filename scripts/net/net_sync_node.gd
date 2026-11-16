@@ -6,6 +6,7 @@
 # and never applies damage. Explicit RPCs, not MultiplayerSynchronizer (decision L5). Shot events live in
 # net_sync_shots.gd; enemies and the boss in net_sync_enemies.gd and net_sync_boss.gd.
 # Loot, asteroids, score, the end of the match and laser beams: net_sync_loot, _asteroids, _score, _laser.gd.
+# Wave transitions and announcements: net_sync_waves.gd. Ship state: net_sync_ships.gd.
 
 extends Node
 
@@ -18,6 +19,8 @@ const NetSyncScore: GDScript = preload("res://scripts/net/net_sync_score.gd")
 const NetSyncBullets: GDScript = preload("res://scripts/net/net_sync_bullets.gd")
 const NetSyncLaser: GDScript = preload("res://scripts/net/net_sync_laser.gd")
 const NetSyncDisconnect: GDScript = preload("res://scripts/net/net_sync_disconnect.gd")
+const NetSyncWaves: GDScript = preload("res://scripts/net/net_sync_waves.gd")
+const NetSyncShips: GDScript = preload("res://scripts/net/net_sync_ships.gd")
 ## Seconds between state packets (host) or input packets (client): 20 per second.
 const SEND_INTERVAL: float = 0.05
 
@@ -29,6 +32,7 @@ var _enemies: RefCounted = null
 var _loot: RefCounted = null
 var _asteroids: RefCounted = null
 var _bullets: RefCounted = null
+var _waves: RefCounted = null
 ## Reliable events the host sends on the next physics frame: [rpc method, payload] pairs.
 var _outbox: Array = []
 
@@ -42,6 +46,7 @@ func setup(main: Node2D, is_host: bool) -> void:
 	_loot = NetSyncLoot.new(main, self)
 	_asteroids = NetSyncAsteroids.new(main, self)
 	_bullets = NetSyncBullets.new(main, self)
+	_waves = NetSyncWaves.new(main, self)
 	_main._enemy_spawner.set("replica", not is_host)
 	if _is_host:
 		_main._player_two.set("remote_driven", true)
@@ -160,11 +165,19 @@ func rpc_host_session_end(event: Dictionary) -> void:
 	NetSyncScore.apply_session_end(_main, event)
 
 
+## Host -> client: a wave was cleared (or a chapter starts): the announcement text, the wave and the state. Reliable.
+@rpc("authority", "call_remote", "reliable")
+func rpc_host_wave_transition(event: Dictionary) -> void:
+	if _is_host or _waves == null:
+		return
+	_waves.apply_transition(event)
+
+
 ## Host side: the state of both ships, as sent to the client.
 func build_state() -> Dictionary:
 	var state: Dictionary = {
-		"j1": _ship_state(_main._player, _main.lives),
-		"j2": _ship_state(_main._player_two, _main._player_two_lives),
+		"j1": NetSyncShips.ship_state(_main._player, _main.lives),
+		"j2": NetSyncShips.ship_state(_main._player_two, _main._player_two_lives),
 	}
 	if _is_host:
 		if _enemies != null:
@@ -173,6 +186,7 @@ func build_state() -> Dictionary:
 			_asteroids.encode_into(state)
 		NetSyncScore.encode_into(_main, state)
 		NetSyncLaser.encode_into(_main, state)
+		_waves.encode_into(state)
 	return state
 
 
@@ -180,12 +194,14 @@ func build_state() -> Dictionary:
 func apply_host_state(state: Dictionary) -> void:
 	if _is_host or _main == null:
 		return
-	_apply_ship(_main._player, state.get("j1", {}) as Dictionary, 1)
-	_apply_ship(_main._player_two, state.get("j2", {}) as Dictionary, 2)
+	NetSyncShips.apply_ship(_main, _main._player, state.get("j1", {}) as Dictionary, 1)
+	NetSyncShips.apply_ship(_main, _main._player_two, state.get("j2", {}) as Dictionary, 2)
 	if _enemies != null:
 		_enemies.apply_state(state)
 	if _asteroids != null:
 		_asteroids.apply_state(state)
+	if _waves != null:
+		_waves.apply_state(state)
 	NetSyncLaser.apply(_main, state)
 	if _main.get("_session_active") == true:
 		NetSyncScore.apply(_main, state)
@@ -213,6 +229,12 @@ func announce_loot_spawn(loot: Node, loot_type: int, spawn_position: Vector2) ->
 func announce_session_end(kind: String) -> void:
 	if _is_host and _main != null:
 		queue_reliable("rpc_host_session_end", NetSyncScore.session_end_event(_main, kind))
+
+
+## Host side: a wave was cleared and the host shows `phrase`; queues the transition for the client.
+func announce_wave_transition(phrase: String) -> void:
+	if _is_host and _waves != null:
+		_waves.announce_transition(phrase)
 
 
 ## Host side: scans the enemy and boss bullets now (the physics path does this each frame with a client connected).
@@ -246,35 +268,6 @@ func local_shoot_intent() -> bool:
 func _on_volley(weapon: int, level: int, origin: Vector2, aim: Vector2, double_shot: bool, ship_index: int) -> void:
 	if _has_remote_peer():
 		rpc("rpc_host_shot", NetSyncShots.make_event(ship_index, weapon, level, origin, aim, double_shot))
-
-
-static func _ship_state(ship: CharacterBody2D, lives: int) -> Dictionary:
-	if ship == null:
-		return {}
-	return {
-		"x": ship.position.x,
-		"y": ship.position.y,
-		"facing": int(signf(ship.velocity.x)),
-		"lives": lives,
-		"shield": ship.get_shield_level(),
-		"weapon_level": ship.get_weapon_level(),
-	}
-
-
-func _apply_ship(ship: CharacterBody2D, data: Dictionary, index: int) -> void:
-	if ship == null or data.is_empty():
-		return
-	ship.position = Vector2(float(data["x"]), float(data["y"]))
-	ship.set("facing", int(data["facing"]))
-	ship.set_weapon_level(int(data["weapon_level"]))
-	ship.apply_replicated_shield(int(data["shield"]))
-	var lives: int = int(data["lives"])
-	if index == 1:
-		_main.lives = lives
-		_main._hud.set_lives(lives)
-	else:
-		_main._player_two_lives = lives
-		_main._hud.set_lives_p2(lives)
 
 
 ## Sends the queued reliable events in order. The queue is emptied even when no client is connected.

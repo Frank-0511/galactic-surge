@@ -6,6 +6,8 @@
 
 extends RefCounted
 
+const NET_SYNC_NAME: String = "NetSync"
+
 var _main: Node2D
 
 
@@ -39,7 +41,7 @@ func on_wave_cleared(_wave_index: int) -> void:
 		_main._enemy_spawner.stop()
 		_main._boss_pending = true
 		_main._audio_feedback.stop_combat_music()
-		_main._wave_announcement.show_announcement(_main.wave + 1, "¡AMENAZA COLOSAL DETECTADA!")
+		show_transition("¡AMENAZA COLOSAL DETECTADA!")
 		return
 	show_wave_cleared_feedback()
 	# Enter wave transition instead of starting the next wave immediately.
@@ -55,7 +57,15 @@ func on_wave_cleared(_wave_index: int) -> void:
 			_main._visual_feedback.play_asteroid_warning()
 		if _main._camera != null and _main._camera.has_method(&"add_trauma"):
 			_main._camera.add_trauma(0.20)
+	show_transition(phrase)
+
+
+## Shows the announcement for the next wave; on a network host the client gets the same one (Etapa 20 gap 5).
+func show_transition(phrase: String) -> void:
 	_main._wave_announcement.show_announcement(_main.wave + 1, phrase)
+	var net: Node = _main.get_node_or_null(NET_SYNC_NAME)
+	if net != null and net.has_method(&"announce_wave_transition"):
+		net.call("announce_wave_transition", phrase)
 
 
 ## Wave-cleared feedback (Etapa 15 T6): banner, camera zoom pulse, and a short
