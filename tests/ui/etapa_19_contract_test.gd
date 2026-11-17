@@ -179,6 +179,8 @@ func _assert_toggles_share_style() -> bool:
 	var ok: bool = fullscreen.get_theme_font_size("font_size") == vsync.get_theme_font_size("font_size") \
 		and fullscreen.get_theme_color("font_color") == vsync.get_theme_color("font_color") \
 		and fullscreen.theme_type_variation == &"ToggleButton" and vsync.theme_type_variation == &"ToggleButton"
+	# VSync se oculta del menu (decision del usuario): el ajuste sigue guardado con su valor por defecto.
+	ok = ok and not vsync.visible
 	root.remove_child(menu)
 	menu.free()
 	if ok:

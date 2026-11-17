@@ -84,6 +84,7 @@ theme_type_variation = &"ToggleButton"
 text = "Pantalla completa: No"
 
 [node name="VsyncToggle" type="Button" parent="Control/Center/Content/DisplayOptions"]
+visible = false
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 theme_type_variation = &"ToggleButton"
