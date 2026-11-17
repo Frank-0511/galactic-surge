@@ -1,0 +1,27 @@
+# Godot 4 generated files
+.godot/
+
+# Godot imported resources
+*.import
+
+# Exported builds
+exports/
+build/
+*.pck
+*.zip
+
+# OS generated files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Herramientas auxiliares y temporales
+.superpowers/
+.codex-*/
