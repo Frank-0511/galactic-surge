@@ -1,4 +1,8 @@
-[gd_resource type="Theme" load_steps=6 format=3]
+[gd_resource type="Theme" load_steps=9 format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/Rajdhani-Regular.ttf" id="1_rajdhani"]
+[ext_resource type="FontFile" path="res://assets/fonts/Rajdhani-Bold.ttf" id="2_rajdhani_bold"]
+[ext_resource type="FontFile" path="res://assets/fonts/Orbitron.ttf" id="3_orbitron"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
 bg_color = Color(0.07, 0.09, 0.18, 0.92)
@@ -76,7 +80,13 @@ content_margin_right = 16.0
 content_margin_bottom = 12.0
 
 [resource]
+default_font = ExtResource("1_rajdhani")
 default_font_size = 20
+Button/fonts/font = ExtResource("2_rajdhani_bold")
+Label/fonts/font = ExtResource("1_rajdhani")
+
+Title/base_type = "Label"
+Title/fonts/font = ExtResource("3_orbitron")
 Button/styles/normal = SubResource("StyleBoxFlat_btn_normal")
 Button/styles/hover = SubResource("StyleBoxFlat_btn_hover")
 Button/styles/pressed = SubResource("StyleBoxFlat_btn_pressed")

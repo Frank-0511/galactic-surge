@@ -27,6 +27,7 @@ color = Color(0.01, 0.015, 0.04, 0.8)
 mouse_filter = 2
 
 [node name="TitleLabel" type="Label" parent="Control"]
+theme_type_variation = &"Title"
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
