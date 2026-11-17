@@ -32,6 +32,7 @@ func _run_contracts() -> void:
 	await _check_host_loss_is_idempotent()
 	await _check_client_returns_to_menu_on_lost_host()
 	await _check_notice_clears_when_returning_to_menu()
+	await _check_host_frees_j2_slot_and_targets()
 
 	if _failures == 0:
 		print("ETAPA 20 SYNC DISCONNECT CONTRACT TESTS: ALL PASSED")
@@ -124,6 +125,29 @@ func _check_notice_clears_when_returning_to_menu() -> void:
 		_expect(_hud_notice_text(main) == HOST_LEFT_NOTICE, "Contrato T51 (precondicion): el aviso del host esta visible en la partida")
 		main.call("return_to_main_menu")
 		_expect(_hud_notice_text(main) == "", "Contrato T51a: volver al menu oculta el aviso de desconexion")
+	_close_session(main, peer)
+
+
+# T52-T53 (S4, task T5, L16): after the J2 client leaves, a new client can take J2 (the remembered peer is
+# cleared) and enemy dives never aim at the hidden J2 or at an eliminated ship (they fall back to the screen center).
+func _check_host_frees_j2_slot_and_targets() -> void:
+	var peer: ENetMultiplayerPeer = _open_server(HOST_PORT)
+	var main: Node = await _new_main()
+	var p2: CharacterBody2D = await _start_network_session(main)
+	var sync: Node = main.get_node_or_null(SYNC_NODE_NAME)
+	sync.set("_remote_peer", CLIENT_PEER_ID)
+	if _call_checked(sync, "handle_peer_lost", 1, [CLIENT_PEER_ID]):
+		_expect(int(sync.get("_remote_peer")) == 0, "Contrato T52: tras la desconexion de J2 el host olvida el peer remoto para aceptar un cliente nuevo")
+		var pressure: Object = main.get("_enemy_spawner").get("_pressure") as Object
+		if pressure != null and pressure.has_method("dive_target_position"):
+			var p1: CharacterBody2D = main.get("_player") as CharacterBody2D
+			p1.global_position = Vector2(100.0, 100.0)
+			p1.collision_layer = 0
+			_expect(pressure.call("dive_target_position") == Vector2(540.0, 850.0), "Contrato T53: sin naves vivas (J1 eliminada, J2 oculta) la picada no apunta a ninguna nave")
+			p1.collision_layer = 1
+			_expect((pressure.call("dive_target_position") as Vector2).distance_to(Vector2(100.0, 100.0)) < 0.5, "Contrato T53b: con J1 viva la picada apunta a J1, no a J2 oculta")
+		else:
+			_expect(false, "Contrato T53: el modulo de presion expone dive_target_position()")
 	_close_session(main, peer)
 
 

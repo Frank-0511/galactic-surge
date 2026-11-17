@@ -41,13 +41,15 @@ static func _encode_ship(main: Node2D, slot: int) -> Dictionary:
 	var beam: Node = ship.get("_laser_beam") as Node if ship != null else null
 	var live: bool = is_instance_valid(beam)
 	var origin: Vector2 = (beam as Node2D).global_position if live else Vector2.ZERO
+	var pulse_length: float = float(beam.call("consume_pending_pulse")) if live and beam.has_method("consume_pending_pulse") else 0.0
+	var is_on: bool = live and beam.get("is_firing") == true
 	return {
 		"ship": slot,
-		"firing": live and beam.get("is_firing") == true,
+		"firing": is_on or pulse_length > 0.0,
 		"level": ship.call("get_weapon_level") if ship != null else 1,
 		"x": origin.x,
 		"y": origin.y,
-		"length": float(beam.call("get_active_length")) if live else 0.0,
+		"length": (float(beam.call("get_active_length")) if is_on else pulse_length) if live else 0.0,
 	}
 
 

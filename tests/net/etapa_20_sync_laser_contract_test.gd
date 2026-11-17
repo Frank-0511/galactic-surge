@@ -23,6 +23,7 @@ func _init() -> void:
 func _run_contracts() -> void:
 	await _check_host_laser()
 	await _check_client_laser_replica()
+	await _check_short_laser_pulse()
 	_check_beam_width_curve_unchanged()
 
 	if _failures == 0:
@@ -111,6 +112,28 @@ func _laser_entry(sync: Node, ship: int) -> Dictionary:
 		if entry is Dictionary and int((entry as Dictionary).get("ship", 0)) == ship:
 			return entry as Dictionary
 	return {}
+
+
+# T52 (host, L13): a beam pressed and released between two state packets still shows once as firing, with its length;
+# the next packet reports it off.
+func _check_short_laser_pulse() -> void:
+	var peer: ENetMultiplayerPeer = _open_server(HOST_PORT_A)
+	var main: Node = await _new_main()
+	var p2: CharacterBody2D = await _start_network_session(main)
+	var sync: Node = main.get_node_or_null(SYNC_NODE_NAME)
+	var beam: Area2D = p2.get("_laser_beam") as Area2D if p2 != null else null
+	if sync != null and beam != null:
+		p2.call("set_weapon", WEAPON_LASER)
+		await physics_frame
+		beam.call("set_firing", true)
+		beam.call("set_firing", false)
+		var entry: Dictionary = _laser_entry(sync, 2)
+		_expect(entry.get("firing") == true, "Contrato T52a: un pulso corto entre dos paquetes de estado llega como firing=true")
+		_expect(float(entry.get("length", 0.0)) > 0.0, "Contrato T52b: el pulso corto lleva el largo del haz al disparar")
+		_expect(_laser_entry(sync, 2).get("firing") == false, "Contrato T52c: el paquete siguiente marca el laser apagado")
+	else:
+		_expect(false, "Contrato T52 (precondicion): J2 tiene laser y NetSync")
+	_close_session(main, peer)
 
 
 # A host state packet with only the laser of J2 (the other keys are optional on the client).

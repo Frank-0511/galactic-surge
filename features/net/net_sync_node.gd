@@ -281,6 +281,9 @@ func _flush_outbox() -> void:
 ## Host side: a peer left the match. Only the J2 client counts (Etapa 20 T5); see net_sync_disconnect.gd.
 func handle_peer_lost(peer_id: int) -> void:
 	NetSyncDisconnect.host_peer_left(_main, _is_host, _remote_peer, peer_id)
+	# Free the J2 slot so a new client's input is accepted (the check above needs the old value, so it goes last).
+	if _is_host and peer_id == _remote_peer:
+		_remote_peer = 0
 
 
 func _exit_tree() -> void:

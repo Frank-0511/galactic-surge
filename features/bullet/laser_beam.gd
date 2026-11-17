@@ -99,6 +99,19 @@ func set_power_level(level: int) -> void:
 	queue_redraw()
 
 
+## True from the moment the beam fires until a state packet reads it (see consume_pending_pulse).
+var _pulse_pending: bool = false
+var _pulse_length: float = 0.0
+
+
+## Network sync (host): reports whether the beam fired since the last read, so a press shorter than the 20 Hz
+## send interval is still sent once. Returns the pulse length (0 when none) and clears the flag.
+func consume_pending_pulse() -> float:
+	var length: float = _pulse_length if _pulse_pending else 0.0
+	_pulse_pending = false
+	return length
+
+
 func set_firing(firing: bool) -> void:
 	if is_firing == firing:
 		return
@@ -113,6 +126,8 @@ func set_firing(firing: bool) -> void:
 
 	if is_firing:
 		_geometry.update_beam_geometry()
+		_pulse_pending = true
+		_pulse_length = _active_length
 	else:
 		_geometry.reset_to_default_beam()
 

@@ -4,6 +4,8 @@
 
 extends RefCounted
 
+const PlayerShip: Script = preload("res://features/player/player.gd")
+
 var _spawner: Node2D
 
 
@@ -24,6 +26,15 @@ func tick_dives(delta: float, formation_enemies: Array[Area2D]) -> void:
 		_spawner._dive_cooldown_timer = randf_range(1.6, 2.5) if _spawner._is_enraged else randf_range(3.2, 5.0)
 
 
+## Where a dive aims: the first ship still alive (never a hidden J2 or an eliminated ship), else the screen center.
+func dive_target_position() -> Vector2:
+	if _spawner.is_inside_tree():
+		var ship: Node2D = PlayerShip.first_alive_ship(_spawner.get_tree())
+		if ship != null:
+			return ship.global_position
+	return Vector2(540.0, 850.0)
+
+
 func trigger_dive(count: int = 1) -> Array[Area2D]:
 	var candidates: Array[Area2D] = []
 	for enemy: Area2D in _spawner._get_valid_enemies():
@@ -38,11 +49,7 @@ func trigger_dive(count: int = 1) -> Array[Area2D]:
 		return a.global_position.y > b.global_position.y
 	)
 
-	var target_pos: Vector2 = Vector2(540.0, 850.0)
-	if _spawner.is_inside_tree():
-		var players: Array[Node] = _spawner.get_tree().get_nodes_in_group(&"player")
-		if not players.is_empty() and is_instance_valid(players[0]) and players[0] is Node2D:
-			target_pos = (players[0] as Node2D).global_position
+	var target_pos: Vector2 = dive_target_position()
 
 	var selected_count: int = mini(count, candidates.size())
 	var attackers: Array[Area2D] = []
