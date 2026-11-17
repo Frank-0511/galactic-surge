@@ -20,9 +20,9 @@ Oleadas de naves enemigas bajan desde la parte superior de la pantalla en formac
 
 | Acción | Tecla |
 |---|---|
-| Mover a la izquierda | `A` |
-| Mover a la derecha | `D` |
-| Disparar | `Espacio` |
+| Mover a la izquierda | `A` (J2: `←`) |
+| Mover a la derecha | `D` (J2: `→`) |
+| Disparar | `Espacio` (J2: `Shift`) |
 | Pausa | `Escape` |
 | Seleccionar arma 1-4 | `1` `2` `3` `4` |
 | Arma anterior / siguiente | `Q` / `E` |
@@ -50,9 +50,13 @@ Todas las teclas pueden cambiarse en **Ajustes > Controles**.
 
 Los puertos reservados y fuera de rango son rechazados antes de abrir la conexión.
 
+Para jugar en LAN: ambos equipos en la misma red, el anfitrión inicia **Host** (por ejemplo, puerto 7777), comparte su IP local y el segundo jugador usa **Join** con esa IP y el mismo puerto. El anfitrión controla a J1 y el cliente a J2; el host decide la partida y sincroniza el resto. Si el cliente se desconecta, la partida del host continúa en solitario; si el host se pierde, el cliente vuelve al menú con un aviso. El firewall del anfitrión debe permitir UDP en ese puerto. Sin red, el botón **Coop local** permite jugar de a dos en el mismo teclado.
+
 ## Versión web
 
-Existe un build para navegador (HTML5) de la versión para un jugador, sin red. Para exportarlo, usar el preset **Web** de *Proyecto > Exportar* en el editor. El navegador necesita servir el build por HTTP; no funciona abriendo `index.html` directamente desde el disco.
+Jugable en el navegador, sin instalar nada: https://frank0511.itch.io/galactic-surge (un jugador y coop local; el panel de red y el botón Salir no se muestran en web; en pantallas táctiles aparecen joystick virtual, disparo y pausa).
+
+Para exportar el build HTML5 por tu cuenta, usar el preset **Web** de *Proyecto > Exportar* en el editor. El navegador necesita servir el build por HTTP; no funciona abriendo `index.html` directamente desde el disco.
 
 ## Estructura del proyecto
 
@@ -70,7 +74,13 @@ Convenciones de código: nombres en inglés, archivos y funciones en `snake_case
 
 ## Tests
 
-La suite de contratos corre en modo headless desde Godot y valida el comportamiento por dominio (balance, enemigos, oleadas, armas, UI, red y coop). Los scripts viven en `tests/`.
+La suite de contratos corre en modo headless desde Godot y valida el comportamiento por dominio (balance, enemigos, oleadas, armas, UI, red y coop). Los scripts viven en `tests/`. Ejecutar una suite:
+
+```bash
+godot --headless --path game --script res://tests/<dominio>/<suite>.gd
+```
+
+Cada suite termina con código 0 si pasa. `tests/net/etapa_20_two_process_test.gd` levanta un host y un cliente reales sobre ENet en localhost (puerto 7791).
 
 ## Créditos de audio
 
