@@ -139,17 +139,11 @@ func show_network_message(text: String) -> void:
 	_lobby_menu.show_message(text)
 
 
-## Etapa 21 (S7): web builds have no ENet networking. In web the Red buttons are disabled and a notice shows;
-## outside web they are enabled again.
+## Etapa 21 (S7): web builds have no ENet networking and no way to close the browser tab, so in web the Red
+## panel and the Salir button are hidden; outside web they are visible again.
 func apply_network_availability(is_web: bool) -> void:
-	for button: Button in [
-		$Control/NetPanel/ButtonRow/HostButton,
-		$Control/NetPanel/ButtonRow/JoinButton,
-		$Control/NetPanel/ButtonRow/NetCoopButton,
-	]:
-		button.disabled = is_web
-	if is_web:
-		show_network_message("El coop en red no está disponible en el navegador.")
+	$Control/NetPanel.visible = not is_web
+	$Control/Menu/QuitButton.visible = not is_web
 
 
 ## Public: closes the lobby and clears the scene multiplayer peer. Safe when nothing is open.

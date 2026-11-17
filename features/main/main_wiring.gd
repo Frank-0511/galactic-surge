@@ -158,7 +158,9 @@ func _begin_net_sync(network: bool) -> void:
 
 func on_main_menu_quit_requested() -> void:
 	_main.return_to_main_menu()
-	_main.get_tree().quit()
+	# Web builds cannot quit the process; calling quit() there leaves the canvas broken.
+	if not OS.has_feature("web"):
+		_main.get_tree().quit()
 
 
 func on_main_menu_settings_requested() -> void:
