@@ -52,7 +52,7 @@ static func dive_cap_y(viewport: Rect2) -> float:
 
 ## Live viewport when inside the tree; outside it, the 1080x960 base viewport.
 func _viewport_rect() -> Rect2:
-	return _boss.get_viewport_rect() if _boss.is_inside_tree() else Rect2(0.0, 0.0, 1080.0, 960.0)
+	return GameLayout.playfield_of(_boss.get_viewport_rect()) if _boss.is_inside_tree() else Rect2(0.0, 0.0, 1080.0, 960.0)
 
 
 func _update_entering(delta: float) -> void:

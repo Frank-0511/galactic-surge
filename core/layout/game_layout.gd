@@ -19,6 +19,10 @@ const TOP_MARGIN: float = 120.0
 const BOTTOM_MARGIN: float = 96.0
 const FALLBACK_DROP_Y: float = 160.0
 
+# Fixed height of the playfield (Etapa 21, movil-banda-controles). On tall phones the viewport grows below
+# this line; that extra band is reserved for the touch controls and never holds gameplay anchors.
+const PLAYFIELD_HEIGHT: float = 960.0
+
 var viewport_size: Vector2 = Vector2.ZERO
 var viewport_rect: Rect2 = Rect2()
 var playfield_rect: Rect2 = Rect2()
@@ -35,19 +39,32 @@ func configure(next_viewport_size: Vector2) -> void:
 func relayout(next_viewport_size: Vector2) -> void:
 	viewport_size = next_viewport_size
 	viewport_rect = Rect2(Vector2.ZERO, viewport_size)
+	var field: Rect2 = playfield_of(viewport_rect)
 	playfield_rect = Rect2(
 		Vector2(SIDE_MARGIN, TOP_MARGIN),
 		Vector2(
-			maxf(0.0, viewport_size.x - SIDE_MARGIN * 2.0),
-			maxf(0.0, viewport_size.y - TOP_MARGIN - BOTTOM_MARGIN),
+			maxf(0.0, field.size.x - SIDE_MARGIN * 2.0),
+			maxf(0.0, field.size.y - TOP_MARGIN - BOTTOM_MARGIN),
 		),
 	)
 
 
+# Pure: the playfield inside a viewport. Anchored to the top; the viewport's extra height below
+# PLAYFIELD_HEIGHT is the control band. Equal to the viewport when it is not taller than the playfield.
+static func playfield_of(viewport: Rect2) -> Rect2:
+	return Rect2(viewport.position, Vector2(viewport.size.x, minf(viewport.size.y, PLAYFIELD_HEIGHT)))
+
+
+# Pure: the band below the playfield where touch controls go. Zero height when the viewport has no extra height.
+static func control_band_of(viewport: Rect2) -> Rect2:
+	var top: float = minf(viewport.end.y, PLAYFIELD_HEIGHT)
+	return Rect2(Vector2(viewport.position.x, top), Vector2(viewport.size.x, maxf(0.0, viewport.end.y - top)))
+
+
 # Player spawn: horizontally centered, sitting BOTTOM_MARGIN above the bottom
-# edge of the viewport.
+# edge of the playfield (not of the viewport, so the control band never covers the ship).
 func get_player_spawn_position() -> Vector2:
-	return Vector2(viewport_rect.get_center().x, viewport_rect.end.y - BOTTOM_MARGIN)
+	return Vector2(viewport_rect.get_center().x, playfield_of(viewport_rect).end.y - BOTTOM_MARGIN)
 
 
 # Horizontal movement limits for the player: the full viewport width. Player

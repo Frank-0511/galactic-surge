@@ -174,7 +174,7 @@ func _process(delta: float) -> void:
 		return
 
 	var horizontal_delta: float = _direction * formation_speed * delta
-	var viewport_rect: Rect2 = get_viewport_rect()
+	var viewport_rect: Rect2 = GameLayout.playfield_of(get_viewport_rect())
 	var left_edge: float = formation_enemies[0].global_position.x - ENEMY_HALF_WIDTH
 	var right_edge: float = formation_enemies[0].global_position.x + ENEMY_HALF_WIDTH
 	for enemy: Area2D in formation_enemies:
