@@ -20,7 +20,7 @@ func start_battle() -> void:
 		return
 	_main._active_boss = boss
 	boss.global_position = Vector2(_main.get_viewport().get_visible_rect().size.x * 0.5, -100.0)
-	boss.max_health = int(round(_main.BOSS_BASE_HEALTH * (1.0 + _main.BOSS_HEALTH_STEP * float(_main._chapter - 1))))
+	boss.max_health = int(_main.BOSS_HEALTH_BY_CHAPTER[clampi(_main._chapter - 1, 0, _main.BOSS_HEALTH_BY_CHAPTER.size() - 1)])
 	var chapter_index: int = clampi(_main._chapter - 1, 0, _main.TOTAL_CHAPTERS - 1)
 	boss.boss_variant = _main.BOSS_VARIANTS_BY_CHAPTER[chapter_index]
 	# Núcleo Blindado three-phase fight is reserved for the final chapter.

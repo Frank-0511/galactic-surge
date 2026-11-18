@@ -145,7 +145,7 @@ func _check_boss_replica_follows_host() -> void:
 	(host.get("_boss") as RefCounted).call("start_battle")
 	var boss: Node = host.get("_active_boss") as Node
 	if boss != null:
-		boss.call("take_damage", 200)
+		boss.call("take_damage", int(boss.get("max_health")) / 2)
 	var host_state: Dictionary = host.get_node(SYNC_NODE_NAME).call("build_state")
 	var truth_pos: Vector2 = (boss as Node2D).position if boss != null else Vector2.ZERO
 	var truth_health: int = int(boss.get("health")) if boss != null else -1

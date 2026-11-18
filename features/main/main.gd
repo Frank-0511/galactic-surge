@@ -10,8 +10,8 @@ const POINTS_PER_ENEMY: int = 100
 const CLEAN_WAVE_BONUS: int = 500
 const TOTAL_WAVES: int = 10
 const TOTAL_CHAPTERS: int = 3
-const BOSS_BASE_HEALTH: int = 150
-const BOSS_HEALTH_STEP: float = 0.5
+## Boss max health per chapter (Etapa 21 balance): chapter 1 150 PV, chapter 2 450, chapter 3 600.
+const BOSS_HEALTH_BY_CHAPTER: Array = [150, 450, 600]
 ## Wave number (1-based) that is a peaceful bonus wave in every chapter.
 const BONUS_WAVE_NUMBER: int = 8
 const BONUS_DROP_COUNT: int = 8

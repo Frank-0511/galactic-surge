@@ -10,7 +10,7 @@ const TOTAL_WAVES: int = 10
 const TOTAL_CHAPTERS: int = 3
 const BONUS_WAVE_NUMBER: int = 8
 const BOSS_SCENE_PATH := "res://features/boss/boss.tscn"
-# Chapter 3 boss health (T1 scaling: 150 -> 225 -> 300).
+# Chapter 3 boss health (Etapa 21 balance: 150 -> 450 -> 600 per chapter).
 const BLINDADO_MAX_HEALTH: int = 300
 const ARMOR_PHASE_EXTERIOR: int = 1
 const ARMOR_PHASE_SUBCORE: int = 2
@@ -439,7 +439,10 @@ func _assert_blindado_phase_feedback(main: Node2D, boss: Area2D) -> bool:
 	boss.connect(&"armor_phase_changed", func(phase: int) -> void: phases.append(phase))
 
 	camera.set("trauma", 0.0)
-	boss.call("take_damage", 102)
+	var max_hp: int = int(boss.get("max_health"))
+	var to_66: int = int(round(max_hp * 0.66))
+	var to_33: int = int(round(max_hp * 0.33))
+	boss.call("take_damage", max_hp - to_66)
 	if phases != [2]:
 		push_error("Losing the exterior armor must emit phase 2, got %s" % str(phases))
 		passed = false
@@ -451,7 +454,7 @@ func _assert_blindado_phase_feedback(main: Node2D, boss: Area2D) -> bool:
 		passed = false
 
 	camera.set("trauma", 0.0)
-	boss.call("take_damage", 99)
+	boss.call("take_damage", to_66 - to_33)
 	if phases != [2, 3]:
 		push_error("Exposing the core must emit phase 3 after phase 2, got %s" % str(phases))
 		passed = false
