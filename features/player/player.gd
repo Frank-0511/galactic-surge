@@ -193,6 +193,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_time += delta
 	_heat.tick(delta)
+	update_visual_tilt(delta)
 	queue_redraw()
 
 	if not _gameplay_enabled or replica:
@@ -206,6 +207,16 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	_visuals.draw_ship()
+
+
+## Eases the banking tilt of the drawn ship toward its horizontal speed (Etapa 23).
+func update_visual_tilt(delta: float) -> void:
+	_visuals.update_tilt(delta)
+
+
+## Current banking angle in radians (positive leans right).
+func get_visual_tilt() -> float:
+	return _visuals.tilt
 
 
 # Static helpers (input, colors, tables and the alive-ship lookup) delegate to their modules.

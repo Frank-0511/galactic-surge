@@ -5,11 +5,25 @@
 
 extends RefCounted
 
+const MAX_TILT: float = 0.3141593  # 18 degrees: middle of the 15-20 degree banking range (Etapa 23)
+const TILT_RESPONSE: float = 8.0   # how fast the ship leans toward its target tilt (1/s)
+
 var _player: CharacterBody2D
+## Current banking angle in radians, positive when leaning right. Visual only: the body never rotates.
+var tilt: float = 0.0
 
 
 func _init(player: CharacterBody2D) -> void:
 	_player = player
+
+
+## Eases the banking angle toward the lean that matches the horizontal speed.
+func update_tilt(delta: float) -> void:
+	var ratio: float = 0.0
+	if _player.speed > 0.0:
+		ratio = clampf(_player.velocity.x / _player.speed, -1.0, 1.0)
+	var blend: float = 1.0 - exp(-TILT_RESPONSE * delta)
+	tilt = lerpf(tilt, ratio * MAX_TILT, blend)
 
 
 ## Hull outline color per slot: J1 Azul Neón (default), J2 Naranja Neón (coop local).
@@ -31,6 +45,8 @@ func weapon_color() -> Color:
 
 func draw_ship() -> void:
 	var heat_ratio: float = clampf(_player.heat / _player.max_heat, 0.0, 1.0)
+	# Banking: rotate only the drawing, so the collision shape stays upright.
+	_player.draw_set_transform(Vector2.ZERO, tilt)
 
 	# Wide ambient glow announces silhouette.
 	var glow_color: Color = Color(0.35, 0.55, 1.0, 0.14).lerp(Color(1.0, 0.3, 0.1, 0.25), heat_ratio)
@@ -122,3 +138,4 @@ func draw_ship() -> void:
 	var blink: float = 1.0 if fmod(_player._time, 1.0) < 0.6 else 0.2
 	_player.draw_circle(Vector2(-23, 12), 1.4, Color(1.0, 0.25, 0.25, blink))
 	_player.draw_circle(Vector2(23, 12), 1.4, Color(0.3, 1.0, 0.4, blink))
+	_player.draw_set_transform(Vector2.ZERO, 0.0)
