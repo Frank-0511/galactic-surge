@@ -136,8 +136,7 @@ func _check_touch_reaches_joystick_in_tree() -> void:
 		return
 	var controls: Node = scene.instantiate()
 	get_root().add_child(controls)
-	var size: Vector2 = get_root().get_visible_rect().size
-	var center: Vector2 = Vector2(size.x * 0.2, size.y * 0.8)
+	var center: Vector2 = controls.call("get_joystick_center") as Vector2
 	var drag := InputEventScreenDrag.new()
 	drag.index = 0
 	# Touch positions arrive in window space: the viewport applies its final transform to them.

@@ -17,6 +17,9 @@ const BASE_COLOR: Color = Color(1.0, 1.0, 1.0, 0.18)
 const KNOB_COLOR: Color = Color(1.0, 1.0, 1.0, 0.45)
 const HINT_COLOR: Color = Color(1.0, 1.0, 1.0, 0.55)
 const HINT_FONT_SIZE: int = 18
+# A control band shorter than this (landscape, no extra height) falls back to the bottom edge of the viewport.
+const MIN_BAND_HEIGHT: float = 200.0
+const FALLBACK_BOTTOM_MARGIN: float = 110.0
 
 var _joystick_center: Vector2 = Vector2.ZERO
 var _joystick_anchor: Vector2 = Vector2.ZERO
@@ -37,10 +40,36 @@ func _ready() -> void:
 	_pad.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pad.draw.connect(_draw_pad)
 	add_child(_pad)
-	var size: Vector2 = get_viewport().get_visible_rect().size
-	set_joystick_center(Vector2(size.x * 0.2, size.y * 0.8))
-	set_fire_button_center(Vector2(size.x * 0.8, size.y * 0.8))
-	set_pause_button_center(Vector2(size.x * 0.9, size.y * 0.08))
+	var centers: Dictionary = default_centers(get_viewport().get_visible_rect())
+	set_joystick_center(centers["joystick"])
+	set_fire_button_center(centers["fire"])
+	set_pause_button_center(centers["pause"])
+
+
+# Pure: default centers for the three controls. Joystick and fire sit in the control band below the playfield
+# (Etapa 21, movil-banda-controles) so the thumb never covers the ship; pause stays at the top right.
+static func default_centers(viewport: Rect2) -> Dictionary:
+	var size: Vector2 = viewport.size
+	var band: Rect2 = GameLayout.control_band_of(viewport)
+	var row_y: float = band.get_center().y if band.size.y >= MIN_BAND_HEIGHT else viewport.end.y - FALLBACK_BOTTOM_MARGIN
+	return {
+		"joystick": Vector2(viewport.position.x + size.x * 0.2, row_y),
+		"fire": Vector2(viewport.position.x + size.x * 0.8, row_y),
+		"pause": Vector2(viewport.position.x + size.x * 0.9, viewport.position.y + size.y * 0.08),
+	}
+
+
+# Current centers, for tests and the HUD layer.
+func get_joystick_center() -> Vector2:
+	return _joystick_center
+
+
+func get_fire_button_center() -> Vector2:
+	return _fire_center
+
+
+func get_pause_button_center() -> Vector2:
+	return _pause_center
 
 
 func _process(delta: float) -> void:
