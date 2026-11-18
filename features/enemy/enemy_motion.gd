@@ -32,6 +32,13 @@ var _return_elapsed: float = 0.0
 var _enemy: Area2D
 
 
+## Pure: picks the swoop side for a dive. Enemies almost above the screen center curve away from it.
+static func dive_side(p0_x: float, target_x: float, center_x: float) -> float:
+	if absf(target_x - p0_x) < 40.0:
+		return 1.0 if p0_x <= center_x else -1.0
+	return 1.0 if target_x >= p0_x else -1.0
+
+
 func _init(enemy: Area2D) -> void:
 	_enemy = enemy
 
@@ -78,15 +85,14 @@ func start_dive(target_pos: Vector2, duration: float = 2.0, _dive_type: String =
 	_dive_elapsed = 0.0
 
 	var p0: Vector2 = _enemy.global_position
-	# Determine swoop lateral curvature
-	var side: float = 1.0 if target_pos.x >= p0.x else -1.0
-	if absf(target_pos.x - p0.x) < 40.0:
-		side = 1.0 if p0.x <= 540.0 else -1.0
+	var view: Rect2 = _enemy.get_viewport_rect() if _enemy.is_inside_tree() else Rect2(0.0, 0.0, 1080.0, 1040.0)
+	# Determine swoop lateral curvature, relative to the live screen center
+	var side: float = dive_side(p0.x, target_pos.x, view.size.x * 0.5)
 
 	_dive_p0 = p0
 	_dive_p1 = p0 + Vector2(side * 220.0, 160.0)
 	_dive_p2 = Vector2(target_pos.x + side * 140.0, target_pos.y - 120.0)
-	_dive_p3 = Vector2(target_pos.x - side * 80.0, 1040.0)
+	_dive_p3 = Vector2(target_pos.x - side * 80.0, view.end.y + 80.0)
 
 	_enemy.dive_started.emit()
 

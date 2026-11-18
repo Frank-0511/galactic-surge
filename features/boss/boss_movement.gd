@@ -36,7 +36,23 @@ func trigger_dive() -> void:
 	var player: Node2D = _boss._attacks.get_player_node()
 	if player != null:
 		target_x = player.global_position.x
-	_boss._dive_target = Vector2(clampf(target_x, _boss._left_margin, _boss._right_margin), 760.0)
+	_boss._dive_target = Vector2(clampf(target_x, _boss._left_margin, _boss._right_margin), dive_target_y(_viewport_rect()))
+
+
+## Dive target Y (Etapa 21 T4), anchored to the viewport bottom. At 1080x960 it is the former fixed 760.
+static func dive_target_y(viewport: Rect2) -> float:
+	return viewport.end.y - 200.0
+
+
+## Dive cap Y (Etapa 21 T4), anchored to the viewport bottom and kept above the dive target.
+## At 1080x960 it is the former fixed 740.
+static func dive_cap_y(viewport: Rect2) -> float:
+	return viewport.end.y - 220.0
+
+
+## Live viewport when inside the tree; outside it, the 1080x960 base viewport.
+func _viewport_rect() -> Rect2:
+	return _boss.get_viewport_rect() if _boss.is_inside_tree() else Rect2(0.0, 0.0, 1080.0, 960.0)
 
 
 func _update_entering(delta: float) -> void:
@@ -99,7 +115,7 @@ func _update_descent(delta: float) -> void:
 	var dive_tilt: float = clampf((steer_speed / descent_speed) * 0.5, -0.4, 0.4)
 	_boss.rotation = lerpf(_boss.rotation, dive_tilt, delta * 6.0)
 
-	if _boss.global_position.y >= _boss._dive_target.y or _boss.global_position.y >= 740.0:
+	if _boss.global_position.y >= _boss._dive_target.y or _boss.global_position.y >= dive_cap_y(_viewport_rect()):
 		_boss._state = _boss.MovementState.DIVE_ASCENT
 
 

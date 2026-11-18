@@ -21,12 +21,12 @@ func advance(delta: float) -> void:
 		_asteroid._hit_flash_timer = maxf(_asteroid._hit_flash_timer - delta, 0.0)
 		_asteroid.queue_redraw()
 
-	# Despawn when far beyond viewport bounds
-	var max_y: float = 1200.0
-	if _asteroid.is_inside_tree():
-		var vp: Rect2 = _asteroid.get_viewport_rect()
-		if vp.size.y > 0.0:
-			max_y = vp.end.y + 160.0
-	var pos: Vector2 = _asteroid.global_position
-	if pos.y > max_y or pos.y < -300.0 or pos.x < -300.0 or pos.x > 1400.0:
+	# Despawn when far beyond viewport bounds (the live viewport, or 1080x1040 outside the tree)
+	var vp: Rect2 = _asteroid.get_viewport_rect() if _asteroid.is_inside_tree() and _asteroid.get_viewport_rect().size.y > 0.0 else Rect2(0.0, 0.0, 1080.0, 1040.0)
+	if is_outside_cull(_asteroid.global_position, vp):
 		_asteroid.queue_free()
+
+
+## Pure: true when an asteroid is far beyond the viewport on any side and can be despawned.
+static func is_outside_cull(pos: Vector2, vp: Rect2) -> bool:
+	return pos.y > vp.end.y + 160.0 or pos.y < -300.0 or pos.x < -300.0 or pos.x > vp.end.x + 320.0

@@ -143,7 +143,9 @@ func _check_host_frees_j2_slot_and_targets() -> void:
 			var p1: CharacterBody2D = main.get("_player") as CharacterBody2D
 			p1.global_position = Vector2(100.0, 100.0)
 			p1.collision_layer = 0
-			_expect(pressure.call("dive_target_position") == Vector2(540.0, 850.0), "Contrato T53: sin naves vivas (J1 eliminada, J2 oculta) la picada no apunta a ninguna nave")
+			var live_view: Rect2 = main.get_viewport().get_visible_rect()
+			var fallback_point := Vector2(live_view.size.x * 0.5, live_view.end.y - 110.0)
+			_expect(pressure.call("dive_target_position") == fallback_point, "Contrato T53: sin naves vivas (J1 eliminada, J2 oculta) la picada cae al centro inferior del viewport vivo")
 			p1.collision_layer = 1
 			_expect((pressure.call("dive_target_position") as Vector2).distance_to(Vector2(100.0, 100.0)) < 0.5, "Contrato T53b: con J1 viva la picada apunta a J1, no a J2 oculta")
 		else:

@@ -27,7 +27,7 @@ window/size/initial_position_type=2
 window/size/window_width_override=918
 window/size/window_height_override=816
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
+window/stretch/aspect="expand"
 
 [input]
 

@@ -26,13 +26,24 @@ func tick_dives(delta: float, formation_enemies: Array[Area2D]) -> void:
 		_spawner._dive_cooldown_timer = randf_range(1.6, 2.5) if _spawner._is_enraged else randf_range(3.2, 5.0)
 
 
-## Where a dive aims: the first ship still alive (never a hidden J2 or an eliminated ship), else the screen center.
+## Where a dive aims: the first ship still alive (never a hidden J2 or an eliminated ship), else the bottom-center point.
 func dive_target_position() -> Vector2:
 	if _spawner.is_inside_tree():
 		var ship: Node2D = PlayerShip.first_alive_ship(_spawner.get_tree())
 		if ship != null:
 			return ship.global_position
-	return Vector2(540.0, 850.0)
+	return fallback_dive_point(_viewport_rect())
+
+
+## Fallback dive point (Etapa 21 T4): horizontal center, 110 px above the viewport bottom.
+## At 1080x960 it is the former fixed Vector2(540, 850).
+static func fallback_dive_point(viewport: Rect2) -> Vector2:
+	return Vector2(viewport.size.x * 0.5, viewport.end.y - 110.0)
+
+
+## Live viewport when inside the tree; outside it, the 1080x960 base viewport.
+func _viewport_rect() -> Rect2:
+	return _spawner.get_viewport_rect() if _spawner.is_inside_tree() else Rect2(0.0, 0.0, 1080.0, 960.0)
 
 
 func trigger_dive(count: int = 1) -> Array[Area2D]:

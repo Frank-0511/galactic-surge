@@ -69,12 +69,6 @@ signal formation_rejoined(enemy: Area2D)
 ## Vertical step applied after reaching a viewport edge.
 @export var descent_distance: float = 32.0
 
-## Maximum vertical descent accumulated for the formation.
-@export var max_formation_descent_y: float = 380.0
-
-## Maximum Y position allowed for the lowest enemy in formation.
-@export var max_formation_bottom_y: float = 480.0
-
 ## Whether enemies enter using Bézier curve fly-in.
 @export var fly_in_enabled: bool = true
 
@@ -140,6 +134,18 @@ func set_formation_layout(origin: Vector2, first_row_y: float) -> void:
 	_first_row_y = first_row_y
 
 
+## Maximum vertical descent limit for the formation (Etapa 21 T4), anchored to the viewport bottom.
+## At 1080x960 it is the former fixed 380.
+static func descent_limit_y(viewport: Rect2) -> float:
+	return viewport.end.y - 580.0
+
+
+## Maximum Y limit for the lowest enemy in formation (Etapa 21 T4), anchored to the viewport bottom.
+## At 1080x960 it is the former fixed 480.
+static func bottom_limit_y(viewport: Rect2) -> float:
+	return viewport.end.y - 480.0
+
+
 func _process(delta: float) -> void:
 	if not _is_running or _is_flying_in:
 		return
@@ -195,12 +201,12 @@ func _process(delta: float) -> void:
 				enemy.position.x += clamp_x
 
 		# Check descent ceiling: only descend if formation bottom remains within safe limits
-		var can_descend: bool = (_formation_shift.y + descent_distance <= max_formation_descent_y)
+		var can_descend: bool = (_formation_shift.y + descent_distance <= descent_limit_y(viewport_rect))
 		if can_descend:
 			var lowest_y: float = -INF
 			for enemy: Area2D in formation_enemies:
 				lowest_y = maxf(lowest_y, enemy.global_position.y)
-			if lowest_y + descent_distance > max_formation_bottom_y:
+			if lowest_y + descent_distance > bottom_limit_y(viewport_rect):
 				can_descend = false
 
 		if can_descend:
