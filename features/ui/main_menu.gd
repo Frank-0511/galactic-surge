@@ -71,6 +71,7 @@ func _ready() -> void:
 	_apply_vignette()
 	_apply_title_style()
 	apply_network_availability(OS.has_feature("web"))
+	apply_platform_availability(OS.has_feature("web"), DisplayServer.is_touchscreen_available())
 	_apply_chip_style()
 	_start_title_pulse()
 	_refresh_difficulty_text()
@@ -144,6 +145,11 @@ func show_network_message(text: String) -> void:
 func apply_network_availability(is_web: bool) -> void:
 	$Control/NetPanel.visible = not is_web
 	$Control/Menu/QuitButton.visible = not is_web
+
+
+## Public: the local coop button needs a shared keyboard, so it is hidden only in a browser on a touch device.
+func apply_platform_availability(is_web: bool, is_touch: bool) -> void:
+	$Control/Menu/CoopButton.visible = not (is_web and is_touch)
 
 
 ## Public: closes the lobby and clears the scene multiplayer peer. Safe when nothing is open.
