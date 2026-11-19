@@ -225,7 +225,7 @@ func _check_web_hides_network_and_quit() -> void:
 	_expect(not host.is_visible_in_tree() and not join.is_visible_in_tree() and not net_coop.is_visible_in_tree(), "Contrato T21.13a: en web el panel de red y sus botones quedan ocultos")
 	_expect(not quit_button.is_visible_in_tree(), "Contrato T21.13b: en web el boton Salir queda oculto")
 	menu.call("apply_network_availability", false)
-	_expect(net_panel.is_visible_in_tree() and host.is_visible_in_tree() and join.is_visible_in_tree() and net_coop.is_visible_in_tree(), "Contrato T21.13c: fuera de web el panel de red queda visible")
+	_expect(not net_panel.is_visible_in_tree() and not host.is_visible_in_tree() and not join.is_visible_in_tree() and not net_coop.is_visible_in_tree(), "Contrato T21.13c: fuera de web el panel de red queda oculto mientras la red no este activada")
 	_expect(quit_button.is_visible_in_tree(), "Contrato T21.13d: fuera de web el boton Salir queda visible")
 	get_root().remove_child(menu)
 	menu.free()

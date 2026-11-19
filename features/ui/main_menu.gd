@@ -140,10 +140,14 @@ func show_network_message(text: String) -> void:
 	_lobby_menu.show_message(text)
 
 
+## Off while the networking feature is hidden from players (Proyecto Final decision). The network code stays;
+## set this to true to show the Red panel again outside web.
+const NETWORK_UI_ENABLED := false
+
 ## Etapa 21 (S7): web builds have no ENet networking and no way to close the browser tab, so in web the Red
-## panel and the Salir button are hidden; outside web they are visible again.
+## panel and the Salir button are hidden; outside web the Red panel is visible only if NETWORK_UI_ENABLED.
 func apply_network_availability(is_web: bool) -> void:
-	$Control/NetPanel.visible = not is_web
+	$Control/NetPanel.visible = NETWORK_UI_ENABLED and not is_web
 	$Control/Menu/QuitButton.visible = not is_web
 
 
